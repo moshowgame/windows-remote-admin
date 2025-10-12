@@ -15,24 +15,30 @@ Author： [Moshow 郑锴](https://zhengkai.blog.csdn.net/)
 
 ## 🌟 核心功能
 
-| 功能模块 | 具体能力 | 适用场景 |
-|---------|---------|---------|
-| PowerShell 命令 | - 执行白名单命令（带操作审计日志）<br>- 支持编码选择、常用命令快速输入<br>- 命令执行防抖 | 远程执行服务器操作（如进程查看） |
-| 文件夹操作 | **FolderExplorer**：自定义路径浏览，展示文件 / 文件夹的名称、大小、修改时间 | 查看服务器目录结构 |
-| 日志查看 | **LogViewer**：日志文件匹配、内容搜索、关键词高亮、查询范围天数限制（<10M） | 远程排查服务器日志问题 |
-| 文件操作 | - **TextViewer**：只读模式查看文本文件<br>- **ViewContent**：小文件内容快速预览<br>- **Download**：直接下载文件 | 查看配置文件、获取服务器文件 |
+---
+
+## 📸 功能预览
+
+| 功能 | 截图文件 | 预览说明                          |
+|-----|---------|-------------------------------|
+| 🎯PowerShell 执行 | ![img_powershell.png](img_powershell.png) | 支持常用命令快速选择、编码切换，执行按钮带防抖       |
+| 文件夹浏览 | ![img_folderExplorer.png](img_folderExplorer.png) | 支持自定义路径输入，展示文件类型、大小、修改时间      |
+| 文本查看 | ![img_textViewer.png](img_textViewer.png) | 默认模式，适合小文本文件查看(<10m)，界面适配底部显示 |
+| 日志查看 | ![img_logViewer.png](img_logViewer.png) | 关键词搜索高亮，可限制查询天数，解决大日志检索效率问题   |
+
+
 
 
 ---
 
 ## 🛠️ 技术栈
 
-- 核心框架：SpringBoot 3.3（如需 2.7.X 版本，可从项目 `SpringBoot2` 分支获取）
+- 核心框架：SpringBoot3 + jPowershell3
 - Web 容器：Undertow（替代默认 Tomcat，轻量高性能）
-- 前端组件：CodeMirror5（日志 / 文本编辑，解决 Ace 渲染性能问题）
+- 前端组件：Bootstrap5 + CodeMirror5（日志 / 文本编辑，解决 Ace 渲染性能问题）
 - 运行环境：JDK 17（推荐微软 MSJDK17）
 - 构建工具：Maven
-- 支持系统：Windows Only（当前版本）
+- 支持系统：Windows Only
 
 ---
 
@@ -67,100 +73,6 @@ mvn clean compile
 
 成功响应：hello world - https://zhengkai.blog.csdn.net/
 
----
-
-## 🔧 API 示例
-
-### 1. 列出文件夹内容（FolderExplorer）
-
-**POST** `http://localhost:12306/sre/list`
-
-请求体：
-
-```json
-{
-  "filePath": "D:\\Download\\",
-  "userName": "admin"
-}
-```
-
-返回体：
-
-```json
-[
-  {
-    "directory": false,
-    "lastModified": "2025-03-02 20:45:53",
-    "name": "removeYoudao.js",
-    "path": "D:\\Download\\removeYoudao.js",
-    "size": "0"
-  }
-]
-```
-
-### 2. 读取日志 / 预览文件（LogViewer/TextViewer）
-
-**POST** `http://localhost:12306/sre/read`
-
-请求体：
-
-```json
-{
-  "filePath": "D:\\Download\\app.log",
-  "userName": "admin"
-}
-```
-
-返回体：直接返回文件内容（支持关键词高亮）
-
-### 3. 下载文件（Download）
-
-**POST** `http://localhost:12306/sre/download`
-
-请求体：
-
-```json
-{
-  "filePath": "D:\\Download\\report.zip",
-  "userName": "admin"
-}
-```
-
-响应：触发浏览器文件下载
-
-### 4. 执行 PowerShell 命令（Command Execution）
-
-**POST** `http://localhost:12306/sre/execute`
-
-请求体：
-
-```json
-{
-  "command": "Get-Process java",
-  "userName": "admin"
-}
-```
-
-返回体：
-
-```
-Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
--------  ------    -----      -----     ------     --  -- -----------
-1234       56     7890       12345      10.5    123  12 java
-```
-
----
-
-## 📸 功能预览
-
-| 功能 | 截图文件 | 预览说明 |
-|-----|---------|---------|
-| 文件夹浏览 | img_folderExplorer.png | 支持自定义路径输入，展示文件类型、大小、修改时间 |
-| 日志查看 | img_logViewer.png | 关键词搜索高亮，可限制查询天数，解决大日志检索效率问题 |
-| PowerShell 执行 | img_shell.png | 支持常用命令快速选择、编码切换，执行按钮带防抖 |
-| 文本查看 | img_textViewer.png | 只读模式浏览长文本，界面适配底部显示 |
-
-> 注：请确保截图文件放置在项目根目录，或修改路径为实际存储位置（如 docs/img/xxx.png）
 
 ---
 
