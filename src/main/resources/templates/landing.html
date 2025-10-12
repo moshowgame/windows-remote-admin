@@ -32,21 +32,13 @@
         .landing-container .form-group {
             margin-bottom: 15px;
         }
-        .landing-container .form-control {
-            background-color: #9cb9a1;
-            color: #fff;
-            border: 1px solid #0078d4;
-        }
-        .landing-container .form-control:focus {
-            border-color: #005a9e;
-            box-shadow: 0 0 8px rgba(0, 90, 158, 0.5);
-        }
-        .landing-container .btn-powershell {
+        .landing-container .btn-option {
             width: 100%;
+            margin-bottom: 10px;
             background-color: #0078d4;
             border-color: #0078d4;
         }
-        .landing-container .btn-powershell:hover {
+        .landing-container .btn-option:hover {
             background-color: #005a9e;
             border-color: #005a9e;
         }
@@ -59,15 +51,13 @@
 </head>
 <body>
     <div class="landing-container">
-        <h2>SRE Landing Page</h2>
-        <form id="optionForm">
-            <div class="form-group">
-                <p>Enter 1 goto Powershell Executor ;<br> Enter 2 goto File Explorer</p>
-                <input type="text" class="form-control" id="option" placeholder="请输入选项 (1 或 2)" required>
-            </div>
-            <button type="submit" class="btn btn-powershell">提交</button>
-            <div class="error-message" id="errorMessage"></div>
-        </form>
+        <h2>Admin Landing Page</h2>
+        <div class="form-group">
+            <p>请选择您要访问的功能：</p>
+            <button type="button" class="btn btn-option" id="shellButton">🎯Remote Powershell Admin</button>
+            <button type="button" class="btn btn-option" id="fileButton">📁File Explorer &📄Log Viewer</button>
+        </div>
+        <div class="error-message" id="errorMessage"></div>
     </div>
 
     <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
@@ -76,23 +66,13 @@
         $(document).ready(function() {
             const shellUrl = /*[[ @{/shell} ]]*/ '';
             const fileUrl = /*[[ @{/file} ]]*/ '';
-            $('#optionForm').on('submit', function(event) {
-                event.preventDefault();
-
-                const option = $('#option').val().trim();
-
-                if (option !== '1' && option !== '2') {
-                    $('#errorMessage').text('请输入有效的选项 (1 或 2)');
-                    return;
-                }
-
-                $('#errorMessage').text('');
-
-                if (option === '1') {
-                    window.location.href = shellUrl;
-                } else if (option === '2') {
-                    window.location.href = fileUrl;
-                }
+            
+            $('#shellButton').on('click', function() {
+                window.open(shellUrl, '_blank');
+            });
+            
+            $('#fileButton').on('click', function() {
+                window.open(fileUrl, '_blank');
             });
         });
     </script>
