@@ -14,4 +14,5 @@ public class FileRequest {
     String keyWord;
     String ticketNumber;
     String days;
+    String clientIpAddress;
 }

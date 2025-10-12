@@ -12,4 +12,5 @@ public class ShellRequest {
     String ticketNumber;
     Date executionTime;
     String encoding;
+    String clientIpAddress;
 }
