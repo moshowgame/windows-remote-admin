@@ -36,30 +36,20 @@ public class EntitlementController {
     @PostMapping("/entitlement")
     public Object entitlement(@RequestBody Entitlement entity, HttpServletRequest request,
                               HttpServletResponse response) throws Exception {
-        if(StringUtils.isAnyBlank(entity.getUserName(),entity.getPassWord(),entity.getTicketNumber())){
-            return ResponseUtil.fail(ResponseUtil.StatusCode.BAD_REQUEST,"username | password | ticket cannot be null");
+        if(StringUtils.isAnyBlank(entity.getUserName(), entity.getToken(), entity.getTicketNumber())){
+            return ResponseUtil.fail(ResponseUtil.StatusCode.BAD_REQUEST,"username | token | ticket cannot be null");
         }
         // 调用认证服务
         // 认证成功后设置Cookie
-        if(entitlementService.authenticate(entity.getUserName(),entity.getPassWord())) { // 根据你的实际认证结果判断
+        if(entitlementService.authenticate(entity.getToken())) { // 根据你的实际认证结果判断
             // 获取Session并存储用户信息
             HttpSession session = request.getSession();
             session.setAttribute("entitledUser", entity.getUserName());
             session.setAttribute("ticketNumber", entity.getTicketNumber());
-            // 设置Session过期时间（30天）
-            session.setMaxInactiveInterval(30 * 24 * 60 * 60); // 单位：秒
+            // 设置Session过期时间（4H）
+            session.setMaxInactiveInterval(4 * 60 * 60); // 单位：秒
 
             return ResponseUtil.success(entity.getUserName());
-            //            // 设置cookie时加密值
-//            String encryptedValue = AESUtil.encrypt(entity.getUserName());
-//
-//            Cookie userCookie = new Cookie("userName", entity.getUserName()); // 替换为实际用户信息
-//            userCookie.setMaxAge(30 * 24 * 60 * 60); // 30天（单位：秒）
-//            userCookie.setPath("/"); // 全站有效
-//            userCookie.setHttpOnly(true); // 增强安全性
-//            // userCookie.setSecure(true); // 如果是HTTPS环境需要启用
-//            response.addCookie(userCookie);
-//            return ResponseUtil.success(entity.getUserName());
         }else{
             return ResponseUtil.fail(ResponseUtil.StatusCode.UNAUTHORIZED);
         }

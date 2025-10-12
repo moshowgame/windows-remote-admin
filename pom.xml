@@ -198,6 +198,12 @@
 			<artifactId>therapi-runtime-javadoc</artifactId>
 			<version>0.15.0</version>
 		</dependency> -->
+		<!-- jPowershell dependency -->
+		<dependency>
+			<groupId>com.profesorfalken</groupId>
+			<artifactId>jPowerShell</artifactId>
+			<version>3.1.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

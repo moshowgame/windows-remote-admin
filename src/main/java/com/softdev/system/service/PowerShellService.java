@@ -2,35 +2,41 @@ package com.softdev.system.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.profesorfalken.jpowershell.PowerShell;
+import com.profesorfalken.jpowershell.PowerShellResponse;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
 public class PowerShellService {
 
     public String executeCommand(String command, String encoding) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "powershell.exe", "-Command", command
-        );
-
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-
         StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), encoding))) { // 使用用户选择的编码
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+        
+        try (PowerShell powerShell = PowerShell.openSession()) {
+            // 处理多行脚本
+            String[] lines = command.split("\n");
+            PowerShellResponse response;
+            
+            if (lines.length > 1) {
+                // 多行脚本模式
+                response = powerShell.executeCommand(command);
+            } else {
+                // 单行命令模式
+                response = powerShell.executeCommand(command);
             }
+            
+            if (response.isError()) {
+                output.append("Error: ").append(response.getCommandOutput());
+            } else {
+                output.append(response.getCommandOutput());
+            }
+        } catch (Exception e) {
+            log.error("PowerShell execution error: ", e);
+            output.append("Error executing PowerShell command: ").append(e.getMessage());
         }
-
-        int exitCode = process.waitFor();
-//        log.info("output: " + output);
-        return "Exit Code: " + exitCode + "\nOutput:\n" + output;
+        
+        return output.toString();
     }
 }

@@ -11,11 +11,11 @@ import java.util.Objects;
 @Slf4j
 @Service
 public class EntitlementService {
-    private final Map<String, String> userMap = new HashMap<>();
+    private final Map<String, String> tokenMap = new HashMap<>();
 
-    public EntitlementService() {
+    private void init() {
         try {
-            // 从资源文件夹中读取 users.csv
+            // 从资源文件夹中读取 tokens.csv
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(Objects.requireNonNull(getClass().getResourceAsStream("/data/entitlement.csv")), StandardCharsets.UTF_8)
             );
@@ -27,20 +27,28 @@ public class EntitlementService {
                 String[] tokens = line.split(",");
                 if (tokens.length >= 2) {
                     String username = tokens[0].trim();
-                    String password = tokens[1].trim();
-                    userMap.put(username, password);
+                    String token = tokens[1].trim();
+                    tokenMap.put(token, "admin");
                 }
             }
             reader.close();
 
-            log.info("EntitlementService initialized successfully. total {}",userMap.size());
+            log.info("EntitlementService initialized successfully. total {}", tokenMap.size());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public boolean authenticate(String username, String password) {
-        // 验证用户名和密码是否匹配
-        return password.equals(userMap.get(username));
+    public boolean authenticate(String token) {
+        if (tokenMap.isEmpty()) {
+            init();
+        }
+        // 验证用户名和Token是否匹配
+        return "admin".equals(tokenMap.get(token));
+    }
+    
+    // 仅验证Token，不关心用户名（用于纯Token验证模式）
+    public boolean validateToken(String token) {
+        return tokenMap.containsValue(token);
     }
 }

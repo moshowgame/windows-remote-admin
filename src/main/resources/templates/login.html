@@ -59,24 +59,24 @@
         <h2>登录</h2>
         <form id="loginForm">
             <div class="form-group">
+                <label for="token">Token</label>
+                <div class="input-group">
+                    <div class="input-group-text"><i class="bi bi-key-fill"></i></div>
+                    <input type="password" class="form-control" id="token" placeholder="请输入访问Token" required>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="userName">用户名</label>
                 <div class="input-group">
                     <div class="input-group-text"><i class="bi bi-person-fill"></i></div>
-                    <input type="text" class="form-control" id="userName" placeholder="请输入用户名" required>
+                    <input type="text" class="form-control" id="userName" placeholder="请输入你的名字" required>
                 </div>
             </div>
             <div class="form-group">
-                <label for="passWord">密码</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-lock-fill"></i></div>
-                    <input type="password" class="form-control" id="passWord" placeholder="请输入密码" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="ticketNumber">Ticket Number/Reason</label>
+                <label for="ticketNumber">使用目的</label>
                 <div class="input-group">
                     <div class="input-group-text"><i class="bi bi-ticket-perforated-fill"></i></div>
-                    <input type="text" class="form-control" id="ticketNumber" placeholder="请输入Ticket Number/Reason" required>
+                    <input type="text" class="form-control" id="ticketNumber" placeholder="请输入本次使用的Purpose/Reason/Ticket" required>
                 </div>
             </div>
             <button type="submit" class="btn btn-login">登录</button>
@@ -102,10 +102,10 @@
                 if (isSubmitting) return;
 
                 const userName = $('#userName').val().trim();
-                const passWord = $('#passWord').val().trim();
+                const token = $('#token').val().trim();
                 const ticketNumber = $('#ticketNumber').val().trim();
 
-                if (!userName || !passWord || !ticketNumber) {
+                if (!userName || !token || !ticketNumber) {
                     $('#errorMessage').text('所有字段都不能为空');
                     return;
                 }
@@ -115,7 +115,7 @@
 
                 const data = {
                     userName: userName,
-                    passWord: passWord,
+                    token: token,
                     ticketNumber: ticketNumber
                 };
 

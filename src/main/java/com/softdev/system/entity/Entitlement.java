@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class Entitlement {
     String userName;
-    String passWord;
+    String token;
     String ticketNumber;
 }

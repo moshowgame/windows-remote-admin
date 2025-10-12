@@ -17,14 +17,14 @@ import java.util.Date;
 
 @Slf4j
 @RestController
-public class ShellController {
+public class PowershellController {
 
     @Autowired
     PowerShellService powerShellService;
 
     @GetMapping("/shell")
     public ModelAndView shell() {
-        return new ModelAndView("shell");
+        return new ModelAndView("powershell");
     }
 
     @PostMapping("execute")

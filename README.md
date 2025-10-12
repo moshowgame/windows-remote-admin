@@ -165,6 +165,10 @@ Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
 ---
 
 ## 📝 版本更新记录
+### 2025-10-12
+- 优化Powershell执行逻辑，使用jPowershell并支持多行模式
+- 鉴权改为token only，用户名和使用目的仅用于审计
+- 其他minor changes，易用性提升
 
 ### 2025-04-06
 - 优化 FileExplorer：支持自定义路径，修复搜索框问题
