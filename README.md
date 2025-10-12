@@ -166,7 +166,7 @@ Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
 
 ## 📝 版本更新记录
 ### 2025-10-12
-- 优化Powershell执行逻辑，使用jPowershell并支持多行模式
+- 优化Powershell执行逻辑，使用jPowershell并支持多行模式，优化无执行结果返回脚本的结果显示
 - 鉴权改为token only，用户名和使用目的仅用于审计
 - 审计能力提升，添加IP到审计日志
 - 其他minor changes，易用性提升

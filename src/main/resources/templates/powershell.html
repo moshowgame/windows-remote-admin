@@ -44,6 +44,12 @@
             display: none;
             color: #34e134;
         }
+        
+        #cmd-input {
+            resize: vertical;
+            min-height: 38px;
+            max-height: 200px;
+        }
     </style>
 </head>
 <body class="bg-dark">
@@ -81,10 +87,10 @@
                 <!-- 输入区域 -->
                 <div class="input-group p-2 border-top border-primary">
                     <span class="input-group-text ps-prompt bg-transparent border-0">PS </span>
-                    <input type="text" id="cmd-input"
+                    <textarea id="cmd-input"
                            class="form-control cmd-input border-0"
                            autocomplete="off"
-                           placeholder="输入命令后按回车">
+                           placeholder="输入命令后按 Ctrl+Enter 执行"></textarea>
                     <span class="input-group-text bg-transparent border-0">
                         <i class="fas fa-spinner fa-spin loading-spinner"></i>
                         <input type="button" id="lastBtn" class="btn btn-outline-info ms-3" value="Last">
@@ -119,7 +125,7 @@
         function initialize() {
             $terminal.empty();
             $terminal.append(`
-                    ****** Server Remote Execution - execute your powershell script remotely ******<br>
+                    ****** SpringBootRemotePowershellAdmin - execute your powershell script remotely ******<br>
                     (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/">GITHUB</a> ).<br><br>
 
                     安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
@@ -166,9 +172,9 @@
             localStorage.setItem('cmdHistory', JSON.stringify(commandHistory));
         }
 
-        // 回车执行
-        $input.on('keypress', function(e) {
-            if (e.which === 13) {
+        // Ctrl+Enter 执行
+        $input.on('keydown', function(e) {
+            if (e.ctrlKey && e.which === 13) {
                 const $submitBtn = $(this);
                 const cmd = $input.val().trim();
                 if (cmd) {
@@ -176,6 +182,7 @@
                     $("#submitBtn").prop('disabled', true); // 禁用按钮
                     executeCommand(cmd, $submitBtn);
                 }
+                e.preventDefault();
             }
         });
         $("#lastBtn").click(function() {
@@ -206,15 +213,19 @@
                 executeCommand(cmd, $submitBtn);
             }
         });
-        // 上下箭头历史记录
+        // 上下箭头历史记录 (只在光标位于第一行时生效)
         $input.on('keydown', function(e) {
-            if (e.key === 'ArrowUp') {
+            const cursorPosition = this.selectionStart;
+            const firstLineEnd = this.value.indexOf('\n');
+            const isFirstLine = firstLineEnd === -1 || cursorPosition <= firstLineEnd;
+            
+            if (isFirstLine && e.key === 'ArrowUp') {
                 if (historyIndex > 0) {
                     historyIndex--;
                     $input.val(commandHistory[historyIndex]);
                 }
                 e.preventDefault();
-            } else if (e.key === 'ArrowDown') {
+            } else if (isFirstLine && e.key === 'ArrowDown') {
                 if (historyIndex < commandHistory.length - 1) {
                     historyIndex++;
                     $input.val(commandHistory[historyIndex]);
