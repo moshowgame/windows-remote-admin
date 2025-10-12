@@ -2,10 +2,10 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.softdev.system</groupId>
-	<artifactId>ServerRemoteExecution</artifactId>
+	<artifactId>SpringBootRemotePowershellAdmin</artifactId>
 	<packaging>jar</packaging>
 	<version>2025</version>
-	<name>ServerRemoteExecution</name>
+	<name>SpringBootRemotePowershellAdmin</name>
 	<url>https://zhengkai.blog.csdn.net/</url>
 
 	<properties>

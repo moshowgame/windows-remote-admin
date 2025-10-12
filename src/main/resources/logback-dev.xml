@@ -14,10 +14,10 @@
 
     <!-- 按日期滚动的文件输出 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>D:\Workspace\Project\ServerRemoteExecution\logs\application.log</file> <!-- 当前日志文件 -->
+        <file>D:\Workspace\Project\SpringBootRemotePowershellAdmin\logs\application.log</file> <!-- 当前日志文件 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- 按天滚动，文件名格式：logs/application-2023-10-20.log -->
-            <fileNamePattern>D:\Workspace\Project\ServerRemoteExecution\logs\application-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>D:\Workspace\Project\SpringBootRemotePowershellAdmin\logs\application-%d{yyyy-MM-dd}.log</fileNamePattern>
             <!-- 保留 7 天日志 -->
             <maxHistory>7</maxHistory>
         </rollingPolicy>

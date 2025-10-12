@@ -1,4 +1,4 @@
 mvn clean compile package
 pause
-java -jar "./target/ServerRemoteExecution-2025.jar"
+java -jar "./target/SpringBootRemotePowershellAdmin-2025.jar"
 pause
