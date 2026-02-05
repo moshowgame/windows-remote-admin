@@ -3,78 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PowerShell Landing Page</title>
-    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
-    <style>
-        body {
-            background-color: #000;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .landing-container {
-            background-color: #000;
-            padding: 30px;
-            border: 1px solid #0078d4;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 120, 212, 0.5);
-            width: 400px;
-            text-align: center;
-        }
-        .landing-container h2 {
-            margin-bottom: 20px;
-            color: #0078d4;
-        }
-        .landing-container .form-group {
-            margin-bottom: 15px;
-        }
-        .landing-container .btn-option {
-            width: 100%;
-            margin-bottom: 10px;
-            background-color: #0078d4;
-            border-color: #0078d4;
-        }
-        .landing-container .btn-option:hover {
-            background-color: #005a9e;
-            border-color: #005a9e;
-        }
-        .landing-container .error-message {
-            color: red;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-    </style>
+    <title>Landing Page</title>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
 </head>
 <body>
-    <div class="landing-container">
-        <h2>Admin Landing Page</h2>
-        <div class="form-group">
-            <p>请选择您要访问的功能：</p>
-            <button type="button" class="btn btn-option" id="shellButton">🎯Remote Powershell Admin</button>
-            <button type="button" class="btn btn-option" id="fileButton">📁File Explorer &📄Log Viewer</button>
-        </div>
-        <div class="error-message" id="errorMessage"></div>
-    </div>
+    <div id="app"></div>
 
-    <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-    <script th:inline="javascript">
-        $(document).ready(function() {
-            const shellUrl = /*[[ @{/shell} ]]*/ '';
-            const fileUrl = /*[[ @{/file} ]]*/ '';
-            
-            $('#shellButton').on('click', function() {
-                window.open(shellUrl, '_blank');
-            });
-            
-            $('#fileButton').on('click', function() {
-                window.open(fileUrl, '_blank');
-            });
-        });
+    <script type="module">
+        const { createApp } = Vue;
+        const { NConfigProvider, NCard, NSpace, NButton } = naive;
+
+        const shellUrl = '/sre/shell';
+        const fileUrl = '/sre/file';
+
+        const App = {
+            setup() {
+                const openShell = () => {
+                    window.open(shellUrl, '_blank');
+                };
+                const openFileExplorer = () => {
+                    window.open(fileUrl, '_blank');
+                };
+                return {
+                    openShell,
+                    openFileExplorer
+                };
+            },
+            template: `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #000; margin: 0; color: #fff; font-family: 'Courier New', monospace;">
+                    <n-config-provider>
+                        <n-card title="Admin Landing Page" style="width: 450px; text-align: center; border: 1px solid #0078d4; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 120, 212, 0.5); background-color: #000; color: #fff;">
+                            <template #header>
+                                <h2 style="color: #0078d4; margin: 0;">Admin Landing Page</h2>
+                            </template>
+                            <n-space vertical size="large" style="width: 100%;">
+                                <p style="color: #fff;">请选择您要访问的功能：</p>
+                                <n-button type="primary" size="large" block @click="openShell">
+                                    🎯 Remote Powershell Admin
+                                </n-button>
+                                <n-button type="info" size="large" block @click="openFileExplorer">
+                                    📁 File Explorer & 📄 Log Viewer
+                                </n-button>
+                            </n-space>
+                        </n-card>
+                    </n-config-provider>
+                </div>
+            `
+        };
+
+        createApp(App).use(naive).mount('#app');
     </script>
 </body>
 </html>

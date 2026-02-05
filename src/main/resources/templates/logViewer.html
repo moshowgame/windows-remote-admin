@@ -1,181 +1,230 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LogViewer</title>
-
-    <!-- Bootstrap 5 CSS -->
-    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet"/>
-    <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet"/>
-    <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
-
-    <!-- CodeMirror 5 CSS -->
-    <link th:href="@{/static/codemirror/5.65.18/lib/codemirror.css}" rel="stylesheet"/>
-    <link th:href="@{/static/codemirror/5.65.18/addon/search/matchesonscrollbar.css}" rel="stylesheet"/>
-    <link th:href="@{/static/codemirror/5.65.18/theme/idea.css}" rel="stylesheet"/>
-
-    <!-- Prism.js CSS -->
-    <!--<link th:href="@{/static/prism/prism.css}" rel="stylesheet"/>-->
-
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
+    <style>
+        #logEditor {
+            min-height: calc(90vh - 180px);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            padding: 12px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        .line-number {
+            display: inline-block;
+            width: 50px;
+            color: #999;
+            text-align: right;
+            margin-right: 10px;
+            user-select: none;
+        }
+    </style>
 </head>
 <body>
-<!-- 导航栏 -->
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-        <span class="navbar-brand">LogViewer</span>
-        <div class="d-flex">
-            <div class="form-check form-switch text-light me-3">
-                (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/">GITHUB</a> )
-            </div>
-        </div>
-    </div>
-</nav>
+    <div id="app"></div>
 
-<div class="container-fluid">
-    <div class="row mt-3">
-        <!-- 侧边栏 -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <p id="fileName"></p>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush" id="fileListSidebar"></ul>
-                </div>
-            </div>
-        </div>
-        <!-- 主编辑器区域 -->
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-header">
-                    <label>文件名</label><input type="text" id="fileNamePattern" class="form-control ms-3" placeholder="匹配文件名" th:value="${fileNamePattern}">
-                    <label>包含文本</label><input type="text" id="keyWord" class="form-control ms-3" placeholder="关键字" th:value="${keyWord}">
-                    <label>查询范围(天数)</label><input type="number" id="days" class="form-control ms-3" placeholder="天数" min="1" max="999" value="1">
-                    <input type="button" id="searchBtn" class="form-control ms-3 btn btn-outline-primary" value="搜索">
-                </div>
-                <div class="card-body p-0 d-flex flex-column">
-                    <input type="text" id="searchInput" class="form-control ms-3" placeholder="搜索日志内容(高亮显示)">
-                    <div class="flex-grow-1">
-                        <!-- 替换 <pre> 为 <textarea> -->
-                        <textarea id="logEditor" style="height: 100%; border-left: 1px solid #ddd;"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    <script type="module">
+        const { createApp, ref, computed, watch } = Vue;
+        const {
+            NConfigProvider, NCard, NLayout, NLayoutContent, NSpace,
+            NInput, NInputGroup, NButton, NDataTable, NSpin, NAlert,
+            NMessageProvider, createDiscreteApi
+        } = naive;
 
-<!-- 脚本依赖 -->
-<script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-<script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-
-<!-- CodeMirror 5 JavaScript -->
-<script th:src="@{/static/codemirror/5.65.18/lib/codemirror.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/mode/loadmode.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/mode/verilog/verilog.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/search.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/searchcursor.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/scroll/annotatescrollbar.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/matchesonscrollbar.js}"></script>
-
-<!-- Prism.js JavaScript -->
-<!--<script th:src="@{/static/prism/prism.js}"></script>-->
-
-<script th:inline="javascript">
-    $(function() {
-        const readUrl = /*[[ @{/read} ]]*/ '';
-        const listPlusUrl = /*[[ @{/listPlus} ]]*/ '';
+        const readUrl = '/sre/read';
+        const listPlusUrl = '/sre/listPlus';
         const filePath = /*[[${filePath}]]*/ '';
         const fileNamePattern = /*[[${fileNamePattern}]]*/ '';
         const keyWord = /*[[${keyWord}]]*/ '';
-        $('#fileName').html('<i class="bi bi-folder2-open"></i> '+filePath);
-        let originalContent = "";
 
-        // 初始化CodeMirror 5编辑器
-        const editor = CodeMirror.fromTextArea(document.getElementById('logEditor'), {
-            lineNumbers: true,
-            // 确保 mode 设置正确
-            mode: 'verilog',
-            // mode: 'text/x-log',
-            theme: 'idea',
-            readOnly: true,
-            // 添加自动高度配置
-            viewportMargin: Infinity,
-            autoRefresh: true
-        });
-        // 添加窗口resize监听
-        window.addEventListener('resize', () => editor.refresh());
-        // 搜索文本高亮功能
-        $('#searchInput').on('input', function() {
-            const query = $(this).val();
-            if (query) {
-                editor.getWrapperElement().querySelectorAll('.CodeMirror-searching').forEach(el => el.classList.remove('CodeMirror-searching'));
-                const cursor = editor.getSearchCursor(query);
-                while (cursor.findNext()) {
-                    editor.markText(cursor.from(), cursor.to(), { className: 'highlight' });
-                }
-            } else {
-                editor.getWrapperElement().querySelectorAll('.CodeMirror-searching').forEach(el => el.classList.remove('CodeMirror-searching'));
-            }
-        });
+        const App = {
+            setup() {
+                const { message } = createDiscreteApi(['message']);
+                const fileNamePatternInput = ref(fileNamePattern || '');
+                const keyWordInput = ref(keyWord || '');
+                const daysInput = ref(1);
+                const searchKeyword = ref('');
+                const fileContent = ref('');
+                const fileList = ref([]);
+                const loading = ref(false);
+                const currentFilePath = ref(filePath);
 
-        // 搜索按钮点击事件
-        $('#searchBtn').click(function() {
-            $.ajax({
-                url: listPlusUrl,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ 
-                    filePath: filePath, 
-                    fileNamePattern: $('#fileNamePattern').val(), 
-                    keyWord: $('#keyWord').val(),
-                    days: $('#days').val() // 新增天数参数
-                }),
-                success: function(response) {
-                    renderFileListSidebar(response.data);
-                },
-                error: function(error) {
-                    console.error('Error searching files:', error);
-                }
-            });
-        });
+                const columns = [
+                    { title: '文件名', key: 'name', ellipsis: { tooltip: true } }
+                ];
 
-        // 渲染侧边栏文件列表
-        function renderFileListSidebar(files) {
-            const $fileListSidebar = $('#fileListSidebar').empty();
-            files.forEach(file => {
-                const $listItem = $('<li class="list-group-item list-group-item-action">' + file.name + '</li>');
-                $listItem.click(function() {
-                    $.ajax({
-                        url: readUrl,
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ filePath: filePath + "\\" + file.name }),
-                        success: function(response) {
-                            originalContent = response.data;
-                            editor.setValue(originalContent); // 更新CodeMirror内容
-                            editor.refresh();
-                        },
-                        error: function(error) {
-                            console.error('Error reading file:', error);
+                const searchFiles = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await fetch(listPlusUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                filePath: currentFilePath.value,
+                                fileNamePattern: fileNamePatternInput.value,
+                                keyWord: keyWordInput.value,
+                                days: daysInput.value.toString()
+                            })
+                        });
+                        const data = await res.json();
+                        fileList.value = data.data;
+                    } catch (error) {
+                        message.error('搜索文件失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const selectFile = async (fileName) => {
+                    loading.value = true;
+                    try {
+                        const fullPath = currentFilePath.value + '\\' + fileName;
+                        const res = await fetch(readUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath: fullPath })
+                        });
+                        const data = await res.text();
+                        fileContent.value = data;
+                    } catch (error) {
+                        message.error('读取文件失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const highlightedContent = computed(() => {
+                    if (!searchKeyword.value || !fileContent.value) {
+                        return fileContent.value;
+                    }
+                    const lines = fileContent.value.split('\n');
+                    return lines.map(line => {
+                        if (line.toLowerCase().includes(searchKeyword.value.toLowerCase())) {
+                            return line.replace(
+                                new RegExp(`(${searchKeyword.value})`, 'gi'),
+                                '<span class="highlight">$1</span>'
+                            );
                         }
-                    });
+                        return line;
+                    }).join('\n');
                 });
-                $fileListSidebar.append($listItem);
-            });
-        }
-    });
-</script>
-<style>
-    .highlight {
-        background-color: yellow;
-    }
-    /* 添加CSS */
-    .CodeMirror {
-        flex: 1;
-        min-height: calc(90vh - 180px); /* 动态获取浏览器的高度然后减去200px */
-    }
-</style>
+
+                const linesWithNumbers = computed(() => {
+                    if (!highlightedContent.value) return [];
+                    return highlightedContent.value.split('\n').map((line, index) => ({
+                        number: index + 1,
+                        content: line
+                    }));
+                });
+
+                const scrollToLine = (lineNumber) => {
+                    const element = document.getElementById(`line-${lineNumber}`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                };
+
+                return {
+                    currentFilePath,
+                    fileNamePatternInput,
+                    keyWordInput,
+                    daysInput,
+                    searchKeyword,
+                    fileList,
+                    columns,
+                    loading,
+                    linesWithNumbers,
+                    searchFiles,
+                    selectFile,
+                    scrollToLine
+                };
+            },
+            template: `
+                <div style="background-color: #f5f5f5; min-height: 100vh; padding: 16px;">
+                    <n-config-provider>
+                        <n-card style="border-radius: 8px;">
+                            <template #header>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>LogViewer</span>
+                                    <div style="font-size: 12px;">
+                                        (c) Powered by Moshow (
+                                        <a href="https://zhengkai.blog.csdn.net/" target="_blank">CSDN</a> |
+                                        <a href="https://github.com/moshowgame/" target="_blank">GITHUB</a> )
+                                    </div>
+                                </div>
+                            </template>
+                            <n-layout has-sider style="height: 85vh;">
+                                <n-layout-sider bordered width="300" style="background-color: #fff;">
+                                    <div style="padding: 16px;">
+                                        <h5 style="margin-bottom: 12px;">搜索设置</h5>
+                                        <n-space vertical size="medium">
+                                            <div>
+                                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">文件名模式</label>
+                                                <n-input v-model:value="fileNamePatternInput" placeholder="匹配文件名" />
+                                            </div>
+                                            <div>
+                                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">包含文本</label>
+                                                <n-input v-model:value="keyWordInput" placeholder="关键字" />
+                                            </div>
+                                            <div>
+                                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">查询范围(天数)</label>
+                                                <n-input-number v-model:value="daysInput" :min="1" :max="999" style="width: 100%;" />
+                                            </div>
+                                            <n-button type="primary" block @click="searchFiles" :loading="loading">搜索</n-button>
+                                        </n-space>
+                                        <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px;">
+                                            <n-data-table
+                                                :columns="columns"
+                                                :data="fileList"
+                                                :bordered="false"
+                                                size="small"
+                                                max-height="calc(85vh - 400px)"
+                                                @row-click="(row) => selectFile(row.name)"
+                                                style="cursor: pointer;"
+                                            />
+                                        </div>
+                                    </div>
+                                </n-layout-sider>
+                                <n-layout-content style="background-color: #fff; padding: 16px;">
+                                    <n-space vertical size="medium" style="margin-bottom: 16px;">
+                                        <div>
+                                            <label style="font-size: 12px; margin-right: 8px;">搜索日志内容(高亮显示)</label>
+                                            <n-input v-model:value="searchKeyword" placeholder="输入关键词高亮显示" style="width: 300px;" />
+                                        </div>
+                                    </n-space>
+                                    <n-spin :show="loading" style="min-height: 400px;">
+                                        <div id="logEditor" v-if="linesWithNumbers.length > 0">
+                                            <div v-for="line in linesWithNumbers" :key="line.number" :id="'line-' + line.number" style="display: flex;">
+                                                <span class="line-number">{{ line.number }}</span>
+                                                <span v-html="line.content"></span>
+                                            </div>
+                                        </div>
+                                        <n-empty v-else description="请选择文件查看内容" />
+                                    </n-spin>
+                                </n-layout-content>
+                            </n-layout>
+                        </n-card>
+                    </n-config-provider>
+                </div>
+            `
+        };
+
+        createApp(App).use(naive).mount('#app');
+    </script>
 </body>
 </html>

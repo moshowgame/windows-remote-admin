@@ -4,147 +4,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录页面</title>
-    <link th:href="@{static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 350px;
-            text-align: center;
-        }
-        .login-container h2 {
-            margin-bottom: 20px;
-            color: #0078d4;
-        }
-        .login-container .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .login-container .btn-login {
-            width: 100%;
-            background-color: #0078d4;
-            border-color: #0078d4;
-        }
-        .login-container .btn-login:hover {
-            background-color: #005a9e;
-            border-color: #005a9e;
-        }
-        .login-container .error-message {
-            color: red;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-        .login-container .input-group-text {
-            background-color: #f0f0f0;
-            border: none;
-        }
-        .login-container .form-control:focus {
-            border-color: #0078d4;
-            box-shadow: 0 0 8px rgba(0, 120, 212, 0.5);
-        }
-    </style>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
 </head>
 <body>
-    <div class="login-container">
-        <h2>登录</h2>
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="token">Token</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-key-fill"></i></div>
-                    <input type="password" class="form-control" id="token" placeholder="请输入访问Token" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="userName">用户名</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-person-fill"></i></div>
-                    <input type="text" class="form-control" id="userName" placeholder="请输入你的名字" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="ticketNumber">使用目的</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-ticket-perforated-fill"></i></div>
-                    <input type="text" class="form-control" id="ticketNumber" placeholder="请输入本次使用的Purpose/Reason/Ticket" required>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-login">登录</button>
-            <div class="error-message" id="errorMessage"></div>
-        </form>
-    </div>
+    <div id="app"></div>
 
-    <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.min.js}"></script>
-    <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
-    <script th:inline="javascript">
-        $(document).ready(function() {
-            let isSubmitting = false;
-            let retryTimer = null;
+    <script type="module">
+        const { createApp, ref } = Vue;
+        const { NConfigProvider, NCard, NForm, NFormItem, NInput, NButton, NMessageProvider, createDiscreteApi } = naive;
 
-            const entitlementUrl = /*[[ @{/entitlement} ]]*/ '';
-            const landingUrl = /*[[ @{/landing} ]]*/ '';
+        const App = {
+            setup() {
+                const formRef = ref(null);
+                const formValue = ref({
+                    token: '',
+                    userName: '',
+                    ticketNumber: ''
+                });
+                const loading = ref(false);
 
-            $('#loginForm').on('submit', function(event) {
-                event.preventDefault();
+                const entitlementUrl = '/sre/entitlement';
+                const landingUrl = '/sre/landing';
 
-                if (isSubmitting) return;
+                const { message } = createDiscreteApi(['message']);
 
-                const userName = $('#userName').val().trim();
-                const token = $('#token').val().trim();
-                const ticketNumber = $('#ticketNumber').val().trim();
+                const handleLogin = () => {
+                    if (!formValue.value.token || !formValue.value.userName || !formValue.value.ticketNumber) {
+                        message.error('所有字段都不能为空');
+                        return;
+                    }
 
-                if (!userName || !token || !ticketNumber) {
-                    $('#errorMessage').text('所有字段都不能为空');
-                    return;
-                }
+                    loading.value = true;
 
-                isSubmitting = true;
-                $('#errorMessage').text('');
-
-                const data = {
-                    userName: userName,
-                    token: token,
-                    ticketNumber: ticketNumber
+                    fetch(entitlementUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formValue.value)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            message.success('登录成功');
+                            window.location.href = landingUrl;
+                        } else {
+                            throw new Error('登录失败');
+                        }
+                    })
+                    .catch(error => {
+                        message.error('登录失败，请稍后再试');
+                    })
+                    .finally(() => {
+                        loading.value = false;
+                    });
                 };
 
-                $.ajax({
-                    url: entitlementUrl,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(data),
-                    success: function(response) {
-                        isSubmitting = false;
-                        // 可以在这里重定向到其他页面
-                        window.location.href = landingUrl;
-                    },
-                    error: function(xhr, status, error) {
-                        isSubmitting = false;
-                        $('#errorMessage').text('登录失败，请稍后再试');
-                        retryTimer = setTimeout(() => {
-                            $('#errorMessage').text('');
-                        }, 5000);
-                    }
-                });
-            });
+                return {
+                    formRef,
+                    formValue,
+                    loading,
+                    handleLogin
+                };
+            },
+            template: `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; margin: 0;">
+                    <n-config-provider>
+                        <n-card title="登录" style="width: 400px; text-align: center; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+                            <n-form ref="formRef" :model="formValue" label-placement="left" label-width="100">
+                                <n-form-item label="Token" path="token">
+                                    <n-input v-model:value="formValue.token" type="password" placeholder="请输入访问Token" @keydown.enter="handleLogin" />
+                                </n-form-item>
+                                <n-form-item label="用户名" path="userName">
+                                    <n-input v-model:value="formValue.userName" placeholder="请输入你的名字" @keydown.enter="handleLogin" />
+                                </n-form-item>
+                                <n-form-item label="使用目的" path="ticketNumber">
+                                    <n-input v-model:value="formValue.ticketNumber" placeholder="请输入本次使用的Purpose/Reason/Ticket" @keydown.enter="handleLogin" />
+                                </n-form-item>
+                            </n-form>
+                            <n-button type="primary" block :loading="loading" @click="handleLogin">登录</n-button>
+                        </n-card>
+                    </n-config-provider>
+                </div>
+            `
+        };
 
-            // 防抖功能
-            $('#loginForm input').on('input', function() {
-                clearTimeout(retryTimer);
-                $('#errorMessage').text('');
-            });
-        });
+        createApp(App).use(naive).mount('#app');
     </script>
 </body>
 </html>

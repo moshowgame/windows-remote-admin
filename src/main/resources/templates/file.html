@@ -3,520 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Windows 11 文件浏览器</title>
-    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet"/>
-    <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet"/>
-    <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
-    <style>
-        :root {
-            --win-bg: #f3f3f3;
-            --win-border: #e0e0e0;
-            --win-accent: #0078d4;
-            --win-hover: rgba(0, 120, 212, 0.1);
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui;
-            background: var(--win-bg);
-        }
-
-        .file-explorer {
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            height: 80vh;
-        }
-
-        .sidebar {
-            width: 280px;
-            background: rgba(255, 255, 255, 0.9);
-            border-right: 1px solid var(--win-border);
-            padding: 16px;
-        }
-
-        .quick-access h6 {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 12px;
-        }
-
-        .nav-link {
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: #333;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .nav-link:hover {
-            background: var(--win-hover);
-        }
-
-        .toolbar {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--win-border);
-            padding: 8px 16px;
-            gap: 12px;
-        }
-
-        .breadcrumb {
-            background: none;
-            padding: 4px;
-            font-size: 14px;
-            margin-bottom: 0;
-        }
-
-        .file-list {
-            background: rgba(255, 255, 255, 0.9);
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        .file-item {
-            display: grid;
-            grid-template-columns: 40px 3fr 1fr 120px 120px;
-            align-items: center;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: all 0.2s;
-            cursor: default;
-        }
-
-        .file-item:hover {
-            background: var(--win-hover);
-        }
-
-        .search-box {
-            width: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--win-border);
-            padding: 4px 16px;
-            background: rgba(255, 255, 255, 0.8);
-        }
-
-        .status-bar {
-            background: rgba(255, 255, 255, 0.8);
-            border-top: 1px solid var(--win-border);
-            padding: 8px 16px;
-            font-size: 14px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .file-content {
-            display: none;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 16px;
-            border-top: 1px solid var(--win-border);
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        /* 新增地址栏样式 */
-        .path-input {  
-            width: 200px;  
-            margin-left: 12px;  
-            padding: 4px 16px;  
-            border: 1px solid var(--win-border);  
-            border-radius: 20px;  
-            background: rgba(255, 255, 255, 0.8);  
-        }  
-    </style>
+    <title>File Explorer</title>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
 </head>
 <body>
-    <div class="container-lg mt-4">
-        <div class="file-explorer">
-            <!-- 侧边栏 -->
-            <div class="sidebar">
-                <div class="quick-access">
-                    <h6>Quick Access</h6>
-                    <div class="nav flex-column">
-                        <a class="nav-link" href="#" data-path="C:\\">
-                            <i class="fas fa-desktop me-2"></i>C Drive
-                        </a>
-                        <a class="nav-link" href="#" data-path="D:\\">
-                            <i class="fas fa-desktop me-2"></i>D Drive
-                        </a>
-                        <a class="nav-link" href="#" data-path="E:\\">
-                            <i class="fas fa-desktop me-2"></i>E Drive
-                        </a>
-                        <a class="nav-link" href="#" data-path="C:\\ProgramData\\Qlik\\Sense\\Log\\Repository">
-                            <i class="fas fa-download me-2"></i>Qlik Sense Repository Log
-                        </a>
-                        <a class="nav-link" href="#" data-path="C:\\ProgramData\\Qlik\\Sense\\Log\\Script">
-                            <i class="fas fa-download me-2"></i>Qlik Sense Script Log
-                        </a>
-                        <a class="nav-link" href="#" data-path="D:\\QlikShare\\ArchivedLogs">
-                            <i class="fas fa-download me-2"></i>Qlik Sense ArchivedLogs
-                        </a>
-                        <a class="nav-link" href="#" data-path="D:\\DataShare">
-                            <i class="fas fa-hard-drive me-2"></i>DataShare
-                        </a>
-                    </div>
+    <div id="app"></div>
+
+    <script type="module">
+        const { createApp, ref, onMounted, computed, watch } = Vue;
+        const {
+            NConfigProvider, NCard, NLayout, NLayoutSider, NLayoutContent,
+            NMenu, NButton, NInput, NDataTable, NTag, NSpace, NIcon,
+            NAlert, NModal, NSpin, NEmpty, NBreadcrumb, NBreadcrumbItem,
+            NTooltip, NMessageProvider, createDiscreteApi, useMessage
+        } = naive;
+
+        const listUrl = '/sre/list';
+        const logViewerUrl = '/sre/logViewer';
+        const textViewerUrl = '/sre/textViewer';
+        const readUrl = '/sre/read';
+        const downloadUrl = '/sre/download';
+        const normalizedPathUrl = '/sre/normalizedPath';
+
+        const quickAccessPaths = [
+            { label: 'C Drive', key: 'C:\\', icon: 'desktop' },
+            { label: 'D Drive', key: 'D:\\', icon: 'desktop' },
+            { label: 'E Drive', key: 'E:\\', icon: 'desktop' },
+            { label: 'Qlik Sense Repository Log', key: 'C:\\ProgramData\\Qlik\\Sense\\Log\\Repository', icon: 'download' },
+            { label: 'Qlik Sense Script Log', key: 'C:\\ProgramData\\Qlik\\Sense\\Log\\Script', icon: 'download' },
+            { label: 'Qlik Sense ArchivedLogs', key: 'D:\\QlikShare\\ArchivedLogs', icon: 'download' },
+            { label: 'DataShare', key: 'D:\\DataShare', icon: 'hard-drive' }
+        ];
+
+        const App = {
+            setup() {
+                const { message } = createDiscreteApi(['message']);
+                const currentPath = ref('C:\\');
+                const pathInput = ref('C:\\');
+                const searchKeyword = ref('');
+                const loading = ref(false);
+                const fileData = ref([]);
+                const history = ref([]);
+                const historyIndex = ref(-1);
+                const fileContent = ref('');
+                const showContent = ref(false);
+                const allFiles = ref([]);
+
+                const columns = [
+                    { title: '名称', key: 'name', width: 300, ellipsis: { tooltip: true } },
+                    { title: '类型', key: 'type', width: 100 },
+                    { title: '修改日期', key: 'lastModified', width: 180 },
+                    { title: '大小', key: 'size', width: 120 },
+                    { title: '操作', key: 'actions', width: 250, fixed: 'right' }
+                ];
+
+                const formatFileSize = (bytes) => {
+                    if (!bytes || bytes === '-') return '-';
+                    const size = parseInt(bytes);
+                    if (size >= 1024 * 1024 * 1024) {
+                        return (size / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+                    } else if (size >= 1024 * 1024) {
+                        return (size / (1024 * 1024)).toFixed(2) + ' MB';
+                    } else if (size >= 1024) {
+                        return (size / 1024).toFixed(2) + ' KB';
+                    }
+                    return size + ' B';
+                };
+
+                const loadPath = async (path, fromHistory = false) => {
+                    if (!fromHistory) {
+                        history.value = history.value.slice(0, historyIndex.value + 1);
+                        history.value.push(path);
+                        historyIndex.value++;
+                    }
+
+                    loading.value = true;
+                    currentPath.value = path;
+
+                    try {
+                        // 先格式化路径
+                        const normRes = await fetch(normalizedPathUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath: path })
+                        });
+                        const normData = await normRes.json();
+                        const normalized = normData.data;
+                        currentPath.value = normalized;
+                        pathInput.value = normalized;
+
+                        // 获取文件列表
+                        const res = await fetch(listUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath: normalized })
+                        });
+                        const data = await res.json();
+                        allFiles.value = data.data.map(file => ({
+                            ...file,
+                            type: file.directory ? '文件夹' : '文件',
+                            size: file.directory ? '-' : formatFileSize(file.size),
+                            actions: file.directory ? [
+                                { label: '进入', type: 'primary', action: 'enter' },
+                                { label: '日志', type: 'info', action: 'log' }
+                            ] : [
+                                { label: '读取', type: 'success', action: 'read' },
+                                { label: '下载', type: 'info', action: 'download' },
+                                { label: '查看', type: 'warning', action: 'view' }
+                            ]
+                        }));
+                        fileData.value = allFiles.value;
+                    } catch (error) {
+                        message.error('加载文件失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const handleRowClick = (row) => {
+                    if (row.directory) {
+                        loadPath(currentPath.value + '\\' + row.name);
+                    } else {
+                        readFile(currentPath.value + '\\' + row.name);
+                    }
+                };
+
+                const handleAction = (row, action) => {
+                    const fullPath = currentPath.value + '\\' + row.name;
+                    switch (action) {
+                        case 'enter':
+                            loadPath(fullPath);
+                            break;
+                        case 'read':
+                            readFile(fullPath);
+                            break;
+                        case 'download':
+                            downloadFile(fullPath);
+                            break;
+                        case 'view':
+                            window.open(textViewerUrl + '?filePath=' + encodeURIComponent(fullPath), '_blank');
+                            break;
+                        case 'log':
+                            window.open(logViewerUrl + '?filePath=' + encodeURIComponent(fullPath), '_blank');
+                            break;
+                    }
+                };
+
+                const readFile = async (filePath) => {
+                    loading.value = true;
+                    try {
+                        const res = await fetch(readUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath })
+                        });
+                        const data = await res.text();
+                        fileContent.value = data;
+                        showContent.value = true;
+                    } catch (error) {
+                        message.error('读取文件失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const downloadFile = async (filePath) => {
+                    try {
+                        const res = await fetch(downloadUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath })
+                        });
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filePath.split('\\').pop();
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        message.success('下载成功');
+                    } catch (error) {
+                        message.error('下载失败');
+                    }
+                };
+
+                const navigateHistory = (direction) => {
+                    const newIndex = historyIndex.value + direction;
+                    if (newIndex >= 0 && newIndex < history.value.length) {
+                        historyIndex.value = newIndex;
+                        loadPath(history.value[newIndex], true);
+                    }
+                };
+
+                const goUp = () => {
+                    const parts = currentPath.value.split('\\').filter(p => p);
+                    if (parts.length > 1) {
+                        loadPath(parts.slice(0, -1).join('\\') + '\\');
+                    }
+                };
+
+                const handleSearch = () => {
+                    const keyword = searchKeyword.value.toLowerCase();
+                    if (keyword) {
+                        fileData.value = allFiles.value.filter(file =>
+                            file.name.toLowerCase().includes(keyword)
+                        );
+                    } else {
+                        fileData.value = allFiles.value;
+                    }
+                };
+
+                const handlePathEnter = () => {
+                    const path = pathInput.value.trim();
+                    if (path) {
+                        loadPath(path);
+                    }
+                };
+
+                const clearContent = () => {
+                    showContent.value = false;
+                    fileContent.value = '';
+                };
+
+                watch(searchKeyword, handleSearch);
+
+                onMounted(() => {
+                    loadPath(currentPath.value);
+                });
+
+                return {
+                    currentPath,
+                    pathInput,
+                    searchKeyword,
+                    loading,
+                    fileData,
+                    columns,
+                    quickAccessPaths,
+                    showContent,
+                    fileContent,
+                    loadPath,
+                    handleRowClick,
+                    handleAction,
+                    navigateHistory,
+                    goUp,
+                    handlePathEnter,
+                    clearContent
+                };
+            },
+            template: `
+                <div style="background-color: #f3f3f3; min-height: 100vh; padding: 16px;">
+                    <n-config-provider>
+                        <n-card style="border-radius: 8px; overflow: hidden;">
+                            <n-layout has-sider style="height: 75vh;">
+                                <n-layout-sider bordered width="250" style="background-color: rgba(255,255,255,0.9);">
+                                    <div style="padding: 16px;">
+                                        <h5 style="margin-bottom: 16px; color: #666;">Quick Access</h5>
+                                        <n-space vertical size="small">
+                                            <n-button
+                                                v-for="path in quickAccessPaths"
+                                                :key="path.key"
+                                                text
+                                                style="color: #333; justify-content: flex-start; padding: 8px 12px;"
+                                                @click="loadPath(path.key)"
+                                            >
+                                                <template #icon>
+                                                    <span style="margin-right: 8px;">📁</span>
+                                                </template>
+                                                {{ path.label }}
+                                            </n-button>
+                                        </n-space>
+                                    </div>
+                                </n-layout-sider>
+                                <n-layout-content>
+                                    <div style="background-color: rgba(255,255,255,0.8); padding: 12px; border-bottom: 1px solid #e0e0e0;">
+                                        <n-space>
+                                            <n-button-group>
+                                                <n-button @click="navigateHistory(-1)" :disabled="loading">←</n-button>
+                                                <n-button @click="navigateHistory(1)" :disabled="loading">→</n-button>
+                                            </n-button-group>
+                                            <n-button @click="goUp" :disabled="loading">↑</n-button>
+                                            <n-button @click="clearContent">📄</n-button>
+                                            <n-input
+                                                v-model:value="pathInput"
+                                                placeholder="输入路径"
+                                                style="width: 300px;"
+                                                @keydown.enter="handlePathEnter"
+                                                :disabled="loading"
+                                            />
+                                            <n-input
+                                                v-model:value="searchKeyword"
+                                                placeholder="搜索文件"
+                                                style="width: 200px;"
+                                                :disabled="loading"
+                                            />
+                                        </n-space>
+                                    </div>
+                                    <div style="padding: 0;">
+                                        <n-spin :show="loading" style="min-height: 300px;">
+                                            <n-data-table
+                                                :columns="columns"
+                                                :data="fileData"
+                                                :bordered="false"
+                                                :single-line="false"
+                                                size="small"
+                                                @row-click="handleRowClick"
+                                                style="cursor: pointer;"
+                                            >
+                                                <template #actions="{ row }">
+                                                    <n-space>
+                                                        <n-button
+                                                            v-for="btn in row.actions"
+                                                            :key="btn.action"
+                                                            :type="btn.type"
+                                                            size="tiny"
+                                                            @click.stop="handleAction(row, btn.action)"
+                                                        >
+                                                            {{ btn.label }}
+                                                        </n-button>
+                                                    </n-space>
+                                                </template>
+                                            </n-data-table>
+                                        </n-spin>
+                                    </div>
+                                    <div v-if="showContent" style="background-color: rgba(255,255,255,0.9); border-top: 1px solid #e0e0e0; padding: 16px; height: 300px; overflow-y: auto;">
+                                        <n-alert type="success" title="文件内容" closable @close="clearContent">
+                                            <pre style="white-space: pre-wrap; word-break: break-all;">{{ fileContent }}</pre>
+                                        </n-alert>
+                                    </div>
+                                    <div style="background-color: rgba(255,255,255,0.8); border-top: 1px solid #e0e0e0; padding: 8px 16px; font-size: 12px; display: flex; justify-content: space-between;">
+                                        <span>{{ fileData.length }} 个项目</span>
+                                        <span>
+                                            📁 EnterFolder | 📄 LogViewer | 📄 View Content | ⬇️ Download | 👁️ TextViewer
+                                            | <a href="https://github.com/moshowgame/SpringBootRemotePowershellAdmin" target="_blank">SRE</a>
+                                            | <a href="https://zhengkai.blog.csdn.net/" target="_blank">by Moshow</a>
+                                        </span>
+                                    </div>
+                                </n-layout-content>
+                            </n-layout>
+                        </n-card>
+                    </n-config-provider>
                 </div>
-            </div>
-
-            <!-- 主内容区 -->
-            <div class="flex-grow-1 d-flex flex-column">
-                <!-- 工具栏 -->
-                <div class="toolbar d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-light" id="btnBack">
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <button class="btn btn-sm btn-light" id="btnForward">
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                        <button class="btn btn-sm btn-light" id="btnUp">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button class="btn btn-sm btn-light" id="btnClear">
-                            <i class="bi bi-journal-x"></i>
-                        </button>
-                        <input type="text" class="path-input mb-0 flex-grow-1 mx-lg-2" placeholder="输入路径">
-                        <input type="text" class="search-box mb-0 flex-grow-1 mx-lg-1" placeholder="搜索">
-                        <!--<nav class="breadcrumb mb-0 flex-grow-1 mx-2"></nav>-->
-                    </div>
-                </div>
-
-                <!-- 文件列表 -->
-                <div class="file-list" id="fileList">
-                    <div class="file-item text-muted fw-bold">
-                        <div></div>
-                        <div>名称</div>
-                        <div>类型</div>
-                        <div>修改日期</div>
-                        <div>大小</div>
-                        <div>操作</div>
-                    </div>
-                </div>
-
-
-                <!-- 状态栏 -->
-                <div class="status-bar">
-                    <span></span>
-                    <span><i class="bi bi-folder2-open"></i>EnterFolder</span> <i class="bi bi-journal-text">LogViewer</i> <i class="bi bi-code-square">View Content</i> <i class="bi bi-file-earmark-arrow-down">Download</i><i class="bi bi-eye">TextViewer</i>
-                    <span><a href="https://github.com/moshowgame/SpringBootRemotePowershellAdmin">SRE(Server Remote Execution)</a>&nbsp;&nbsp;<a href="https://zhengkai.blog.csdn.net/">by Moshow</a></span>
-                </div>
-            </div>
-        </div>
-        <!-- 主内容区 -->
-        <div class="flex-grow-1 d-flex flex-column">
-            <!-- 文件内容 -->
-            <div class="file-content" id="fileContent"></div>
-        </div>
-    </div>
-
-    <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-
-    <script th:inline="javascript">
-        const listUrl = /*[[ @{/list} ]]*/ '';
-        const logViewerUrl = /*[[ @{/logViewer} ]]*/ '';
-        const vscodeUrl = /*[[ @{/textViewer} ]]*/ '';
-        const readUrl = /*[[ @{/read} ]]*/ '';
-        const downloadUrl = /*[[ @{/download} ]]*/ '';
-        const normalizedPath = /*[[ @{/normalizedPath} ]]*/ '';
-        // 图标映射
-        const iconMap = {
-            true: 'fa-folder',
-            '文件夹': 'fa-folder',
-            folder: 'fa-folder',
-            'file-word': 'fa-file-word',
-            'file-exe': 'fa-file-code',
-            link: 'fa-link',
-            default: 'fa-file'
+            `
         };
 
-        let currentPath = 'C:\\';
-        let history = [];
-        let currentHistoryIndex = -1;
-        // 新增文件系统对象以保存路径对应的文件列表
-        const fileSystem = {};
-
-        // 初始化
-        $(document).ready(() => {
-            loadPath(currentPath);
-
-            // 快速访问点击
-            $('.nav-link[data-path]').click(function(e) {
-                e.preventDefault();
-                loadPath($(this).data('path'));
-            });
-
-            // 返回上级目录
-            $('#btnUp').click(() => {
-                const parentPath = getParentPath(currentPath);
-                if (parentPath) loadPath(parentPath);
-            });
-
-            // 导航按钮
-            $('#btnBack').click(() => navigateHistory(-1));
-            $('#btnForward').click(() => navigateHistory(1));
-
-            // 搜索功能
-            $('.search-box').on('input', function() {
-                const keyword = $(this).val().toLowerCase();
-                filterFiles(keyword);
-            });
-
-            // 文件点击事件
-            $('#fileList').on('click', '.file-item', function() {
-                const fileName = $(this).find('div:nth-child(2)').text();
-                const filePath = currentPath +"//"+ fileName;
-                if ($(this).find('div:nth-child(1)').html() === '<i class="fas fa-folder text-primary"></i>') {
-                    loadPath(filePath);
-                } else {
-                    readFile(filePath);
-                }
-                console.log($(this).find('div:nth-child(1)').html(),filePath);
-            });
-
-            // 进入文件夹
-            $('#fileList').on('click', '.enter-btn', function(e) {
-                e.stopPropagation();
-                const path = $(this).data('path');
-                loadPath(path);
-            });
-
-            // 读取文件
-            $('#fileList').on('click', '.read-btn', function(e) {
-                e.stopPropagation();
-                const path = $(this).data('path');
-                readFile(path);
-            });
-
-            // 下载文件
-            $('#fileList').on('click', '.download-btn', function(e) {
-                e.stopPropagation();
-                const path = $(this).data('path');
-                downloadFile(path);
-            });
-
-            // 查看文件
-            $('#fileList').on('click', '.view-btn', function(e) {
-                e.stopPropagation();
-                const path = $(this).data('path');
-                window.open(vscodeUrl+'?filePath=' + encodeURIComponent(path), '_blank');
-            });
-
-            // 打开日志查看器
-            $('#fileList').on('click', '.log-viewer-btn', function(e) {
-                e.stopPropagation();
-                const path = $(this).data('path');
-                window.open(logViewerUrl+'?filePath=' + encodeURIComponent(path), '_blank');
-            });
-
-            // 清除日志内容
-            $('#btnClear').click(() => {
-                $('#fileContent').empty().hide();
-            });
-
-            // 新增地址栏回车事件  
-            $('.path-input').on('keydown', function(e) {  
-                if (e.key === 'Enter') {  
-                    const path = $(this).val().trim();  
-                    if (path) {  
-                        loadPath(path);  
-                    }  
-                }  
-            });  
-        });
-
-        // 加载路径
-        function loadPath(path, fromHistory = false) {
-            if (!fromHistory) {
-                history = history.slice(0, currentHistoryIndex + 1);
-                history.push(path);
-                currentHistoryIndex++;
-            }
-
-            currentPath = path;
-
-            // 请求后端接口重新格式化路径
-            $.ajax({
-                url: /*[[ @{/normalizedPath} ]]*/ '',
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-                data: JSON.stringify({ filePath: path }),
-                success: function(response) {
-                    const normalizedPath = response.data;
-                    currentPath = normalizedPath;
-                    fetchFiles(normalizedPath);
-                    updateNavigationButtons();
-                    $('#fileContent').hide();
-                    $('.path-input').val(normalizedPath);
-                },
-                error: function(xhr, status, error) {
-                    console.error('路径格式化失败:', error);
-                    fetchFiles(path);
-                    updateNavigationButtons();
-                    $('#fileContent').hide();
-                    $('.path-input').val(path);
-                }
-            });
-        }
-
-        // 获取文件列表
-        function fetchFiles(path) {
-            $.ajax({
-                url: listUrl,
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-                data: JSON.stringify({ filePath: path }),
-                success: function(response) {
-                    // 保存文件列表到 fileSystem 对象
-                    fileSystem[path] = response.data;
-                    renderFiles(response.data);
-                },
-                error: function(xhr, status, error) {
-                    $('#fileList').empty().append('<div class="text-danger">加载文件失败: Access Denied Exception or other IO Exception</div>');
-                }
-            });
-        }
-
-        // 渲染文件列表
-        function renderFiles(files) {
-            const $list = $('#fileList').empty().append(
-                '<div class="file-item text-muted fw-bold">' +
-                '<div>名称</div><div>类型</div><div>修改日期</div><div>大小</div><div>操作</div></div>'
-            );
-
-            files.forEach(file => {
-                const fileType = file.directory ? '文件夹' : '文件';
-                const icon = iconMap[fileType] || iconMap.default;
-                const actionButton = file.directory
-                    ? `<button class="btn btn-sm btn-primary enter-btn" data-path="${currentPath}\\${file.name}"><i class="bi bi-folder2-open"></i></button>
-                       <button class="btn btn-sm btn-secondary log-viewer-btn" data-path="${currentPath}\\${file.name}"><i class="bi bi-journal-text"></i></button>`
-                    : `<button class="btn btn-sm btn-success read-btn" data-path="${currentPath}\\${file.name}"><i class="bi bi-code-square"></i></button>
-                       <button class="btn btn-sm btn-info download-btn" data-path="${currentPath}\\${file.name}"><i class="bi bi-file-earmark-arrow-down"></i></button>
-                       <button class="btn btn-sm btn-warning view-btn" data-path="${currentPath}\\${file.name}"><i class="bi bi-eye"></i></button>`;
-                // 计算文件大小
-                let fileSize = file.size;
-                let sizeText;
-                if(file.directory) {
-                    sizeText='-'
-                }else{
-                    if (fileSize >= 1024 * 1024 * 1024) {
-                        sizeText = (fileSize / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-                    } else if (fileSize >= 1024 * 1024) {
-                        sizeText = (fileSize / (1024 * 1024)).toFixed(2) + ' MB';
-                    } else if (fileSize >= 1024) {
-                        sizeText = (fileSize / 1024).toFixed(2) + ' KB';
-                    } else {
-                        sizeText = fileSize + ' B';
-                    }
-                }
-                $list.append(`
-                    <div class="file-item">
-                        <div><i class="fas ${icon} text-primary"></i></div>
-                        <div>${file.name}</div>
-                        <div>${file.lastModified}</div>
-                        <div>${sizeText}</div>
-                        <div>${actionButton}</div>
-                    </div>
-                `);
-            });
-
-            // 更新状态栏
-            $('.status-bar span:first').text(`${files.length} 个项目`);
-        }
-
-        // 搜索过滤
-        function filterFiles(keyword) {
-            // 从 fileSystem 对象中获取文件列表
-            const files = fileSystem[currentPath] || [];
-            const filtered = files.filter(file =>
-                file.name.toLowerCase().includes(keyword)
-            );
-            renderFiles(filtered);
-        }
-
-        // 导航历史控制
-        function navigateHistory(direction) {
-            const newIndex = currentHistoryIndex + direction;
-            if (newIndex >= 0 && newIndex < history.length) {
-                currentHistoryIndex = newIndex;
-                loadPath(history[currentHistoryIndex], true);
-            }
-        }
-
-        // 获取上级路径
-        function getParentPath(path) {
-            const parts = path.split('\\').filter(p => p);
-            if (parts.length <= 1) return null;
-            return parts.slice(0, -1).join('\\') + '\\';
-        }
-
-        // 更新面包屑导航
-        function updateBreadcrumb() {
-            const parts = currentPath.split('\\').filter(p => p);
-            const $breadcrumb = $('.breadcrumb').empty();
-
-            parts.forEach((part, index) => {
-                const isLast = index === parts.length - 1;
-                const path = parts.slice(0, index + 1).join('\\') + '\\';
-                $breadcrumb.append(
-                    $(`<a class="breadcrumb-item ${isLast ? 'active' : ''}">${part}</a>`)
-                        .click(!isLast ? () => loadPath(path) : null)
-                );
-            });
-        }
-
-        // 更新导航按钮状态
-        function updateNavigationButtons() {
-            $('#btnBack').prop('disabled', currentHistoryIndex <= 0);
-            $('#btnForward').prop('disabled', currentHistoryIndex >= history.length - 1);
-            $('#btnUp').prop('disabled', !getParentPath(currentPath));
-        }
-
-        // 读取文件内容
-        function readFile(filePath) {
-            $.ajax({
-                url: readUrl,
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-                data: JSON.stringify({ filePath: filePath }),
-                success: function(response) {
-                    console.log(response);
-                    $('#fileContent').html('<div class="alert alert-success" role="alert"><pre>' + response.data + '</pre></div>').show();
-                },
-                error: function(error) {
-                    console.log(error);
-                    $('#fileContent').html('<div class="alert alert-danger" role="alert"><i class="bi bi-bug-fill"></i><pre>'+error.responseJSON.code+' - '+error.responseJSON.msg+'</pre></div>').show();
-                }
-            });
-        }
-        // 下载文件内容
-        function downloadFile(filePath) {
-            $.ajax({
-                url: downloadUrl,
-                type: 'POST',
-                contentType: 'application/json; charset=utf-8',
-                data: JSON.stringify({ filePath: filePath }),
-                success: function(response) {
-                    // 创建一个隐藏的<a>标签，用于触发下载
-                    const blob = new Blob([response], { type: 'application/octet-stream' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filePath.split('\\').pop(); // 使用文件名作为下载文件的默认名称
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                    $('#fileContent').html('<div class="alert alert-success" role="alert"><i class="bi bi-cloud-arrow-down-fill"></i><pre>下载成功!!!</pre></div>').show();
-                },
-                error: function(error) {
-                    console.log(error);
-                    $('#fileContent').html('<div class="alert alert-danger" role="alert"><i class="bi bi-bug-fill"></i><pre>'+error.responseJSON.code+' - '+error.responseJSON.msg+'</pre></div>').show();
-                }
-            });
-        }
+        createApp(App).use(naive).mount('#app');
     </script>
 </body>
 </html>

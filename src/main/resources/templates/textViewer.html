@@ -1,120 +1,168 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TextViewer</title>
-
-    <!-- Bootstrap 5 CSS -->
-    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet"/>
-    <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet"/>
-    <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
-
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
     <style>
-        #logEditor { height: calc(100vh - 150px); border-left: 1px solid #ddd; }
-        .timestamp { color: #008800; font-weight: bold; }
-        .log-info { color: #0000FF; }
-        .log-error { color: #FF0000; font-weight: bold; }
-        .log-warn { color: #FFA500; }
-        .log-debug { color: #888888; }
-        .className { color: #660e7a; }
-        .stacktrace { color: #666; }
-        .number { color: #0000cc; }
-        .highlight { background: #ff0; }
+        #textEditor {
+            min-height: calc(90vh - 150px);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            padding: 12px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        .line-number {
+            display: inline-block;
+            width: 50px;
+            color: #999;
+            text-align: right;
+            margin-right: 10px;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
-<!-- 导航栏 -->
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-        <span class="navbar-brand">TextViewer</span>
-        <div class="d-flex">
-            <div class="form-check form-switch text-light me-3">
-                (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/">GITHUB</a> )
-            </div>
-        </div>
-    </div>
-</nav>
+    <div id="app"></div>
 
-<div class="container-fluid">
-    <div class="row mt-3">
-        <!-- 主编辑器区域 -->
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-header">
-                    <p id="fileName"></p>
-                </div>
-                <div class="card-body p-0">
-                    <div id="logEditor"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    <script type="module">
+        const { createApp, ref, computed, watch, onMounted } = Vue;
+        const {
+            NConfigProvider, NCard, NSpace, NInput, NSpin,
+            NAlert, NEmpty, NMessageProvider, createDiscreteApi
+        } = naive;
 
-<!-- 脚本依赖 -->
-<script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-<script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-<!-- Ace JS -->
-<script th:src="@{/static/ace/1.37.2/ace.min.js}"></script>
-<script th:src="@{/static/ace/1.37.2/ext-themelist.min.js}"></script>
-<script th:src="@{/static/ace/1.37.2/mode-logtalk.min.js}"></script>
-
-<script th:inline="javascript">
-
-    // 加载文件列表
-    $(function() {
-        const listUrl = /*[[ @{/list} ]]*/ '';
-        const readUrl = /*[[ @{/read} ]]*/ '';
-        const downloadUrl = /*[[ @{/download} ]]*/ '';
+        const readUrl = '/sre/read';
         const filePath = /*[[${filePath}]]*/ '';
-        const parentPath = filePath.substring(0, filePath.lastIndexOf('\\'));
-        const fileNameStr = filePath.substring(filePath.lastIndexOf('\\')+1,filePath.length);
-        console.log(parentPath);
 
-        $('#fileName').text(filePath);
-        let editor = ace.edit("logEditor");
-        // editor.setTheme("ace/theme/idea");
-        editor.session.setMode("ace/mode/logtalk");
-        editor.setReadOnly(true);
-        editor.setOption("wrapBehavioursEnabled", true);
-        editor.setOption("wrapMode", true);
-        editor.setOption("scrollPastEnd", 0.1);
+        const App = {
+            setup() {
+                const { message } = createDiscreteApi(['message']);
+                const currentFilePath = ref(filePath);
+                const searchKeyword = ref('');
+                const fileContent = ref('');
+                const loading = ref(false);
+                const error = ref('');
 
-        // 调用 /read 接口读取文件内容
-        $.ajax({
-            url: readUrl,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ filePath: filePath }),
-            success: function(logContent) {
-                editor.setValue(logContent.data);
-                editor.scrollToLine(0);
-            },
-            error: function(error) {
-                console.error('Error reading file:', error);
-                editor.setValue("ERROR ************** "+error.responseJSON.msg);
-            }
-        });
-
-        // 搜索功能
-        $('#searchInput').on('input', function() {
-            const query = $(this).val();
-            if (query) {
-                editor.find(query, {
-                    backwards: false,
-                    wrap: false,
-                    caseSensitive: false,
-                    wholeWord: false,
-                    regExp: false,
-                    highlightAll: true
+                const highlightedContent = computed(() => {
+                    if (!searchKeyword.value || !fileContent.value) {
+                        return fileContent.value;
+                    }
+                    const lines = fileContent.value.split('\n');
+                    return lines.map(line => {
+                        if (line.toLowerCase().includes(searchKeyword.value.toLowerCase())) {
+                            return line.replace(
+                                new RegExp(`(${searchKeyword.value})`, 'gi'),
+                                '<span class="highlight">$1</span>'
+                            );
+                        }
+                        return line;
+                    }).join('\n');
                 });
-            } else {
-                editor.clearSelection();
-            }
-        });
 
-    });
-</script>
+                const linesWithNumbers = computed(() => {
+                    if (!highlightedContent.value) return [];
+                    return highlightedContent.value.split('\n').map((line, index) => ({
+                        number: index + 1,
+                        content: line
+                    }));
+                });
+
+                const scrollToLine = (lineNumber) => {
+                    const element = document.getElementById(`line-${lineNumber}`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                };
+
+                const loadFile = async () => {
+                    loading.value = true;
+                    error.value = '';
+                    try {
+                        const res = await fetch(readUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filePath: currentFilePath.value })
+                        });
+                        if (res.ok) {
+                            fileContent.value = await res.text();
+                        } else {
+                            const errData = await res.json();
+                            error.value = `${errData.code || 'ERROR'} - ${errData.msg || errData.message || '读取文件失败'}`;
+                        }
+                    } catch (err) {
+                        error.value = `读取文件失败: ${err.message}`;
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                onMounted(() => {
+                    loadFile();
+                });
+
+                return {
+                    currentFilePath,
+                    searchKeyword,
+                    loading,
+                    error,
+                    linesWithNumbers,
+                    scrollToLine
+                };
+            },
+            template: `
+                <div style="background-color: #f5f5f5; min-height: 100vh; padding: 16px;">
+                    <n-config-provider>
+                        <n-card style="border-radius: 8px;">
+                            <template #header>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>TextViewer</span>
+                                    <div style="font-size: 12px;">
+                                        (c) Powered by Moshow (
+                                        <a href="https://zhengkai.blog.csdn.net/" target="_blank">CSDN</a> |
+                                        <a href="https://github.com/moshowgame/" target="_blank">GITHUB</a> )
+                                    </div>
+                                </div>
+                            </template>
+                            <n-space vertical size="medium" style="margin-bottom: 16px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <n-tag type="info">{{ currentFilePath }}</n-tag>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <label style="font-size: 12px;">搜索内容:</label>
+                                        <n-input v-model:value="searchKeyword" placeholder="输入关键词高亮显示" style="width: 300px;" />
+                                    </div>
+                                </div>
+                            </n-space>
+                            <n-spin :show="loading" style="min-height: 400px;">
+                                <n-alert v-if="error" type="error" :title="error" closable style="margin-bottom: 16px;" />
+                                <div id="textEditor" v-if="linesWithNumbers.length > 0">
+                                    <div v-for="line in linesWithNumbers" :key="line.number" :id="'line-' + line.number" style="display: flex;">
+                                        <span class="line-number">{{ line.number }}</span>
+                                        <span v-html="line.content"></span>
+                                    </div>
+                                </div>
+                                <n-empty v-else-if="!loading && !error" description="文件内容为空" />
+                            </n-spin>
+                        </n-card>
+                    </n-config-provider>
+                </div>
+            `
+        };
+
+        createApp(App).use(naive).mount('#app');
+    </script>
 </body>
 </html>

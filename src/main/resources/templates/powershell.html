@@ -3,251 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>PowerShell online</title>
-    <!-- Bootstrap 5 CSS -->
-    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet">
-
-    <style>
-        #ps-terminal {
-            background-color: #012456;
-            color: #34e134;
-            font-family: 'Consolas', monospace;
-            height: 60vh;
-            overflow-y: auto;
-            border-radius: 5px;
-            scrollbar-width: thin;
-            scrollbar-color: #0066cc #012456;
-        }
-
-        .cmd-input {
-            background-color: #012456;
-            color: #34e134;
-            border: none;
-            border-radius: 0;
-            caret-color: #34e134;
-        }
-
-        .cmd-input:focus {
-            background-color: #012456;
-            color: #34e134;
-            box-shadow: none;
-        }
-
-        .ps-prompt {
-            color: #34e134;
-            white-space: nowrap;
-        }
-
-        .loading-spinner {
-            display: none;
-            color: #34e134;
-        }
-        
-        #cmd-input {
-            resize: vertical;
-            min-height: 38px;
-            max-height: 200px;
-        }
-    </style>
+    <title>PowerShell Online</title>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <!-- Naive UI CDN -->
+    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
 </head>
-<body class="bg-dark">
-<div class="container py-5">
-    <div class="card border-primary">
-        <div class="card-header bg-primary text-white">
-            <i class="fas fa-terminal me-2"></i>Remote Powershell Admin
-        </div>
-        <div class="card-body p-0 d-flex">
-            <!-- 侧边栏 -->
-            <div class="sidebar bg-dark p-3" style="width: 200px;">
-                <h6 class="text-white">常用命令</h6>
-                <ul class="list-unstyled">
-                    <li><a href="#" class="text-white quick-command" data-command='[Console]::OutputEncoding'>获取默认PS编码</a></li>
-                    <li><a target="_blank" href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell">查询PS命令</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-Process | Where-Object { $_.ProcessName -like "*java*" }'>获取java进程</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-Service| check service status">获取Qlik服务</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Copy-Item -Path "C:\temp\file.txt" -Destination "D:\backup\"'>复制文件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-ChildItem -Path C:\">查询目录</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message'>服务器重启事件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) -and $_.Message -match "Source Network Address" } | ForEach-Object { if ($_.Message -match "Source Network Address:\s+([\d\.]+)") { $matches[1] } } | Sort-Object -Unique'>服务器登录事件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-NetIPAddress">获取IP地址</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='robocopy "C:\SourceFolder" "D:\DestinationFolder" "fileName" /XO /A-:D /S /MT:8'>RoboCopy</a></li>
-                </ul>
-            </div>
+<body>
+    <div id="app"></div>
 
-            <!-- 主内容区 -->
-            <div class="flex-grow-1">
-                <div id="ps-terminal" class="p-3">
-                    <!-- 初始引导信息 -->
-                    <div class="output-line">
-                    </div>
+    <script type="module">
+        const { createApp, ref, nextTick, watch } = Vue;
+        const { NConfigProvider, NCard, NLayout, NLayoutHeader, NLayoutContent, NSpace, NButton, NSelect, NTextarea, NScrollbar, NTag, NEmpty, NAlert, NSpin } = naive;
+
+        const executeUrl = '/sre/execute';
+
+        const quickCommands = [
+            { label: '获取默认PS编码', value: '[Console]::OutputEncoding' },
+            { label: '获取java进程', value: 'Get-Process | Where-Object { $_.ProcessName -like "*java*" }' },
+            { label: '获取服务状态', value: 'Get-Service' },
+            { label: '复制文件', value: 'Copy-Item -Path "C:\\temp\\file.txt" -Destination "D:\\backup\\"' },
+            { label: '查询目录', value: 'Get-ChildItem -Path C:\\' },
+            { label: '服务器重启事件', value: 'Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message' },
+            { label: '服务器登录事件', value: 'Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) }' },
+            { label: '获取IP地址', value: 'Get-NetIPAddress' },
+            { label: 'RoboCopy', value: 'robocopy "C:\\SourceFolder" "D:\\DestinationFolder" "fileName" /XO /A-:D /S /MT:8' }
+        ];
+
+        const App = {
+            setup() {
+                const commandInput = ref('');
+                const encoding = ref('UTF-8');
+                const output = ref('');
+                const loading = ref(false);
+                const commandHistory = ref([]);
+                const historyIndex = ref(-1);
+
+                const encodingOptions = [
+                    { label: 'UTF-8', value: 'UTF-8' },
+                    { label: 'GB2312', value: 'GB2312' }
+                ];
+
+                const executeCommand = () => {
+                    const cmd = commandInput.value.trim();
+                    if (!cmd) return;
+
+                    loading.value = true;
+                    output.value += `\nPS > ${cmd}\n`;
+
+                    fetch(executeUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: cmd, encoding: encoding.value })
+                    })
+                    .then(response => response.text())
+                    .then(result => {
+                        output.value += `${result}\n`;
+                        // 保存到历史记录
+                        commandHistory.value.push(cmd);
+                        historyIndex.value = commandHistory.value.length;
+                        localStorage.setItem('cmdHistory', JSON.stringify(commandHistory.value));
+                    })
+                    .catch(error => {
+                        output.value += `错误: ${error}\n`;
+                    })
+                    .finally(() => {
+                        loading.value = false;
+                        commandInput.value = '';
+                    });
+                };
+
+                const handleKeyDown = (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        executeCommand();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (historyIndex.value > 0) {
+                            historyIndex.value--;
+                            commandInput.value = commandHistory.value[historyIndex.value];
+                        }
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (historyIndex.value < commandHistory.value.length - 1) {
+                            historyIndex.value++;
+                            commandInput.value = commandHistory.value[historyIndex.value];
+                        } else {
+                            historyIndex.value = commandHistory.value.length;
+                            commandInput.value = '';
+                        }
+                    }
+                };
+
+                const selectQuickCommand = (cmd) => {
+                    commandInput.value = cmd;
+                };
+
+                const clearOutput = () => {
+                    output.value = '';
+                };
+
+                // 初始化历史记录
+                const savedHistory = localStorage.getItem('cmdHistory');
+                if (savedHistory) {
+                    try {
+                        commandHistory.value = JSON.parse(savedHistory);
+                        historyIndex.value = commandHistory.value.length;
+                    } catch (e) {}
+                }
+
+                output.value = `****** SpringBootRemotePowershellAdmin - execute your powershell script remotely ******
+(c) Powered by Moshow ( CSDN | GITHUB ).
+
+安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
+
+`;
+
+                return {
+                    commandInput,
+                    encoding,
+                    encodingOptions,
+                    output,
+                    loading,
+                    quickCommands,
+                    executeCommand,
+                    handleKeyDown,
+                    selectQuickCommand,
+                    clearOutput
+                };
+            },
+            template: `
+                <div style="background-color: #1a1a1a; min-height: 100vh; padding: 20px;">
+                    <n-config-provider>
+                        <n-card title="Remote PowerShell Admin" style="border-radius: 8px; background-color: #012456;">
+                            <template #header-extra>
+                                <a href="https://zhengkai.blog.csdn.net/" target="_blank" style="color: #fff;">CSDN</a>
+                                <span style="color: #fff; margin: 0 10px;">|</span>
+                                <a href="https://github.com/moshowgame/" target="_blank" style="color: #fff;">GITHUB</a>
+                            </template>
+                            <n-layout has-sider style="height: 70vh;">
+                                <n-layout-sider bordered width="280" style="background-color: #0a0a0a;">
+                                    <div style="padding: 16px;">
+                                        <h4 style="color: #fff; margin-bottom: 16px;">常用命令</h4>
+                                        <n-space vertical size="small">
+                                            <n-button
+                                                v-for="cmd in quickCommands"
+                                                :key="cmd.value"
+                                                text
+                                                style="color: #00d2ff; justify-content: flex-start; padding: 8px 12px;"
+                                                @click="selectQuickCommand(cmd.value)"
+                                            >
+                                                {{ cmd.label }}
+                                            </n-button>
+                                            <n-button text style="color: #00d2ff; justify-content: flex-start; padding: 8px 12px;" href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell" target="_blank">
+                                                查询PS命令
+                                            </n-button>
+                                        </n-space>
+                                    </div>
+                                </n-layout-sider>
+                                <n-layout-content style="background-color: #012456;">
+                                    <div style="height: calc(100% - 120px); overflow-y: auto; padding: 16px; color: #34e134; font-family: 'Consolas', monospace; white-space: pre-wrap;" id="terminal">
+                                        {{ output }}
+                                    </div>
+                                    <div style="padding: 16px; border-top: 1px solid #0078d4; background-color: #012456;">
+                                        <n-space>
+                                            <span style="color: #34e134; padding: 8px 0;">PS ></span>
+                                            <n-input
+                                                v-model:value="commandInput"
+                                                type="textarea"
+                                                :autosize="{ minRows: 1, maxRows: 4 }"
+                                                placeholder="输入命令后按 Ctrl+Enter 执行"
+                                                style="flex: 1;"
+                                                @keydown="handleKeyDown"
+                                                :disabled="loading"
+                                            />
+                                            <n-button type="primary" :loading="loading" @click="executeCommand">Execute</n-button>
+                                            <n-button @click="clearOutput">Clean</n-button>
+                                            <n-select
+                                                v-model:value="encoding"
+                                                :options="encodingOptions"
+                                                style="width: 100px;"
+                                            />
+                                        </n-space>
+                                    </div>
+                                </n-layout-content>
+                            </n-layout>
+                        </n-card>
+                    </n-config-provider>
                 </div>
+            `
+        };
 
-                <!-- 输入区域 -->
-                <div class="input-group p-2 border-top border-primary">
-                    <span class="input-group-text ps-prompt bg-transparent border-0">PS </span>
-                    <textarea id="cmd-input"
-                           class="form-control cmd-input border-0"
-                           autocomplete="off"
-                           placeholder="输入命令后按 Ctrl+Enter 执行"></textarea>
-                    <span class="input-group-text bg-transparent border-0">
-                        <i class="fas fa-spinner fa-spin loading-spinner"></i>
-                        <input type="button" id="lastBtn" class="btn btn-outline-info ms-3" value="Last">
-                        <input type="button" id="nextBtn" class="btn btn-outline-info ms-3" value="Next">
-                        <input type="button" id="submitBtn" class="btn btn-outline-info ms-3" value="Execute">
-                        <input type="button" id="cleanBtn" class="btn btn-outline-info ms-3" value="Clean">
-                        <!-- 新增编码选择下拉框 -->
-                        <select id="encodingSelect" class="form-select ms-3" style="width: auto;">
-                            <option value="UTF-8" selected>UTF-8</option>
-                            <option value="GB2312">GB2312</option>
-                        </select>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- jQuery & Bootstrap JS -->
-<script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-<script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-
-<script th:inline="javascript">
-    const executeUrl = /*[[ @{/execute} ]]*/ '';
-
-    $(document).ready(function() {
-        const $terminal = $('#ps-terminal');
-        const $input = $('#cmd-input');
-        const $spinner = $('.loading-spinner');
-        let commandHistory = [];
-        let historyIndex = -1;
-        function initialize() {
-            $terminal.empty();
-            $terminal.append(`
-                    ****** SpringBootRemotePowershellAdmin - execute your powershell script remotely ******<br>
-                    (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/">GITHUB</a> ).<br><br>
-
-                    安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
-                    `
-            );
-            $input.focus();
-        }
-        initialize();
-        function executeCommand(cmd, $submitBtn) {
-            // 获取用户选择的编码
-            $.ajax({
-                url: executeUrl,
-                type: 'POST',
-                data: JSON.stringify({ command: cmd,  encoding: $('#encodingSelect').val() }),
-                contentType: 'application/json',
-                success: function(response) {
-                    console.log(response);
-                    $spinner.hide();
-                    $submitBtn.prop('disabled', false); // 启用按钮
-                    $terminal.append(`
-                            <div class="output-line text-success">
-                                PS > ${cmd}
-                            </div>
-                            <div class="output-line text-white">
-                                <pre>${response}</pre>
-                            </div>`);
-                },
-                error: function(xhr, status, error) {
-                    console.log(xhr.responseText);
-                    $spinner.hide();
-                    $submitBtn.prop('disabled', false); // 启用按钮
-                    $terminal.append(`
-                            <div class="output-line text-danger">
-                                错误: ${xhr.responseText}
-                            </div>`);
-                }
-            });
-            commandHistory.push(cmd);
-            historyIndex = commandHistory.length;
-            $input.val('');
-            $spinner.hide();
-            $terminal.scrollTop($terminal[0].scrollHeight);
-            // 使用localStorage
-            localStorage.setItem('cmdHistory', JSON.stringify(commandHistory));
-        }
-
-        // Ctrl+Enter 执行
-        $input.on('keydown', function(e) {
-            if (e.ctrlKey && e.which === 13) {
-                const $submitBtn = $(this);
-                const cmd = $input.val().trim();
-                if (cmd) {
-                    $spinner.show();
-                    $("#submitBtn").prop('disabled', true); // 禁用按钮
-                    executeCommand(cmd, $submitBtn);
-                }
-                e.preventDefault();
-            }
-        });
-        $("#lastBtn").click(function() {
-            if (historyIndex > 0) {
-                historyIndex--;
-                $input.val(commandHistory[historyIndex]);
-            }
-        });
-        $("#nextBtn").click(function() {
-            if (historyIndex < commandHistory.length - 1) {
-                historyIndex++;
-                $input.val(commandHistory[historyIndex]);
-            } else {
-                historyIndex = commandHistory.length;
-                $input.val('');
-            }
-        });
-        $("#cleanBtn").click(function() {
-            $terminal.empty();
-            initialize();
-        });
-        $("#submitBtn").click(function() {
-            const $submitBtn = $(this);
-            const cmd = $input.val().trim();
-            if (cmd) {
-                $spinner.show();
-                $("#submitBtn").prop('disabled', true); // 禁用按钮
-                executeCommand(cmd, $submitBtn);
-            }
-        });
-        // 上下箭头历史记录 (只在光标位于第一行时生效)
-        $input.on('keydown', function(e) {
-            const cursorPosition = this.selectionStart;
-            const firstLineEnd = this.value.indexOf('\n');
-            const isFirstLine = firstLineEnd === -1 || cursorPosition <= firstLineEnd;
-            
-            if (isFirstLine && e.key === 'ArrowUp') {
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    $input.val(commandHistory[historyIndex]);
-                }
-                e.preventDefault();
-            } else if (isFirstLine && e.key === 'ArrowDown') {
-                if (historyIndex < commandHistory.length - 1) {
-                    historyIndex++;
-                    $input.val(commandHistory[historyIndex]);
-                } else {
-                    historyIndex = commandHistory.length;
-                    $input.val('');
-                }
-                e.preventDefault();
-            }
-        });
-
-        // 快速命令点击事件
-        $('.quick-command').click(function(e) {
-            e.preventDefault();
-            const cmd = $(this).data('command');
-            $input.val(cmd);
-            $input.focus();
-        });
-
-        // 初始化焦点
-        $input.focus();
-    });
-</script>
+        createApp(App).use(naive).mount('#app');
+    </script>
 </body>
 </html>
