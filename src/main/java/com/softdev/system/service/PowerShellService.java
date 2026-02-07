@@ -38,15 +38,26 @@ public class PowerShellService {
             output.append("Error executing PowerShell command: ").append(e.getMessage());
         }
         
-        // 统一换行符格式为 \n，便于前端处理
         String result = output.toString();
-        // 将 \r\n 和 \r 统一转换为 \n
+        
+        // 1. 清理开头的多余换行符
+        result = result.replaceAll("^\n+", "");
+        
+        // 2. 统一换行符格式
         result = result.replace("\r\n", "\n").replace("\r", "\n");
-        // 处理常见的Unicode转义序列
-        result = result.replace("\u0028", "(").replace("\u0029", ")")
-                      .replace("\u0020", " ")   // 空格
-                      .replace("\u002D", "-")   // 连字符
-                      .replace("\u002E", ".");  // 点号
+        
+        // 3. 处理Unicode转义序列
+        result = result.replace("\\u0028", "(")
+                      .replace("\\u0029", ")")
+                      .replace("\\u0020", " ")
+                      .replace("\\u002D", "-")
+                      .replace("\\u002E", ".")
+                      .replace("\\u005C", "\\")  // 反斜杠
+                      .replace("\\u002F", "/");   // 正斜杠
+        
+        // 4. 清理多余的连续换行符（保留最多2个连续换行）
+        result = result.replaceAll("\n{3,}", "\n\n");
+        
         return result;
     }
 }

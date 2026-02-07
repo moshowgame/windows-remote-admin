@@ -74,8 +74,7 @@
             font-size: 18px;
             line-height: 1.4;
             overflow-y: auto;
-            min-height: 300px;
-            max-height: 35vh;
+            min-height: 200px;
             padding: 16px;
             border: 2px dashed #30363d;
             margin-bottom: 12px;
@@ -622,15 +621,16 @@
 
                                 <!-- Main Content -->
                                 <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                                    <!-- Output Area -->
+                                    <!-- Output Area (占据更多空间) -->
                                     <div
                                         ref="terminalRef"
                                         class="terminal-output"
                                         v-html="formattedOutput"
+                                        style="flex: 1; max-height: none;"
                                     ></div>
 
-                                    <!-- Input Section -->
-                                    <div class="input-section">
+                                    <!-- Input Section (固定在底部) -->
+                                    <div class="input-section" style="flex-shrink: 0;">
                                         <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
                                             <span class="input-prompt">PS ></span>
                                             <n-select
