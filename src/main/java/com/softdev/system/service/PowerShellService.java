@@ -38,26 +38,26 @@ public class PowerShellService {
             output.append("Error executing PowerShell command: ").append(e.getMessage());
         }
         
-        String result = output.toString();
+        // String result = output.toString();
         
-        // 1. 清理开头的多余换行符
-        result = result.replaceAll("^\n+", "");
+        // // 1. 清理开头的多余换行符
+        // result = result.replaceAll("^\n+", "");
         
-        // 2. 统一换行符格式
-        result = result.replace("\r\n", "\n").replace("\r", "\n");
+        // // 2. 统一换行符格式
+        // result = result.replace("\r\n", "\n").replace("\r", "\n");
         
-        // 3. 处理Unicode转义序列
-        result = result.replace("\\u0028", "(")
-                      .replace("\\u0029", ")")
-                      .replace("\\u0020", " ")
-                      .replace("\\u002D", "-")
-                      .replace("\\u002E", ".")
-                      .replace("\\u005C", "\\")  // 反斜杠
-                      .replace("\\u002F", "/");   // 正斜杠
+        // // 3. 处理Unicode转义序列
+        // result = result.replace("\\u0028", "(")
+        //               .replace("\\u0029", ")")
+        //               .replace("\\u0020", " ")
+        //               .replace("\\u002D", "-")
+        //               .replace("\\u002E", ".")
+        //               .replace("\\u005C", "\\")  // 反斜杠
+        //               .replace("\\u002F", "/");   // 正斜杠
         
-        // 4. 清理多余的连续换行符（保留最多2个连续换行）
-        result = result.replaceAll("\n{3,}", "\n\n");
+        // // 4. 清理多余的连续换行符（保留最多2个连续换行）
+        // result = result.replaceAll("\n{3,}", "\n\n");
         
-        return result;
+        return output.toString();
     }
 }
