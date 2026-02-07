@@ -38,6 +38,15 @@ public class PowerShellService {
             output.append("Error executing PowerShell command: ").append(e.getMessage());
         }
         
-        return output.toString();
+        // 统一换行符格式为 \n，便于前端处理
+        String result = output.toString();
+        // 将 \r\n 和 \r 统一转换为 \n
+        result = result.replace("\r\n", "\n").replace("\r", "\n");
+        // 处理常见的Unicode转义序列
+        result = result.replace("\u0028", "(").replace("\u0029", ")")
+                      .replace("\u0020", " ")   // 空格
+                      .replace("\u002D", "-")   // 连字符
+                      .replace("\u002E", ".");  // 点号
+        return result;
     }
 }

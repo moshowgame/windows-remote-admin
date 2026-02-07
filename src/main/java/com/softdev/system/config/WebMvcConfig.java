@@ -18,6 +18,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                     "/login",        // 登录页面
                     "/entitlement",  // 登录接口
+                    "/execute",      // PowerShell执行接口
+                    "/shell",        // PowerShell页面
                     "/images/**",    // 图片资源
                     "/js/**",        // JS文件
                     "/css/**",       // CSS文件

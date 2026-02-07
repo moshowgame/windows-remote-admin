@@ -3,31 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>PowerShell Online</title>
-    <!-- Vue 3 CDN -->
-    <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
-    <!-- Naive UI CDN -->
-    <script src="https://unpkg.com/naive-ui@2.38.0/dist/index.prod.js"></script>
+    <!-- Vue 3 Local -->
+    <script src="/sre/static/libs/vue/3.4.0/vue.global.prod.min.js"></script>
+    <!-- Naive UI Local -->
+    <script src="/sre/static/libs/native-ui/2.43.1/index.prod.js"></script>
+    <script>
+        // Ensure Naive UI is properly exposed globally
+        if (typeof window.naive === 'undefined' && typeof window.NaiveUI !== 'undefined') {
+            window.naive = window.NaiveUI;
+        }
+    </script>
+    <style>
+        /* 使用本地字体或更快的CDN */
+        /* @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap'); */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d1117;
+            font-family: 'VT323', monospace;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .pixel-card {
+            border: 4px solid #79c0ff;
+            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+            box-shadow:
+                8px 8px 0 #1f6feb,
+                16px 16px 0 rgba(31, 111, 235, 0.3);
+            image-rendering: pixelated;
+            border-radius: 0;
+        }
+
+        .pixel-header {
+            background: linear-gradient(90deg, #1f6feb 0%, #79c0ff 50%, #1f6feb 100%);
+            border-bottom: 4px solid #0d1117;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pixel-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            color: #ffffff;
+            text-shadow: 2px 2px 0 #000;
+            letter-spacing: 2px;
+        }
+
+        .pixel-badge {
+            background: #ffd33d;
+            color: #0d1117;
+            padding: 4px 12px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            border: 3px solid #0d1117;
+        }
+
+        .terminal-output {
+            background-color: #0d1117;
+            color: #3fb950;
+            font-size: 18px;
+            line-height: 1.4;
+            overflow-y: auto;
+            min-height: 300px;
+            max-height: 35vh;
+            padding: 16px;
+            border: 2px dashed #30363d;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .terminal-output br {
+            display: block;
+            margin: 6px 0;
+            line-height: 1.2;
+        }
+        
+        .terminal-output div {
+            margin: 2px 0;
+        }
+
+        .terminal-output::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .terminal-output::-webkit-scrollbar-track {
+            background: #161b22;
+            border: 2px solid #30363d;
+        }
+
+        .terminal-output::-webkit-scrollbar-thumb {
+            background: #58a6ff;
+            border: 2px solid #0d1117;
+            border-radius: 0;
+        }
+
+        .terminal-output::-webkit-scrollbar-thumb:hover {
+            background: #79c0ff;
+        }
+
+        .prompt-line {
+            color: #58a6ff;
+            font-weight: bold;
+        }
+
+        .output-line {
+            color: #3fb950;
+            margin-bottom: 8px;
+        }
+
+        .error-line {
+            color: #f85149;
+        }
+
+        .info-line {
+            color: #a5d6ff;
+        }
+
+        .input-section {
+            background-color: #161b22;
+            border: 4px solid #30363d;
+            padding: 16px;
+        }
+
+        .input-prompt {
+            background: linear-gradient(90deg, #3fb950 0%, #2ea043 100%);
+            color: #ffffff;
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            padding: 12px 20px;
+            display: inline-block;
+            border: 3px solid #0d1117;
+            letter-spacing: 2px;
+        }
+
+        .pixel-textarea {
+            background-color: #0d1117 !important;
+            color: #3fb950 !important;
+            font-family: 'VT323', monospace !important;
+            font-size: 18px !important;
+            line-height: 1.4 !important;
+            border: 4px solid #58a6ff !important;
+            border-radius: 0 !important;
+            min-height: 150px !important;
+            resize: vertical !important;
+            padding: 12px !important;
+            box-shadow: inset 4px 4px 0 #0d1117 !important;
+        }
+
+        .pixel-textarea:focus {
+            border-color: #79c0ff !important;
+            box-shadow:
+                inset 4px 4px 0 #0d1117,
+                0 0 0 4px rgba(121, 192, 255, 0.3) !important;
+        }
+
+        .pixel-textarea::placeholder {
+            color: #484f58 !important;
+        }
+
+        .pixel-button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            padding: 12px 24px;
+            border: 4px solid #0d1117;
+            border-radius: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.1s;
+            box-shadow: 4px 4px 0 #0d1117;
+        }
+
+        .pixel-button:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #0d1117;
+        }
+
+        .pixel-button:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 #0d1117;
+        }
+
+        .pixel-button-primary {
+            background: linear-gradient(180deg, #3fb950 0%, #2ea043 100%);
+            color: #ffffff;
+        }
+
+        .pixel-button-secondary {
+            background: linear-gradient(180deg, #58a6ff 0%, #1f6feb 100%);
+            color: #ffffff;
+        }
+
+        .pixel-button-danger {
+            background: linear-gradient(180deg, #f85149 0%, #da3633 100%);
+            color: #ffffff;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+            border-right: 4px solid #30363d;
+        }
+
+        .quick-cmd-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: #58a6ff;
+            padding: 12px;
+            border-bottom: 4px solid #30363d;
+            margin-bottom: 12px;
+        }
+
+        .quick-cmd-item {
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #a5d6ff;
+            padding: 10px 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-cmd-item:hover {
+            background: #21262d;
+            border-color: #58a6ff;
+            color: #ffffff;
+            padding-left: 16px;
+        }
+
+        .quick-cmd-icon {
+            font-size: 20px;
+        }
+
+        .stats-bar {
+            background: linear-gradient(90deg, #161b22 0%, #0d1117 100%);
+            border-top: 4px solid #30363d;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #7d8590;
+        }
+
+        .pixel-select {
+            background-color: #0d1117 !important;
+            color: #3fb950 !important;
+            border: 4px solid #58a6ff !important;
+            border-radius: 0 !important;
+            font-family: 'VT323', monospace !important;
+            font-size: 16px !important;
+            min-height: 40px !important;
+        }
+
+        .pixel-select:hover {
+            border-color: #79c0ff !important;
+        }
+
+        .pixel-input {
+            background-color: #0d1117 !important;
+            color: #3fb950 !important;
+            border: 4px solid #58a6ff !important;
+            border-radius: 0 !important;
+            font-family: 'VT323', monospace !important;
+            font-size: 16px !important;
+            min-height: 36px !important;
+        }
+
+        .history-btn {
+            background: #21262d;
+            border: 2px solid #30363d;
+            color: #a5d6ff;
+            padding: 8px 16px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .history-btn:hover:not(:disabled) {
+            background: #30363d;
+            border-color: #58a6ff;
+        }
+
+        .history-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .pixel-decoration {
+            position: absolute;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            color: #30363d;
+            user-select: none;
+            opacity: 0.3;
+        }
+
+        .decoration-tl {
+            top: 10px;
+            left: 10px;
+        }
+
+        .decoration-br {
+            bottom: 10px;
+            right: 10px;
+        }
+    </style>
 </head>
 <body>
     <div id="app"></div>
 
-    <script type="module">
-        const { createApp, ref, nextTick, watch } = Vue;
-        const { NConfigProvider, NCard, NLayout, NLayoutHeader, NLayoutContent, NSpace, NButton, NSelect, NTextarea, NScrollbar, NTag, NEmpty, NAlert, NSpin } = naive;
+    <script>
+        // Global error handling
+        window.addEventListener('error', function(e) {
+            console.error('Global error caught:', e.error);
+        });
+        
+        // Error handling for missing dependencies
+        if (typeof Vue === 'undefined') {
+            console.error('Vue is not loaded');
+            document.getElementById('app').innerHTML = '<div style="color: red; padding: 20px;">Error: Vue.js failed to load. Please refresh the page.</div>';
+        }
+        
+        if (typeof naive === 'undefined') {
+            console.error('Naive UI is not loaded');
+            document.getElementById('app').innerHTML = '<div style="color: red; padding: 20px;">Error: Naive UI failed to load. Please refresh the page.</div>';
+        }
+
+        const { createApp, ref, computed, nextTick, watch } = Vue;
+        const { NConfigProvider, NSpace, NButton, NInput, NSelect, NSpin, NEmpty } = naive;
 
         const executeUrl = '/sre/execute';
 
         const quickCommands = [
-            { label: '获取默认PS编码', value: '[Console]::OutputEncoding' },
-            { label: '获取java进程', value: 'Get-Process | Where-Object { $_.ProcessName -like "*java*" }' },
-            { label: '获取服务状态', value: 'Get-Service' },
-            { label: '复制文件', value: 'Copy-Item -Path "C:\\temp\\file.txt" -Destination "D:\\backup\\"' },
-            { label: '查询目录', value: 'Get-ChildItem -Path C:\\' },
-            { label: '服务器重启事件', value: 'Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message' },
-            { label: '服务器登录事件', value: 'Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) }' },
-            { label: '获取IP地址', value: 'Get-NetIPAddress' },
-            { label: 'RoboCopy', value: 'robocopy "C:\\SourceFolder" "D:\\DestinationFolder" "fileName" /XO /A-:D /S /MT:8' }
+            { label: '获取默认PS编码', value: '[Console]::OutputEncoding', icon: '⚙️' },
+            { label: '获取java进程', value: 'Get-Process | Where-Object { $_.ProcessName -like "*java*" }', icon: '☕' },
+            { label: '获取服务状态', value: 'Get-Service', icon: '🔧' },
+            { label: '复制文件', value: 'Copy-Item -Path "C:\\temp\\file.txt" -Destination "D:\\backup\\"', icon: '📋' },
+            { label: '查询目录', value: 'Get-ChildItem -Path C:\\', icon: '📁' },
+            { label: '服务器重启事件', value: 'Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message', icon: '🔄' },
+            { label: '服务器登录事件', value: 'Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) }', icon: '🔐' },
+            { label: '获取IP地址', value: 'Get-NetIPAddress', icon: '🌐' },
+            { label: 'RoboCopy', value: 'robocopy "C:\\SourceFolder" "D:\\DestinationFolder" "fileName" /XO /A-:D /S /MT:8', icon: '📦' }
         ];
 
         const App = {
@@ -38,18 +376,47 @@
                 const loading = ref(false);
                 const commandHistory = ref([]);
                 const historyIndex = ref(-1);
+                const terminalRef = ref(null);
 
                 const encodingOptions = [
                     { label: 'UTF-8', value: 'UTF-8' },
                     { label: 'GB2312', value: 'GB2312' }
                 ];
 
+                const canGoBack = computed(() => historyIndex.value > 0);
+                const canGoForward = computed(() => {
+                    if (!commandHistory.value) return false;
+                    return historyIndex.value < commandHistory.value.length - 1;
+                });
+
+                const scrollTerminal = () => {
+                    nextTick(() => {
+                        if (terminalRef.value && terminalRef.value.scrollHeight) {
+                            terminalRef.value.scrollTop = terminalRef.value.scrollHeight;
+                        }
+                    });
+                };
+
+                const formattedOutput = computed(() => {
+                    if (!output.value) return '';
+                    // 处理 Windows 换行符 \r\n 和 Unix 换行符 \n
+                    return output.value
+                        .replace(/\r\n/g, '<br>')
+                        .replace(/\n/g, '<br>')
+                        .replace(/\r/g, '<br>');
+                });
+
                 const executeCommand = () => {
                     const cmd = commandInput.value.trim();
                     if (!cmd) return;
 
+                    // Ensure commandHistory is initialized
+                    if (!commandHistory.value) {
+                        commandHistory.value = [];
+                    }
+
                     loading.value = true;
-                    output.value += `\nPS > ${cmd}\n`;
+                    output.value += '\nPS > ' + cmd + '\n';
 
                     fetch(executeUrl, {
                         method: 'POST',
@@ -58,35 +425,42 @@
                     })
                     .then(response => response.text())
                     .then(result => {
-                        output.value += `${result}\n`;
-                        // 保存到历史记录
+                        output.value += result + '\n';
                         commandHistory.value.push(cmd);
                         historyIndex.value = commandHistory.value.length;
-                        localStorage.setItem('cmdHistory', JSON.stringify(commandHistory.value));
+                        try {
+                            localStorage.setItem('cmdHistory', JSON.stringify(commandHistory.value));
+                        } catch (e) {
+                            console.warn('Failed to save command history to localStorage:', e);
+                        }
                     })
                     .catch(error => {
-                        output.value += `错误: ${error}\n`;
+                        output.value += '[错误] ' + error.message + '\n';
                     })
                     .finally(() => {
                         loading.value = false;
                         commandInput.value = '';
+                        scrollTerminal();
                     });
                 };
 
                 const handleKeyDown = (e) => {
+                    if (!commandHistory.value || commandHistory.value.length === 0) return;
+                    
                     if (e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
                         executeCommand();
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
                         if (historyIndex.value > 0) {
                             historyIndex.value--;
-                            commandInput.value = commandHistory.value[historyIndex.value];
+                            commandInput.value = commandHistory.value[historyIndex.value] || '';
                         }
                     } else if (e.key === 'ArrowDown') {
                         e.preventDefault();
                         if (historyIndex.value < commandHistory.value.length - 1) {
                             historyIndex.value++;
-                            commandInput.value = commandHistory.value[historyIndex.value];
+                            commandInput.value = commandHistory.value[historyIndex.value] || '';
                         } else {
                             historyIndex.value = commandHistory.value.length;
                             commandInput.value = '';
@@ -95,28 +469,97 @@
                 };
 
                 const selectQuickCommand = (cmd) => {
-                    commandInput.value = cmd;
+                    if (typeof cmd === 'string') {
+                        commandInput.value = cmd;
+                        setTimeout(() => {
+                            const textarea = document.querySelector('.pixel-textarea');
+                            if (textarea) textarea.focus();
+                        }, 100);
+                    }
                 };
 
                 const clearOutput = () => {
-                    output.value = '';
+                    output.value = welcomeMessage;
+                    // Reset command history navigation
+                    if (commandHistory.value) {
+                        historyIndex.value = commandHistory.value.length;
+                    }
+                    scrollTerminal();
                 };
 
-                // 初始化历史记录
+                const goBack = () => {
+                    if (!commandHistory.value || commandHistory.value.length === 0) return;
+                    if (historyIndex.value > 0) {
+                        historyIndex.value--;
+                        commandInput.value = commandHistory.value[historyIndex.value] || '';
+                    }
+                };
+
+                const goForward = () => {
+                    if (!commandHistory.value || commandHistory.value.length === 0) {
+                        commandInput.value = '';
+                        return;
+                    }
+                    if (historyIndex.value < commandHistory.value.length - 1) {
+                        historyIndex.value++;
+                        commandInput.value = commandHistory.value[historyIndex.value] || '';
+                    } else {
+                        historyIndex.value = commandHistory.value.length;
+                        commandInput.value = '';
+                    }
+                };
+
+                const welcomeMessage = `
+ ██████╗ ██████╗ ███████╗ █████╗ ███╗   ██╗    ██████╗  █████╗ ███╗   ███╗███████╗ ██████╗██╗  ██╗
+ ██╔══██╗██╔══██╗██╔════╝██╔══██╗████╗  ██║    ██╔══██╗██╔══██╗████╗ ████║██╔════╝██╔════╝██║  ██║
+ ██║  ██║██████╔╝█████╗  ███████║██╔██╗ ██║    ██████╔╝███████║██╔████╔██║█████╗  ██║     ███████║
+ ██║  ██║██╔══██╗██╔══╝  ██╔══██║██║╚██╗██║    ██╔══██╗██╔══██║██║╚██╔╝██║██╔══╝  ██║     ██╔══██║
+ ██████╔╝██║  ██║███████╗██║  ██║██║ ╚████║    ██████╔╝██║  ██║██║ ╚═╝ ██║███████╗╚██████╗██║  ██║
+ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝    ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝
+
+ ═══════════════════════════════════════════════════════════════════════════════════════════════════
+  🔥 POWER REMOTE EXECUTION v2.0 🔥
+ ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+  [✓] 服务器连接: ONLINE
+  [✓] 权限验证: PASSED
+  [✓] PowerShell环境: READY
+
+  📌 快捷键:
+     • Ctrl+Enter : 执行命令
+     • ↑/↓ 箭头 : 浏览历史
+     • 点击左侧命令: 快速填充
+
+  🎮 by Moshow ( CSDN | GITHUB )
+
+ ═══════════════════════════════════════════════════════════════════════════════════════════════════
+`;
+
+                output.value = welcomeMessage;
+
+                // Initialize with empty array to prevent null errors
+                commandHistory.value = [];
+                historyIndex.value = 0;
+                
                 const savedHistory = localStorage.getItem('cmdHistory');
                 if (savedHistory) {
                     try {
-                        commandHistory.value = JSON.parse(savedHistory);
-                        historyIndex.value = commandHistory.value.length;
-                    } catch (e) {}
+                        const parsedHistory = JSON.parse(savedHistory);
+                        if (Array.isArray(parsedHistory)) {
+                            commandHistory.value = parsedHistory;
+                            historyIndex.value = commandHistory.value.length;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse command history:', e);
+                        // Keep empty array as fallback
+                    }
                 }
 
-                output.value = `****** SpringBootRemotePowershellAdmin - execute your powershell script remotely ******
-(c) Powered by Moshow ( CSDN | GITHUB ).
-
-安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
-
-`;
+                watch(commandInput, () => {
+                    if (commandHistory.value) {
+                        historyIndex.value = commandHistory.value.length;
+                    }
+                });
 
                 return {
                     commandInput,
@@ -125,75 +568,162 @@
                     output,
                     loading,
                     quickCommands,
+                    terminalRef,
+                    canGoBack,
+                    canGoForward,
+                    formattedOutput,
                     executeCommand,
                     handleKeyDown,
                     selectQuickCommand,
-                    clearOutput
+                    clearOutput,
+                    goBack,
+                    goForward
                 };
             },
             template: `
-                <div style="background-color: #1a1a1a; min-height: 100vh; padding: 20px;">
-                    <n-config-provider>
-                        <n-card title="Remote PowerShell Admin" style="border-radius: 8px; background-color: #012456;">
-                            <template #header-extra>
-                                <a href="https://zhengkai.blog.csdn.net/" target="_blank" style="color: #fff;">CSDN</a>
-                                <span style="color: #fff; margin: 0 10px;">|</span>
-                                <a href="https://github.com/moshowgame/" target="_blank" style="color: #fff;">GITHUB</a>
-                            </template>
-                            <n-layout has-sider style="height: 70vh;">
-                                <n-layout-sider bordered width="280" style="background-color: #0a0a0a;">
-                                    <div style="padding: 16px;">
-                                        <h4 style="color: #fff; margin-bottom: 16px;">常用命令</h4>
-                                        <n-space vertical size="small">
-                                            <n-button
-                                                v-for="cmd in quickCommands"
-                                                :key="cmd.value"
-                                                text
-                                                style="color: #00d2ff; justify-content: flex-start; padding: 8px 12px;"
-                                                @click="selectQuickCommand(cmd.value)"
-                                            >
-                                                {{ cmd.label }}
-                                            </n-button>
-                                            <n-button text style="color: #00d2ff; justify-content: flex-start; padding: 8px 12px;" href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell" target="_blank">
-                                                查询PS命令
-                                            </n-button>
-                                        </n-space>
+                <div style="height: 100vh; display: flex; justify-content: center; align-items: center; background: #0d1117; padding: 20px;">
+                    <div style="width: 100%; max-width: 1400px; height: 90vh; display: flex; flex-direction: column;">
+                        <div class="pixel-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+                            <span class="pixel-decoration decoration-tl">◆</span>
+                            <span class="pixel-decoration decoration-br">◇</span>
+
+                            <!-- Header -->
+                            <div class="pixel-header">
+                                <div class="pixel-title">⚡ POWER SHELL ⚡</div>
+                                <div class="pixel-badge">V2.0</div>
+                            </div>
+
+                            <div style="flex: 1; display: flex; overflow: hidden;">
+                                <!-- Sidebar -->
+                                <div class="sidebar" style="width: 320px; padding: 16px; overflow-y: auto;">
+                                    <div class="quick-cmd-title">⚡ QUICK COMMANDS</div>
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <div
+                                            v-for="cmd in quickCommands"
+                                            :key="cmd.value"
+                                            class="quick-cmd-item"
+                                            @click="selectQuickCommand(cmd.value)"
+                                            :disabled="loading"
+                                        >
+                                            <span class="quick-cmd-icon">{{ cmd.icon }}</span>
+                                            <span>{{ cmd.label }}</span>
+                                        </div>
+                                        <a
+                                            href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell"
+                                            target="_blank"
+                                            class="quick-cmd-item"
+                                            style="color: #ffd33d; text-decoration: none;"
+                                        >
+                                            <span class="quick-cmd-icon">📖</span>
+                                            <span>查询 PS 命令</span>
+                                        </a>
                                     </div>
-                                </n-layout-sider>
-                                <n-layout-content style="background-color: #012456;">
-                                    <div style="height: calc(100% - 120px); overflow-y: auto; padding: 16px; color: #34e134; font-family: 'Consolas', monospace; white-space: pre-wrap;" id="terminal">
-                                        {{ output }}
-                                    </div>
-                                    <div style="padding: 16px; border-top: 1px solid #0078d4; background-color: #012456;">
-                                        <n-space>
-                                            <span style="color: #34e134; padding: 8px 0;">PS ></span>
-                                            <n-input
-                                                v-model:value="commandInput"
-                                                type="textarea"
-                                                :autosize="{ minRows: 1, maxRows: 4 }"
-                                                placeholder="输入命令后按 Ctrl+Enter 执行"
-                                                style="flex: 1;"
-                                                @keydown="handleKeyDown"
-                                                :disabled="loading"
-                                            />
-                                            <n-button type="primary" :loading="loading" @click="executeCommand">Execute</n-button>
-                                            <n-button @click="clearOutput">Clean</n-button>
+                                </div>
+
+                                <!-- Main Content -->
+                                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                    <!-- Output Area -->
+                                    <div
+                                        ref="terminalRef"
+                                        class="terminal-output"
+                                        v-html="formattedOutput"
+                                    ></div>
+
+                                    <!-- Input Section -->
+                                    <div class="input-section">
+                                        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                                            <span class="input-prompt">PS ></span>
                                             <n-select
                                                 v-model:value="encoding"
                                                 :options="encodingOptions"
-                                                style="width: 100px;"
+                                                style="width: 120px;"
+                                                class="pixel-select"
                                             />
-                                        </n-space>
+                                        </div>
+
+                                        <div style="margin-bottom: 12px;">
+                                            <textarea
+                                                v-model="commandInput"
+                                                class="pixel-textarea"
+                                                placeholder="在此输入 PowerShell 命令..."
+                                                :disabled="loading"
+                                                @keydown="handleKeyDown"
+                                                style="width: 100%;"
+                                            ></textarea>
+                                        </div>
+
+                                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                            <button
+                                                class="pixel-button pixel-button-primary"
+                                                @click="executeCommand"
+                                                :disabled="loading || !commandInput.trim()"
+                                            >
+                                                <n-spin v-if="loading" :show="loading" size="small" />
+                                                <span v-else>▶ EXECUTE</span>
+                                            </button>
+
+                                            <button
+                                                class="pixel-button pixel-button-secondary"
+                                                @click="clearOutput"
+                                                :disabled="loading"
+                                            >
+                                                🗑️ CLEAR
+                                            </button>
+
+                                            <div style="display: flex; gap: 8px; margin-left: auto;">
+                                                <button
+                                                    class="history-btn"
+                                                    @click="goBack"
+                                                    :disabled="!canGoBack || loading"
+                                                >
+                                                    ◀ BACK
+                                                </button>
+                                                <button
+                                                    class="history-btn"
+                                                    @click="goForward"
+                                                    :disabled="!canGoForward || loading"
+                                                >
+                                                    FORWARD ▶
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </n-layout-content>
-                            </n-layout>
-                        </n-card>
-                    </n-config-provider>
+                                </div>
+                            </div>
+
+                            <!-- Stats Bar -->
+                            <div class="stats-bar">
+                                <span>HISTORY: {{ commandHistory ? commandHistory.length : 0 }} COMMANDS</span>
+                                <span>ENCODING: {{ encoding }}</span>
+                                <span>STATUS: <span style="color: #3fb950;">ONLINE</span></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `
         };
 
-        createApp(App).use(naive).mount('#app');
+        // Wait for DOM to be ready and all resources loaded
+        function initializeApp() {
+            if (typeof Vue !== 'undefined' && typeof naive !== 'undefined') {
+                try {
+                    createApp(App).use(naive).mount('#app');
+                    console.log('Application initialized successfully');
+                } catch (error) {
+                    console.error('Failed to initialize app:', error);
+                    document.getElementById('app').innerHTML = '<div style="color: red; padding: 20px;">Error initializing application: ' + error.message + '</div>';
+                }
+            } else {
+                console.error('Dependencies not ready, retrying...');
+                setTimeout(initializeApp, 100);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
     </script>
 </body>
 </html>

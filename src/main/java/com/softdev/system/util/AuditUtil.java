@@ -15,8 +15,15 @@ public class AuditUtil {
         shellRequest.setClientIpAddress(getClientIpAddress(request));
         //从session里面获取用户名和单据号，注入实体中
         HttpSession session = request.getSession(false);
-        shellRequest.setUserName(session.getAttribute("entitledUser")+"");
-        shellRequest.setTicketNumber(session.getAttribute("ticketNumber")+"");
+        if (session != null) {
+            Object userAttr = session.getAttribute("entitledUser");
+            Object ticketAttr = session.getAttribute("ticketNumber");
+            shellRequest.setUserName(userAttr != null ? userAttr.toString() : "anonymous");
+            shellRequest.setTicketNumber(ticketAttr != null ? ticketAttr.toString() : "unknown");
+        } else {
+            shellRequest.setUserName("anonymous");
+            shellRequest.setTicketNumber("unknown");
+        }
         log.info("AuditLog4Powershell:{}", JSON.toJSONString(shellRequest));
     }
     /**
