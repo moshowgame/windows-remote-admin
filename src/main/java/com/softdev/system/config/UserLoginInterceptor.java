@@ -17,7 +17,7 @@ public class UserLoginInterceptor implements HandlerInterceptor {
         // 白名单路径直接放行
         String uri = request.getRequestURI();
 
-        if(uri.startsWith("/login") || uri.startsWith("/entitlement")){
+        if(uri.startsWith("/login") || uri.startsWith("/entitlement")|| uri.startsWith("/powershell")){
             return true;
         }
 
@@ -27,16 +27,32 @@ public class UserLoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
-//        // 检查Cookie中的userName
-//        Cookie[] cookies = request.getCookies();
-//        if(cookies != null){
-//            for(Cookie cookie : cookies){
-//                if("userName".equals(cookie.getName()) &&
-//                   !StringUtils.isEmpty(cookie.getValue())){
-//                    return true; // 已登录
-//                }
-//            }
-//        }
+        // 检查Cookie中的登录信息
+        Cookie[] cookies = request.getCookies();
+        if(cookies != null){
+            String userName = null;
+            String purpose = null;
+            
+            for(Cookie cookie : cookies){
+                if("sre_user".equals(cookie.getName()) && 
+                   StringUtils.isNotBlank(cookie.getValue())){
+                    userName = cookie.getValue();
+                }
+                if("sre_purpose".equals(cookie.getName()) && 
+                   StringUtils.isNotBlank(cookie.getValue())){
+                    purpose = cookie.getValue();
+                }
+            }
+            
+            // 如果Cookie中有有效的登录信息，重建Session
+            if(StringUtils.isNotBlank(userName) && StringUtils.isNotBlank(purpose)){
+                HttpSession newSession = request.getSession(true);
+                newSession.setAttribute("entitledUser", userName);
+                newSession.setAttribute("purpose", purpose);
+                newSession.setMaxInactiveInterval(24 * 60 * 60); // 24小时
+                return true;
+            }
+        }
 
         // 未登录跳转到登录页
         response.sendRedirect(request.getContextPath()+"/login");

@@ -11,7 +11,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 public class EntitlementService {
-    private final Map<String, String> tokenMap = new HashMap<>();
+    private final Map<String, String> userMap = new HashMap<>();
 
     private void init() {
         try {
@@ -27,28 +27,27 @@ public class EntitlementService {
                 String[] tokens = line.split(",");
                 if (tokens.length >= 2) {
                     String username = tokens[0].trim();
-                    String token = tokens[1].trim();
-                    tokenMap.put(token, "admin");
+                    String password = tokens[1].trim();
+                    userMap.put(username, password);
                 }
             }
             reader.close();
 
-            log.info("EntitlementService initialized successfully. total {}", tokenMap.size());
+            log.info("EntitlementService initialized successfully. total {}", userMap.size());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-    public boolean authenticate(String token) {
-        if (tokenMap.isEmpty()) {
+    public boolean authenticate(String username,String password) {
+        if (userMap.isEmpty()) {
             init();
         }
-        // 验证用户名和Token是否匹配
-        return "admin".equals(tokenMap.get(token));
+        // 验证用户名是否存在
+        if (!userMap.containsKey(username)) {
+            return false;
+        }
+        // 验证密码是否正确
+        return password.equals(userMap.get(username));
     }
     
-    // 仅验证Token，不关心用户名（用于纯Token验证模式）
-    public boolean validateToken(String token) {
-        return tokenMap.containsValue(token);
-    }
 }

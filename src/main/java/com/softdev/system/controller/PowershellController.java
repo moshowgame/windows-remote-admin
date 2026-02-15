@@ -21,8 +21,8 @@ public class PowershellController {
     @Autowired
     PowerShellService powerShellService;
 
-    @GetMapping("/shell")
-    public ModelAndView shell() {
+    @GetMapping("/powershell")
+    public ModelAndView powershell() {
         return new ModelAndView("powershell");
     }
 
