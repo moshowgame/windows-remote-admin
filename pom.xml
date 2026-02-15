@@ -74,7 +74,6 @@
 			<groupId>jakarta.servlet</groupId>
 			<artifactId>jakarta.servlet-api</artifactId>
 			<version>${jakarta.version}</version>
-			<scope>provided</scope>
 		</dependency>
 		<!-- 添加Log4j2依赖 -->
 		<dependency>
