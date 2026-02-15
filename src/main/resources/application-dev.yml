@@ -1,7 +1,6 @@
 server:
   port: 12306
   servlet:
-      context-path: /sre
       session:
         timeout: 60m
   undertow:
@@ -13,7 +12,7 @@ spring:
     banner:
       charset: UTF-8
     application:
-        name: SpringBootRemotePowershellAdmin
+        name: WindowsRemoteAdmin
     thymeleaf:
       cache: false
       prefix: classpath:/templates/
@@ -27,6 +26,6 @@ spring:
         max-file-size: 10MB
         max-request-size: 10MB
 aes:
-    secret-key: SRE12306
+    secret-key: WRA12306
 logging:
   config: classpath:log4j2-spring-dev.xml

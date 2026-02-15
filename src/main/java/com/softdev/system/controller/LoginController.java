@@ -23,6 +23,10 @@ public class LoginController {
     @Autowired
     private EntitlementService entitlementService;
 
+    @GetMapping("/")
+    public ModelAndView defaultPage() throws Exception {
+        return new ModelAndView("login");
+    }
     @GetMapping("/login")
     public ModelAndView login(HttpServletRequest request, HttpServletResponse response) throws Exception {
         return new ModelAndView("login");

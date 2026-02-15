@@ -3,16 +3,15 @@ package com.softdev.system;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-// import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Slf4j
 @SpringBootApplication
-//@EnableScheduling
 public class Application {
 	public static void main(String[] args) {
 		SpringApplication.run(Application.class,args);
-		log.info("Powered by https://zhengkai.blog.csdn.net/ ");
-		log.info("View in local http://localhost:12306/sre/ ");
+		log.info("Windows Remote Admin - Portable Windows Management Tool");
+		log.info("Designed for Windows systems without remote login support");
+		log.info("Access at: http://localhost:12306/");
+		log.info("GitHub: https://github.com/moshowgame/windows-remote-admin");
 	}
-
 }
