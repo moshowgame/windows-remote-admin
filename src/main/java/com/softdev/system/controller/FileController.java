@@ -47,6 +47,26 @@ public class FileController {
         return new ModelAndView("file");
     }
 
+    @GetMapping("/textViewer")
+    public ModelAndView textViewer(HttpServletRequest request) {
+        String filePath = request.getParameter("filePath");
+        ModelAndView modelAndView = new ModelAndView("textViewer");
+        modelAndView.addObject("filePath", filePath);
+        return modelAndView;
+    }
+
+    @GetMapping("/logViewer")
+    public ModelAndView logViewer(HttpServletRequest request) {
+        String filePath = request.getParameter("filePath");
+        String fileNamePattern = request.getParameter("fileNamePattern");
+        String keyWord = request.getParameter("keyWord");
+        ModelAndView modelAndView = new ModelAndView("logViewer");
+        modelAndView.addObject("filePath", filePath);
+        modelAndView.addObject("fileNamePattern", fileNamePattern);
+        modelAndView.addObject("keyWord", keyWord);
+        return modelAndView;
+    }
+
     @PostMapping("/list")
     public Object listFile(@RequestBody FileRequest fileRequest, HttpServletRequest request) throws IOException {
         fileRequest.setExecutionType("list");

@@ -3,85 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录页面</title>
-    <link th:href="@{static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <title>🎮 SRE 登录中心 - 马里奥像素风格</title>
+    <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
     <style>
+        /* 粉色马里奥像素风格主题 */
+        :root {
+            --mario-pink: #ff69b4;
+            --mario-light-pink: #ffb6c1;
+            --mario-dark-pink: #ff1493;
+            --mario-purple: #da70d6;
+            --mario-lavender: #e6e6fa;
+            --mario-hot-pink: #ff69b4;
+            --mario-fuchsia: #ff00ff;
+            --pixel-bg: #ffc0cb;
+            --pixel-border: #000000;
+            --pixel-highlight: #ff69b4;
+            --pixel-text: #ffffff;
+            --pixel-accent: #ff1493;
+        }
+
         body {
-            background-color: #f0f0f0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #ffc0cb 0%, #ffb6c1 50%, #ff69b4 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            overflow-x: hidden;
+            position: relative;
         }
+
+        /* 背景装饰元素 */
+        .background-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .mario-block {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: var(--mario-pink);
+            border: 4px solid var(--pixel-border);
+            z-index: 1;
+        }
+
+        .mario-block.question {
+            background: var(--mario-light-pink);
+            color: var(--pixel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .heart {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: var(--mario-hot-pink);
+            border: 2px solid var(--pixel-border);
+            transform: rotate(45deg);
+            animation: heartBeat 2s ease-in-out infinite;
+        }
+
+        .heart:before, .heart:after {
+            content: "";
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: var(--mario-hot-pink);
+            border: 2px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        .heart:before {
+            top: -12px;
+            left: 0;
+        }
+
+        .heart:after {
+            top: 0;
+            left: -12px;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: rotate(45deg) scale(1); }
+            50% { transform: rotate(45deg) scale(1.2); }
+        }
+
+        .flower {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--mario-purple);
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        .flower:before, .flower:after {
+            content: "";
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--mario-purple);
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        .flower:before {
+            transform: rotate(60deg);
+        }
+
+        .flower:after {
+            transform: rotate(120deg);
+        }
+
+        .star {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--mario-fuchsia);
+            border: 2px solid var(--pixel-border);
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: starTwinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .bubble {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: var(--mario-lavender);
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+            animation: bubbleFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes bubbleFloat {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-30px) translateX(10px); }
+            50% { transform: translateY(-60px) translateX(-10px); }
+            75% { transform: translateY(-30px) translateX(5px); }
+        }
+
+        /* 登录容器像素风格 */
         .login-container {
-            background-color: #fff;
+            background: var(--pixel-bg);
+            border: 6px solid var(--pixel-border);
+            box-shadow: 12px 12px 0px rgba(0,0,0,0.3);
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 350px;
+            width: 420px;
             text-align: center;
+            position: relative;
+            margin: 0 auto;
         }
-        .login-container h2 {
+
+        .login-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--mario-hot-pink),
+                var(--mario-hot-pink) 15px,
+                var(--mario-light-pink) 15px,
+                var(--mario-light-pink) 30px
+            );
+        }
+
+        .login-header {
+            background: linear-gradient(to right, var(--mario-pink), var(--mario-hot-pink));
+            color: var(--pixel-text);
+            padding: 15px;
+            border: 4px solid var(--pixel-border);
+            margin: -30px -30px 25px -30px;
+            font-weight: bold;
+            text-shadow: 3px 3px 0px var(--pixel-border);
+            letter-spacing: 2px;
+            position: relative;
+        }
+
+        .login-header::after {
+            content: "";
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--mario-light-pink),
+                var(--mario-light-pink) 12px,
+                var(--mario-pink) 12px,
+                var(--mario-pink) 24px
+            );
+        }
+
+        .form-group {
             margin-bottom: 20px;
-            color: #0078d4;
-        }
-        .login-container .form-group {
-            margin-bottom: 15px;
             text-align: left;
         }
-        .login-container .btn-login {
+
+        .form-label {
+            color: var(--pixel-text);
+            font-weight: bold;
+            text-shadow: 2px 2px 0px var(--pixel-border);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group-text {
+            background: var(--mario-light-pink);
+            color: var(--pixel-border);
+            border: 4px solid var(--pixel-border);
+            border-right: none;
+            font-weight: bold;
+            text-shadow: 1px 1px 0px white;
+        }
+
+        .form-control {
+            background: white;
+            border: 4px solid var(--pixel-border);
+            border-left: none;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .form-control:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.25rem rgba(255, 105, 180, 0.25);
+            border-color: var(--mario-hot-pink);
+        }
+
+        .btn-login {
             width: 100%;
-            background-color: #0078d4;
-            border-color: #0078d4;
-        }
-        .login-container .btn-login:hover {
-            background-color: #005a9e;
-            border-color: #005a9e;
-        }
-        .login-container .error-message {
-            color: red;
-            font-size: 0.9em;
+            padding: 15px;
+            background: linear-gradient(to bottom, var(--mario-pink), var(--mario-hot-pink));
+            color: var(--pixel-text);
+            border: 4px solid var(--pixel-border);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+            text-shadow: 2px 2px 0px var(--pixel-border);
             margin-top: 10px;
         }
-        .login-container .input-group-text {
-            background-color: #f0f0f0;
-            border: none;
+
+        .btn-login:hover {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, var(--mario-hot-pink), var(--mario-dark-pink));
         }
-        .login-container .form-control:focus {
-            border-color: #0078d4;
-            box-shadow: 0 0 8px rgba(0, 120, 212, 0.5);
+
+        .btn-login:active {
+            transform: translate(6px, 6px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.3);
+        }
+
+        .btn-login:disabled {
+            background: linear-gradient(to bottom, #dda0dd, #d8bfd8);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-message {
+            color: var(--mario-dark-pink);
+            font-size: 0.9em;
+            margin-top: 15px;
+            font-weight: bold;
+            text-shadow: 1px 1px 0px white;
+            min-height: 20px;
+        }
+
+        .footer-info {
+            margin-top: 25px;
+            color: var(--mario-purple);
+            font-size: 0.85rem;
+            text-shadow: 1px 1px 0px white;
+        }
+
+        .footer-info a {
+            color: var(--mario-fuchsia);
+            text-decoration: none;
+        }
+
+        .footer-info a:hover {
+            color: var(--mario-hot-pink);
+            text-decoration: underline;
+        }
+
+        /* 扫描线效果 */
+        .scanline {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanline::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(transparent 50%, rgba(0,255,0,0.1) 50%);
+            background-size: 100% 8px;
+            pointer-events: none;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .login-container {
+                width: 90%;
+                margin: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>登录</h2>
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="token">Token</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-key-fill"></i></div>
-                    <input type="password" class="form-control" id="token" placeholder="请输入访问Token" required>
-                </div>
+     <!-- 背景装饰元素 -->
+    <div class="background-elements">
+        <!-- 爱心 -->
+        <div class="heart" style="top: 60px; left: 120px;"></div>
+        <div class="heart" style="top: 140px; right: 180px;"></div>
+        <div class="heart" style="bottom: 180px; left: 220px;"></div>
+        
+        <!-- 花朵 -->
+        <div class="flower" style="top: 90px; right: 120px;"></div>
+        <div class="flower" style="bottom: 120px; left: 150px;"></div>
+        
+        <!-- 星星 -->
+        <div class="star" style="top: 180px; left: 300px;"></div>
+        <div class="star" style="bottom: 100px; right: 250px;"></div>
+        
+        <!-- 气泡 -->
+        <div class="bubble" style="top: 100px; left: 280px;"></div>
+        <div class="bubble" style="top: 200px; right: 200px;"></div>
+        <div class="bubble" style="bottom: 150px; left: 180px;"></div>
+    </div>
+    
+    <div class="container-fluid d-flex justify-content-center align-items-center vh-100">
+        <!-- 粉色装饰元素 -->
+        <div class="heart" style="position: absolute; top: 30px; left: 50px; z-index: 100;"></div>
+        <div class="flower" style="position: absolute; top: 80px; right: 80px; z-index: 100;"></div>
+        <div class="star" style="position: absolute; bottom: 100px; left: 100px; z-index: 100;"></div>
+        <div class="bubble" style="position: absolute; top: 150px; left: 150px; z-index: 100;"></div>
+        <div class="bubble" style="position: absolute; bottom: 80px; right: 120px; z-index: 100;"></div>
+        
+        <div class="login-container scanline">
+            <div class="login-header">
+                <i class="fas fa-heart"></i>
+                SRE 粉色登录中心
+                <i class="fas fa-heart"></i>
             </div>
-            <div class="form-group">
-                <label for="userName">用户名</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-person-fill"></i></div>
-                    <input type="text" class="form-control" id="userName" placeholder="请输入你的名字" required>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="fas fa-user"></i> 账号
+                    </label>
+                    <div class="input-group">
+                        <div class="input-group-text"><i class="fas fa-user-circle"></i></div>
+                        <input type="text" class="form-control" id="username" placeholder="请输入您的账号" required>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="ticketNumber">使用目的</label>
-                <div class="input-group">
-                    <div class="input-group-text"><i class="bi bi-ticket-perforated-fill"></i></div>
-                    <input type="text" class="form-control" id="ticketNumber" placeholder="请输入本次使用的Purpose/Reason/Ticket" required>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock"></i> 密码
+                    </label>
+                    <div class="input-group">
+                        <div class="input-group-text"><i class="fas fa-key"></i></div>
+                        <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+                    </div>
                 </div>
+                
+                <div class="form-group">
+                    <label for="purpose" class="form-label">
+                        <i class="fas fa-bullseye"></i> 使用目的
+                    </label>
+                    <div class="input-group">
+                        <div class="input-group-text"><i class="fas fa-ticket-alt"></i></div>
+                        <input type="text" class="form-control" id="purpose" placeholder="请输入使用目的/Reason/Purpose" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-login" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i> 登 录
+                </button>
+                
+                <div class="error-message" id="errorMessage"></div>
+            </form>
+            
+            <div class="footer-info">
+                <i class="fas fa-heart" style="color: var(--mario-red);"></i>
+                Powered by Moshow | 
+                <a href="https://zhengkai.blog.csdn.net/" target="_blank">
+                    <i class="fab fa-blogger"></i> CSDN
+                </a> | 
+                <a href="https://github.com/moshowgame/" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <i class="fas fa-heart" style="color: var(--mario-red);"></i>
             </div>
-            <button type="submit" class="btn btn-login">登录</button>
-            <div class="error-message" id="errorMessage"></div>
-        </form>
+        </div>
     </div>
 
     <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
@@ -93,7 +446,7 @@
             let isSubmitting = false;
             let retryTimer = null;
 
-            const entitlementUrl = /*[[ @{/entitlement} ]]*/ '';
+            const entitlementUrl = /*[[ @{/login} ]]*/ '';
             const landingUrl = /*[[ @{/landing} ]]*/ '';
 
             $('#loginForm').on('submit', function(event) {
@@ -101,22 +454,39 @@
 
                 if (isSubmitting) return;
 
-                const userName = $('#userName').val().trim();
-                const token = $('#token').val().trim();
-                const ticketNumber = $('#ticketNumber').val().trim();
+                const username = $('#username').val().trim();
+                const password = $('#password').val().trim();
+                const purpose = $('#purpose').val().trim();
 
-                if (!userName || !token || !ticketNumber) {
+                if (!username || !password || !purpose) {
                     $('#errorMessage').text('所有字段都不能为空');
                     return;
                 }
 
+                // 简单的前端验证
+                if (username.length < 2) {
+                    $('#errorMessage').text('账号长度至少2位');
+                    return;
+                }
+
+                if (password.length < 4) {
+                    $('#errorMessage').text('密码长度至少4位');
+                    return;
+                }
+
+                if (purpose.length < 3) {
+                    $('#errorMessage').text('使用目的至少3个字符');
+                    return;
+                }
+
                 isSubmitting = true;
+                $('#loginBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> 登录中...');
                 $('#errorMessage').text('');
 
                 const data = {
-                    userName: userName,
-                    token: token,
-                    ticketNumber: ticketNumber
+                    username: username,
+                    password: password,
+                    purpose: purpose
                 };
 
                 $.ajax({
@@ -126,12 +496,27 @@
                     data: JSON.stringify(data),
                     success: function(response) {
                         isSubmitting = false;
-                        // 可以在这里重定向到其他页面
-                        window.location.href = landingUrl;
+                        $('#loginBtn').prop('disabled', false).html('<i class="fas fa-sign-in-alt"></i> 登 录');
+                        
+                        if (response.code === 200) {
+                            $('#errorMessage').html('<span style="color: var(--mario-green);">✅ 登录成功！正在跳转...</span>');
+                            setTimeout(() => {
+                                window.location.href = landingUrl;
+                            }, 1000);
+                        } else {
+                            $('#errorMessage').text(response.msg || '登录失败');
+                        }
                     },
                     error: function(xhr, status, error) {
                         isSubmitting = false;
-                        $('#errorMessage').text('登录失败，请稍后再试');
+                        $('#loginBtn').prop('disabled', false).html('<i class="fas fa-sign-in-alt"></i> 登 录');
+                        
+                        let errorMsg = '登录失败，请稍后再试';
+                        if (xhr.responseJSON && xhr.responseJSON.msg) {
+                            errorMsg = xhr.responseJSON.msg;
+                        }
+                        
+                        $('#errorMessage').text(errorMsg);
                         retryTimer = setTimeout(() => {
                             $('#errorMessage').text('');
                         }, 5000);
@@ -139,11 +524,26 @@
                 });
             });
 
-            // 防抖功能
+            // 输入框防抖功能
             $('#loginForm input').on('input', function() {
                 clearTimeout(retryTimer);
-                $('#errorMessage').text('');
+                if ($('#errorMessage').text().includes('不能为空') || 
+                    $('#errorMessage').text().includes('长度') || 
+                    $('#errorMessage').text().includes('至少')) {
+                    $('#errorMessage').text('');
+                }
             });
+
+            // 回车键提交
+            $('#loginForm input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    $('#loginForm').submit();
+                }
+            });
+
+            // 页面加载完成后的初始化
+            console.log('🎮 SRE 登录页面已加载');
+            $('#username').focus();
         });
     </script>
 </body>
