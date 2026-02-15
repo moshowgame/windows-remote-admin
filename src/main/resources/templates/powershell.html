@@ -3,229 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>PowerShell online</title>
+    <title>PowerShell ISE - Pixel Style</title>
     <!-- Bootstrap 5 CSS -->
     <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
     <!-- Font Awesome -->
     <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet">
-
+    
     <style>
+        /* 像素风格基础样式 */
+        :root {
+            --pixel-bg: #6b8cff;
+            --pixel-border: #000000;
+            --pixel-highlight: #ff0000;
+            --pixel-text: #ffffff;
+            --terminal-bg: #0a1a2f;
+            --terminal-text: #00ff00;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        /* 像素化卡片容器 */
+        .pixel-card {
+            background: var(--pixel-bg);
+            border: 4px solid var(--pixel-border);
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pixel-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--pixel-highlight),
+                var(--pixel-highlight) 10px,
+                var(--pixel-bg) 10px,
+                var(--pixel-bg) 20px
+            );
+        }
+        
+        /* 标题栏像素风格 */
+        .pixel-header {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+            color: var(--pixel-text);
+            padding: 12px 20px;
+            border-bottom: 4px solid var(--pixel-border);
+            font-weight: bold;
+            text-shadow: 2px 2px 0px var(--pixel-border);
+            letter-spacing: 1px;
+        }
+        
+        .pixel-header i {
+            margin-right: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+        
+        /* 侧边栏像素风格 */
+        .pixel-sidebar {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            border-right: 4px solid var(--pixel-border);
+            padding: 20px;
+            width: 220px;
+        }
+        
+        .pixel-sidebar h6 {
+            color: var(--pixel-text);
+            text-shadow: 2px 2px 0px var(--pixel-border);
+            border-bottom: 3px solid var(--pixel-border);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .pixel-sidebar ul li {
+            margin-bottom: 8px;
+        }
+        
+        .pixel-sidebar a {
+            display: block;
+            background: #f39c12;
+            color: var(--pixel-text);
+            padding: 8px 12px;
+            border: 3px solid var(--pixel-border);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.2);
+        }
+        
+        .pixel-sidebar a:hover {
+            background: #e67e22;
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.2);
+        }
+        
+        /* 终端区域 */
         #ps-terminal {
-            background-color: #012456;
-            color: #34e134;
-            font-family: 'Consolas', monospace;
+            background-color: var(--terminal-bg);
+            color: var(--terminal-text);
+            font-family: 'Courier New', monospace;
             height: 60vh;
             overflow-y: auto;
-            border-radius: 5px;
-            scrollbar-width: thin;
-            scrollbar-color: #0066cc #012456;
-        }
-
-        .cmd-input {
-            background-color: #012456;
-            color: #34e134;
-            border: none;
             border-radius: 0;
-            caret-color: #34e134;
+            scrollbar-width: thin;
+            scrollbar-color: #0066cc var(--terminal-bg);
+            padding: 20px;
+            border: 4px solid var(--pixel-border);
+            box-shadow: inset 3px 3px 0px rgba(0,0,0,0.3);
         }
-
+        
+        .cmd-input {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-text);
+            border: 3px solid var(--pixel-border);
+            border-radius: 0;
+            caret-color: var(--terminal-text);
+            font-family: 'Courier New', monospace;
+            box-shadow: inset 3px 3px 0px rgba(0,0,0,0.3);
+        }
+        
         .cmd-input:focus {
-            background-color: #012456;
-            color: #34e134;
-            box-shadow: none;
+            background-color: var(--terminal-bg);
+            color: var(--terminal-text);
+            box-shadow: inset 3px 3px 0px rgba(0,0,0,0.3), 0 0 0 0.25rem rgba(52, 225, 52, 0.25);
+            border-color: #34e134;
         }
-
+        
         .ps-prompt {
-            color: #34e134;
+            color: var(--terminal-text);
             white-space: nowrap;
+            font-weight: bold;
+            text-shadow: 1px 1px 0px var(--pixel-border);
         }
-
+        
         .loading-spinner {
             display: none;
-            color: #34e134;
+            color: var(--terminal-text);
         }
         
         #cmd-input {
             resize: vertical;
-            min-height: 38px;
-            max-height: 200px;
+            min-height: 63px; /* 原来的1.5倍 */
+            max-height: 300px; /* 相应调整最大高度 */
+        }
+        
+        /* 按钮像素风格 */
+        .pixel-btn {
+            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+            color: var(--pixel-text);
+            border: 3px solid var(--pixel-border);
+            border-radius: 0;
+            padding: 8px 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+            margin: 0 5px;
+        }
+        
+        .pixel-btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, #27ae60, #219653);
+        }
+        
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.3);
+        }
+        
+        .pixel-btn-outline {
+            background: transparent;
+            color: #3498db;
+            border: 3px solid #3498db;
+        }
+        
+        .pixel-btn-outline:hover {
+            background: #3498db;
+            color: white;
+        }
+        
+        /* 编码选择器 */
+        #encodingSelect {
+            background: #9b59b6;
+            color: white;
+            border: 3px solid var(--pixel-border);
+            border-radius: 0;
+            padding: 6px 12px;
+            font-weight: bold;
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.3);
+        }
+        
+        /* 输出行样式 */
+        .output-line {
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .output-line.text-success {
+            color: #2ecc71;
+        }
+        
+        .output-line.text-danger {
+            color: #e74c3c;
+        }
+        
+        .output-line.text-white {
+            color: var(--terminal-text);
+        }
+        
+        pre {
+            color: inherit;
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .pixel-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 4px solid var(--pixel-border);
+            }
+            
+            .d-flex {
+                flex-direction: column;
+            }
+        }
+        
+        /* 特殊效果 */
+        .scanline {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scanline::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(transparent 50%, rgba(0,255,0,0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            animation: scan 8s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+        
+        /* Mario风格装饰元素 */
+        .mario-block {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #e74c3c;
+            border: 3px solid var(--pixel-border);
+            z-index: 10;
+        }
+        
+        .mario-block.question {
+            background: #f1c40f;
+            color: var(--pixel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+        
+        .cloud:before, .cloud:after {
+            content: "";
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        /* 装饰性云朵 */
+        .decoration-cloud-1 {
+            top: 20px;
+            right: 50px;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .decoration-cloud-1:before {
+            width: 30px;
+            height: 30px;
+            top: -15px;
+            left: 5px;
+        }
+        
+        .decoration-cloud-1:after {
+            width: 40px;
+            height: 40px;
+            top: -20px;
+            right: 10px;
+        }
+        
+        .decoration-cloud-2 {
+            bottom: 30px;
+            left: 30px;
+            width: 80px;
+            height: 40px;
+        }
+        
+        .decoration-cloud-2:before {
+            width: 40px;
+            height: 40px;
+            top: -20px;
+            left: 10px;
+        }
+        
+        .decoration-cloud-2:after {
+            width: 50px;
+            height: 50px;
+            top: -25px;
+            right: 15px;
         }
     </style>
 </head>
-<body class="bg-dark">
-<div class="container py-5">
-    <div class="card border-primary">
-        <div class="card-header bg-primary text-white">
-            <i class="fas fa-terminal me-2"></i>Remote Powershell Admin
-        </div>
-        <div class="card-body p-0 d-flex">
-            <!-- 侧边栏 -->
-            <div class="sidebar bg-dark p-3" style="width: 200px;">
-                <h6 class="text-white">常用命令</h6>
-                <ul class="list-unstyled">
-                    <li><a href="#" class="text-white quick-command" data-command='[Console]::OutputEncoding'>获取默认PS编码</a></li>
-                    <li><a target="_blank" href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell">查询PS命令</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-Process | Where-Object { $_.ProcessName -like "*java*" }'>获取java进程</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-Service| check service status">获取Qlik服务</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Copy-Item -Path "C:\temp\file.txt" -Destination "D:\backup\"'>复制文件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-ChildItem -Path C:\">查询目录</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message'>服务器重启事件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) -and $_.Message -match "Source Network Address" } | ForEach-Object { if ($_.Message -match "Source Network Address:\s+([\d\.]+)") { $matches[1] } } | Sort-Object -Unique'>服务器登录事件</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command="Get-NetIPAddress">获取IP地址</a></li>
-                    <li><a href="#" class="text-white quick-command" data-command='robocopy "C:\SourceFolder" "D:\DestinationFolder" "fileName" /XO /A-:D /S /MT:8'>RoboCopy</a></li>
-                </ul>
+<body>
+    <!-- 装饰性元素 -->
+    <div class="cloud decoration-cloud-1"></div>
+    <div class="cloud decoration-cloud-2"></div>
+    
+    <div class="container">
+        <div class="pixel-card">
+            <!-- Mario风格问号块 -->
+            <div class="mario-block question" style="position: absolute; top: 10px; right: 10px;">?</div>
+            
+            <div class="pixel-header">
+                <i class="fas fa-terminal"></i>POWERSHELL ISE - PIXEL EDITION
             </div>
-
-            <!-- 主内容区 -->
-            <div class="flex-grow-1">
-                <div id="ps-terminal" class="p-3">
-                    <!-- 初始引导信息 -->
-                    <div class="output-line">
-                    </div>
+            
+            <div class="card-body p-0 d-flex">
+                <!-- 侧边栏 -->
+                <div class="pixel-sidebar">
+                    <h6>🎮 常用命令</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="quick-command" data-command='[Console]::OutputEncoding'>获取默认PS编码</a></li>
+                        <li><a target="_blank" href="https://learn.microsoft.com/zh-tw/windows-server/administration/windows-commands/powershell">查询PS命令</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-Process | Where-Object { $_.ProcessName -like "*java*" }'>获取java进程</a></li>
+                        <li><a href="#" class="quick-command" data-command="Get-Service| check service status">获取Qlik服务</a></li>
+                        <li><a href="#" class="quick-command" data-command='Copy-Item -Path "C:\temp\file.txt" -Destination "D:\backup\"'>复制文件</a></li>
+                        <li><a href="#" class="quick-command" data-command="Get-ChildItem -Path C:\">查询目录</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message'>服务器重启事件</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) -and $_.Message -match "Source Network Address" } | ForEach-Object { if ($_.Message -match "Source Network Address:\s+([\d\.]+)") { $matches[1] } } | Sort-Object -Unique'>服务器登录事件</a></li>
+                        <li><a href="#" class="quick-command" data-command="Get-NetIPAddress">获取IP地址</a></li>
+                        <li><a href="#" class="quick-command" data-command='robocopy "C:\SourceFolder" "D:\DestinationFolder" "fileName" /XO /A-:D /S /MT:8'>RoboCopy</a></li>
+                    </ul>
                 </div>
 
-                <!-- 输入区域 -->
-                <div class="input-group p-2 border-top border-primary">
-                    <span class="input-group-text ps-prompt bg-transparent border-0">PS </span>
-                    <textarea id="cmd-input"
-                           class="form-control cmd-input border-0"
-                           autocomplete="off"
-                           placeholder="输入命令后按 Ctrl+Enter 执行"></textarea>
-                    <span class="input-group-text bg-transparent border-0">
-                        <i class="fas fa-spinner fa-spin loading-spinner"></i>
-                        <input type="button" id="lastBtn" class="btn btn-outline-info ms-3" value="Last">
-                        <input type="button" id="nextBtn" class="btn btn-outline-info ms-3" value="Next">
-                        <input type="button" id="submitBtn" class="btn btn-outline-info ms-3" value="Execute">
-                        <input type="button" id="cleanBtn" class="btn btn-outline-info ms-3" value="Clean">
-                        <!-- 新增编码选择下拉框 -->
-                        <select id="encodingSelect" class="form-select ms-3" style="width: auto;">
-                            <option value="UTF-8" selected>UTF-8</option>
-                            <option value="GB2312">GB2312</option>
-                        </select>
-                    </span>
+                <!-- 主内容区 -->
+                <div class="flex-grow-1">
+                    <div id="ps-terminal" class="scanline">
+                        <!-- 初始引导信息 -->
+                        <div class="output-line">
+                        </div>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="input-group p-3 border-top" style="border-color: var(--pixel-border) !important; border-width: 4px !important;">
+                        <span class="input-group-text ps-prompt bg-transparent border-0">PS </span>
+                        <textarea id="cmd-input"
+                               class="form-control cmd-input border-0"
+                               autocomplete="off"
+                               placeholder="输入命令后按 Ctrl+Enter 执行"></textarea>
+                        <span class="input-group-text bg-transparent border-0">
+                            <i class="fas fa-spinner fa-spin loading-spinner"></i>
+                            <input type="button" id="lastBtn" class="pixel-btn pixel-btn-outline" value="LAST">
+                            <input type="button" id="nextBtn" class="pixel-btn pixel-btn-outline" value="NEXT">
+                            <input type="button" id="submitBtn" class="pixel-btn" value="EXECUTE">
+                            <input type="button" id="cleanBtn" class="pixel-btn pixel-btn-outline" value="CLEAN">
+                            <!-- 编码选择下拉框 -->
+                            <select id="encodingSelect" class="form-select ms-3">
+                                <option value="UTF-8" selected>UTF-8</option>
+                                <option value="GB2312">GB2312</option>
+                            </select>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- jQuery & Bootstrap JS -->
-<script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-<script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <!-- jQuery & Bootstrap JS -->
+    <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
 
-<script th:inline="javascript">
-    const executeUrl = /*[[ @{/execute} ]]*/ '';
+    <script th:inline="javascript">
+        const executeUrl = /*[[ @{/execute} ]]*/ '';
 
-    $(document).ready(function() {
-        const $terminal = $('#ps-terminal');
-        const $input = $('#cmd-input');
-        const $spinner = $('.loading-spinner');
-        let commandHistory = [];
-        let historyIndex = -1;
-        function initialize() {
-            $terminal.empty();
-            $terminal.append(`
-                    ****** SpringBootRemotePowershellAdmin - execute your powershell script remotely ******<br>
-                    (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/">GITHUB</a> ).<br><br>
-
-                    安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
-                    `
-            );
-            $input.focus();
-        }
-        initialize();
-        function executeCommand(cmd, $submitBtn) {
-            // 获取用户选择的编码
-            $.ajax({
-                url: executeUrl,
-                type: 'POST',
-                data: JSON.stringify({ command: cmd,  encoding: $('#encodingSelect').val() }),
-                contentType: 'application/json',
-                success: function(response) {
-                    console.log(response);
-                    $spinner.hide();
-                    $submitBtn.prop('disabled', false); // 启用按钮
-                    $terminal.append(`
-                            <div class="output-line text-success">
-                                PS > ${cmd}
-                            </div>
-                            <div class="output-line text-white">
-                                <pre>${response}</pre>
-                            </div>`);
-                },
-                error: function(xhr, status, error) {
-                    console.log(xhr.responseText);
-                    $spinner.hide();
-                    $submitBtn.prop('disabled', false); // 启用按钮
-                    $terminal.append(`
-                            <div class="output-line text-danger">
-                                错误: ${xhr.responseText}
-                            </div>`);
-                }
-            });
-            commandHistory.push(cmd);
-            historyIndex = commandHistory.length;
-            $input.val('');
-            $spinner.hide();
-            $terminal.scrollTop($terminal[0].scrollHeight);
-            // 使用localStorage
-            localStorage.setItem('cmdHistory', JSON.stringify(commandHistory));
-        }
-
-        // Ctrl+Enter 执行
-        $input.on('keydown', function(e) {
-            if (e.ctrlKey && e.which === 13) {
-                const $submitBtn = $(this);
-                const cmd = $input.val().trim();
-                if (cmd) {
-                    $spinner.show();
-                    $("#submitBtn").prop('disabled', true); // 禁用按钮
-                    executeCommand(cmd, $submitBtn);
-                }
-                e.preventDefault();
+        $(document).ready(function() {
+            const $terminal = $('#ps-terminal');
+            const $input = $('#cmd-input');
+            const $spinner = $('.loading-spinner');
+            let commandHistory = [];
+            let historyIndex = -1;
+            
+            function initialize() {
+                $terminal.empty();
+                $terminal.append(`
+                        <div style="color: #f1c40f; margin: 15px 0; font-family: 'Courier New', monospace; text-align: center;">
+      ╔════════════════════════════════════════════════════════════╗<br>
+      ║                                                            ║<br>
+      ║  ░█▀▀░█▀▄░█▀▀░█▀█░█▀▀░▀█▀░█▀▀░█▀█░█▀▄░░░█▀█░█▀▀░█▀▀░█▀▀  ║<br>
+      ║  ░█░░░█▀▄░█▀▀░█░█░▀▀█░░█░░█░░░█░█░█░█░░░█▀▀░█▀▀░▀▀█░▀▀█  ║<br>
+      ║  ░▀▀▀░▀░▀░▀▀▀░▀░▀░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀░░░░▀░░░▀▀▀░▀▀▀░▀▀▀  ║<br>
+      ║                                                            ║<br>
+      ║                                                            ║<br>
+      ║  MICROSOFT'S TASK AUTOMATION AND CONFIGURATION FRAMEWORK   ║<br>
+      ║  OBJECT-BASED SHELL FOR SYSTEM ADMINISTRATION              ║<br>
+      ║  CROSS-PLATFORM SUPPORT: WINDOWS | LINUX | MACOS           ║<br>
+      ║                                                            ║<br>
+      ╚════════════════════════════════════════════════════════════╝<br>
+                        </div>
+                        <div style="margin-top: 20px; color: #95a5a6;">
+    (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/" style="color: #3498db;">CSDN</a> | <a href="https://github.com/moshowgame/" style="color: #3498db;">GITHUB</a> ).
+    安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
+                        </div>`
+                );
+                $input.focus();
             }
-        });
-        $("#lastBtn").click(function() {
-            if (historyIndex > 0) {
-                historyIndex--;
-                $input.val(commandHistory[historyIndex]);
-            }
-        });
-        $("#nextBtn").click(function() {
-            if (historyIndex < commandHistory.length - 1) {
-                historyIndex++;
-                $input.val(commandHistory[historyIndex]);
-            } else {
+            
+            initialize();
+            
+            function executeCommand(cmd, $submitBtn) {
+                // 获取用户选择的编码
+                $.ajax({
+                    url: executeUrl,
+                    type: 'POST',
+                    data: JSON.stringify({ command: cmd, encoding: $('#encodingSelect').val() }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        console.log(response);
+                        $spinner.hide();
+                        $submitBtn.prop('disabled', false);
+                        $terminal.append(`
+                                <div class="output-line text-success">
+                                    PS > ${cmd}
+                                </div>
+                                <div class="output-line text-white">
+                                    <pre>${response}</pre>
+                                </div>`);
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(xhr.responseText);
+                        $spinner.hide();
+                        $submitBtn.prop('disabled', false);
+                        $terminal.append(`
+                                <div class="output-line text-danger">
+                                    错误: ${xhr.responseText}
+                                </div>`);
+                    }
+                });
+                commandHistory.push(cmd);
                 historyIndex = commandHistory.length;
                 $input.val('');
+                $spinner.hide();
+                $terminal.scrollTop($terminal[0].scrollHeight);
+                localStorage.setItem('cmdHistory', JSON.stringify(commandHistory));
             }
-        });
-        $("#cleanBtn").click(function() {
-            $terminal.empty();
-            initialize();
-        });
-        $("#submitBtn").click(function() {
-            const $submitBtn = $(this);
-            const cmd = $input.val().trim();
-            if (cmd) {
-                $spinner.show();
-                $("#submitBtn").prop('disabled', true); // 禁用按钮
-                executeCommand(cmd, $submitBtn);
-            }
-        });
-        // 上下箭头历史记录 (只在光标位于第一行时生效)
-        $input.on('keydown', function(e) {
-            const cursorPosition = this.selectionStart;
-            const firstLineEnd = this.value.indexOf('\n');
-            const isFirstLine = firstLineEnd === -1 || cursorPosition <= firstLineEnd;
+
+            // Ctrl+Enter 执行
+            $input.on('keydown', function(e) {
+                if (e.ctrlKey && e.which === 13) {
+                    const $submitBtn = $(this);
+                    const cmd = $input.val().trim();
+                    if (cmd) {
+                        $spinner.show();
+                        $("#submitBtn").prop('disabled', true);
+                        executeCommand(cmd, $submitBtn);
+                    }
+                    e.preventDefault();
+                }
+            });
             
-            if (isFirstLine && e.key === 'ArrowUp') {
+            $("#lastBtn").click(function() {
                 if (historyIndex > 0) {
                     historyIndex--;
                     $input.val(commandHistory[historyIndex]);
                 }
-                e.preventDefault();
-            } else if (isFirstLine && e.key === 'ArrowDown') {
+            });
+            
+            $("#nextBtn").click(function() {
                 if (historyIndex < commandHistory.length - 1) {
                     historyIndex++;
                     $input.val(commandHistory[historyIndex]);
@@ -233,21 +519,58 @@
                     historyIndex = commandHistory.length;
                     $input.val('');
                 }
-                e.preventDefault();
-            }
-        });
+            });
+            
+            $("#cleanBtn").click(function() {
+                $terminal.empty();
+                initialize();
+            });
+            
+            $("#submitBtn").click(function() {
+                const $submitBtn = $(this);
+                const cmd = $input.val().trim();
+                if (cmd) {
+                    $spinner.show();
+                    $("#submitBtn").prop('disabled', true);
+                    executeCommand(cmd, $submitBtn);
+                }
+            });
+            
+            // 上下箭头历史记录
+            $input.on('keydown', function(e) {
+                const cursorPosition = this.selectionStart;
+                const firstLineEnd = this.value.indexOf('\n');
+                const isFirstLine = firstLineEnd === -1 || cursorPosition <= firstLineEnd;
+                
+                if (isFirstLine && e.key === 'ArrowUp') {
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        $input.val(commandHistory[historyIndex]);
+                    }
+                    e.preventDefault();
+                } else if (isFirstLine && e.key === 'ArrowDown') {
+                    if (historyIndex < commandHistory.length - 1) {
+                        historyIndex++;
+                        $input.val(commandHistory[historyIndex]);
+                    } else {
+                        historyIndex = commandHistory.length;
+                        $input.val('');
+                    }
+                    e.preventDefault();
+                }
+            });
 
-        // 快速命令点击事件
-        $('.quick-command').click(function(e) {
-            e.preventDefault();
-            const cmd = $(this).data('command');
-            $input.val(cmd);
+            // 快速命令点击事件
+            $('.quick-command').click(function(e) {
+                e.preventDefault();
+                const cmd = $(this).data('command');
+                $input.val(cmd);
+                $input.focus();
+            });
+
+            // 初始化焦点
             $input.focus();
         });
-
-        // 初始化焦点
-        $input.focus();
-    });
-</script>
+    </script>
 </body>
 </html>
