@@ -375,6 +375,10 @@
                         <li><a href="#" class="quick-command" data-command='Get-EventLog -LogName System | Where-Object { $_.EventID -eq 6006 -or $_.EventID -eq 6005 } | Select-Object TimeGenerated, EventID, Message'>服务器重启事件</a></li>
                         <li><a href="#" class="quick-command" data-command='Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.TimeCreated -gt (Get-Date).AddDays(-15) -and $_.Message -match "Source Network Address" } | ForEach-Object { if ($_.Message -match "Source Network Address:\s+([\d\.]+)") { $matches[1] } } | Sort-Object -Unique'>服务器登录事件</a></li>
                         <li><a href="#" class="quick-command" data-command="Get-NetIPAddress">获取IP地址</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-Content -Path "C:\\path\\to\\file.log" -Tail 1000'>查看文件末尾1000行</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-ChildItem -Path "C:\\path\\to\\directory" -Recurse | Select-String -Pattern "keyword"'>目录中搜索关键字</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-Content -Path "C:\\logs\\*.log" -Tail 500 | Select-String -Pattern "ERROR"'>搜索日志中的错误</a></li>
+                        <li><a href="#" class="quick-command" data-command='Get-ChildItem -Path "C:\\temp" -Include "*.txt","*.log" -Recurse | Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-7) }'>查找最近7天修改的文件</a></li>
                         <li><a href="#" class="quick-command" data-command='robocopy "C:\SourceFolder" "D:\DestinationFolder" "fileName" /XO /A-:D /S /MT:8'>RoboCopy</a></li>
                     </ul>
                 </div>
