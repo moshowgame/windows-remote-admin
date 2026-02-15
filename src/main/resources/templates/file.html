@@ -8,121 +8,442 @@
     <link th:href="@{/static/font-awesome/6.4.0/css/all.min.css}" rel="stylesheet"/>
     <link rel="stylesheet" th:href="@{/static/bootstrap/5.3.2/css/bootstrap-icons.min.css}">
     <style>
+        /* 马里奥像素风格主题 */
         :root {
-            --win-bg: #f3f3f3;
-            --win-border: #e0e0e0;
-            --win-accent: #0078d4;
-            --win-hover: rgba(0, 120, 212, 0.1);
+            --mario-red: #e52521;
+            --mario-blue: #3c44aa;
+            --mario-green: #4bad4b;
+            --mario-yellow: #fbd000;
+            --mario-brown: #964b00;
+            --mario-skin: #fcb97d;
+            --pixel-bg: #6b8cff;
+            --pixel-border: #000000;
+            --pixel-highlight: #ff0000;
+            --pixel-text: #ffffff;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui;
-            background: var(--win-bg);
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+            overflow-x: hidden;
         }
 
+        /* 装饰性背景元素 */
+        .background-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .mario-block {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: var(--mario-red);
+            border: 4px solid var(--pixel-border);
+            z-index: 1;
+        }
+
+        .mario-block.question {
+            background: var(--mario-yellow);
+            color: var(--pixel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .coin {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--mario-yellow);
+            border: 2px solid var(--pixel-border);
+            border-radius: 50%;
+            animation: coinFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes coinFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .pipe {
+            position: absolute;
+            width: 60px;
+            background: var(--mario-green);
+            border: 4px solid var(--pixel-border);
+        }
+
+        .pipe-top {
+            height: 30px;
+            border-bottom: none;
+            border-radius: 30px 30px 0 0;
+        }
+
+        .pipe-stem {
+            height: 80px;
+            border-top: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        .cloud:before, .cloud:after {
+            content: "";
+            position: absolute;
+            background: white;
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        /* 主文件管理器容器 */
         .file-explorer {
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            background: var(--pixel-bg);
+            border: 6px solid var(--pixel-border);
+            box-shadow: 12px 12px 0px rgba(0,0,0,0.3);
             overflow: hidden;
             display: flex;
             height: 80vh;
+            position: relative;
         }
 
+        .file-explorer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--pixel-highlight),
+                var(--pixel-highlight) 15px,
+                var(--pixel-bg) 15px,
+                var(--pixel-bg) 30px
+            );
+        }
+
+        /* 侧边栏像素风格 */
         .sidebar {
             width: 280px;
-            background: rgba(255, 255, 255, 0.9);
-            border-right: 1px solid var(--win-border);
-            padding: 16px;
+            background: linear-gradient(to bottom, var(--mario-blue), #2980b9);
+            border-right: 6px solid var(--pixel-border);
+            padding: 20px;
+            position: relative;
+        }
+
+        .sidebar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            background: repeating-linear-gradient(
+                180deg,
+                var(--mario-yellow),
+                var(--mario-yellow) 10px,
+                transparent 10px,
+                transparent 20px
+            );
         }
 
         .quick-access h6 {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 12px;
+            color: var(--pixel-text);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 0px var(--pixel-border);
+            border-bottom: 4px solid var(--pixel-border);
+            padding-bottom: 8px;
+            text-align: center;
+            letter-spacing: 2px;
         }
 
         .nav-link {
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: #333;
+            display: block;
+            background: var(--mario-red);
+            color: var(--pixel-text);
+            padding: 12px 16px;
+            border: 4px solid var(--pixel-border);
             text-decoration: none;
-            transition: all 0.2s;
+            margin-bottom: 12px;
+            transition: all 0.1s;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+            font-weight: bold;
+            text-shadow: 2px 2px 0px var(--pixel-border);
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
         }
 
         .nav-link:hover {
-            background: var(--win-hover);
+            background: #c0392b;
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
         }
 
+        .sidebar {
+            position: relative;
+            z-index: 20;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        /* 工具栏像素风格 */
         .toolbar {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--win-border);
-            padding: 8px 16px;
+            background: linear-gradient(to right, var(--mario-green), #27ae60);
+            border-bottom: 6px solid var(--pixel-border);
+            padding: 12px 16px;
             gap: 12px;
+            position: relative;
         }
 
-        .breadcrumb {
-            background: none;
-            padding: 4px;
-            font-size: 14px;
-            margin-bottom: 0;
+        .toolbar::before {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--mario-yellow),
+                var(--mario-yellow) 12px,
+                transparent 12px,
+                transparent 24px
+            );
         }
 
+        .btn {
+            background: linear-gradient(to bottom, var(--mario-red), #c0392b);
+            color: var(--pixel-text);
+            border: 3px solid var(--pixel-border);
+            border-radius: 0;
+            padding: 8px 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+
+        .btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, #c0392b, #a5281e);
+        }
+
+        .btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.3);
+        }
+
+        .btn-light {
+            background: linear-gradient(to bottom, #f1c40f, #f39c12);
+            color: var(--pixel-border);
+        }
+
+        .search-box, .path-input {
+            background: var(--mario-yellow);
+            color: var(--pixel-border);
+            border: 4px solid var(--pixel-border);
+            border-radius: 0;
+            padding: 8px 16px;
+            font-weight: bold;
+            box-shadow: inset 3px 3px 0px rgba(0,0,0,0.3);
+            font-family: 'Courier New', monospace;
+        }
+
+        .search-box:focus, .path-input:focus {
+            outline: none;
+            box-shadow: inset 3px 3px 0px rgba(0,0,0,0.3), 0 0 0 0.25rem rgba(241, 196, 15, 0.25);
+            border-color: var(--mario-red);
+        }
+
+        /* 文件列表像素风格 */
         .file-list {
-            background: rgba(255, 255, 255, 0.9);
+            background: #0a1a2f;
             flex-grow: 1;
             overflow-y: auto;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
         }
 
         .file-item {
             display: grid;
-            grid-template-columns: 40px 3fr 1fr 120px 120px;
+            grid-template-columns: 40px 3fr 1fr 120px 120px 150px;
             align-items: center;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: all 0.2s;
+            padding: 12px 16px;
+            border: 3px solid transparent;
+            transition: all 0.1s;
             cursor: default;
+            margin-bottom: 5px;
+            background: rgba(0, 50, 100, 0.3);
         }
 
         .file-item:hover {
-            background: var(--win-hover);
+            border-color: var(--mario-yellow);
+            background: rgba(251, 208, 0, 0.2);
+            transform: translate(2px, 2px);
         }
 
-        .search-box {
-            width: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--win-border);
-            padding: 4px 16px;
-            background: rgba(255, 255, 255, 0.8);
+        .file-item.text-muted {
+            background: rgba(100, 100, 100, 0.5);
+            color: #aaaaaa;
+            border-bottom: 4px solid var(--pixel-border);
         }
 
+        .file-item i {
+            text-shadow: 2px 2px 0px var(--pixel-border);
+        }
+
+        /* 操作按钮组 */
+        .btn-group .btn {
+            margin-right: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to bottom, var(--mario-blue), #2980b9);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(to bottom, #95a5a6, #7f8c8d);
+        }
+
+        .btn-success {
+            background: linear-gradient(to bottom, var(--mario-green), #27ae60);
+        }
+
+        .btn-info {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+        }
+
+        .btn-warning {
+            background: linear-gradient(to bottom, var(--mario-yellow), #f39c12);
+            color: var(--pixel-border);
+        }
+
+        /* 状态栏像素风格 */
         .status-bar {
-            background: rgba(255, 255, 255, 0.8);
-            border-top: 1px solid var(--win-border);
-            padding: 8px 16px;
+            background: linear-gradient(to right, var(--mario-red), #c0392b);
+            border-top: 6px solid var(--pixel-border);
+            padding: 12px 16px;
             font-size: 14px;
             display: flex;
             justify-content: space-between;
+            color: var(--pixel-text);
+            font-weight: bold;
+            text-shadow: 2px 2px 0px var(--pixel-border);
         }
 
+        .status-bar a {
+            color: var(--mario-yellow);
+            text-decoration: none;
+        }
+
+        .status-bar a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* 文件内容区域 */
         .file-content {
             display: none;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 16px;
-            border-top: 1px solid var(--win-border);
+            background: #0a1a2f;
+            padding: 20px;
+            border-top: 6px solid var(--pixel-border);
             flex-grow: 1;
             overflow-y: auto;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
         }
 
-        /* 新增地址栏样式 */
-        .path-input {  
-            width: 200px;  
-            margin-left: 12px;  
-            padding: 4px 16px;  
-            border: 1px solid var(--win-border);  
-            border-radius: 20px;  
-            background: rgba(255, 255, 255, 0.8);  
-        }  
+        .alert {
+            border: 4px solid var(--pixel-border);
+            border-radius: 0;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .alert-success {
+            background: linear-gradient(to bottom, var(--mario-green), #27ae60);
+            color: var(--pixel-text);
+            border-color: var(--pixel-border);
+        }
+
+        .alert-danger {
+            background: linear-gradient(to bottom, var(--mario-red), #c0392b);
+            color: var(--pixel-text);
+            border-color: var(--pixel-border);
+        }
+
+        pre {
+            color: inherit;
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 6px solid var(--pixel-border);
+            }
+            
+            .d-flex {
+                flex-direction: column;
+            }
+            
+            .file-item {
+                grid-template-columns: 40px 2fr 1fr 100px;
+            }
+        }
+
+        /* 扫描线效果 */
+        .scanline {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanline::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(transparent 50%, rgba(0,255,0,0.1) 50%);
+            background-size: 100% 6px;
+            pointer-events: none;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
     </style>
 </head>
 <body>
@@ -131,28 +452,34 @@
             <!-- 侧边栏 -->
             <div class="sidebar">
                 <div class="quick-access">
-                    <h6>Quick Access</h6>
+                    <h6>🎮 快速访问</h6>
                     <div class="nav flex-column">
                         <a class="nav-link" href="#" data-path="C:\\">
-                            <i class="fas fa-desktop me-2"></i>C Drive
+                            <i class="fas fa-hdd me-2"></i>硬盘 C:
                         </a>
                         <a class="nav-link" href="#" data-path="D:\\">
-                            <i class="fas fa-desktop me-2"></i>D Drive
+                            <i class="fas fa-hdd me-2"></i>硬盘 D:
                         </a>
                         <a class="nav-link" href="#" data-path="E:\\">
-                            <i class="fas fa-desktop me-2"></i>E Drive
+                            <i class="fas fa-hdd me-2"></i>硬盘 E:
                         </a>
                         <a class="nav-link" href="#" data-path="C:\\ProgramData\\Qlik\\Sense\\Log\\Repository">
-                            <i class="fas fa-download me-2"></i>Qlik Sense Repository Log
+                            <i class="fas fa-book me-2"></i>Qlik存储库日志
                         </a>
                         <a class="nav-link" href="#" data-path="C:\\ProgramData\\Qlik\\Sense\\Log\\Script">
-                            <i class="fas fa-download me-2"></i>Qlik Sense Script Log
+                            <i class="fas fa-scroll me-2"></i>Qlik脚本日志
                         </a>
                         <a class="nav-link" href="#" data-path="D:\\QlikShare\\ArchivedLogs">
-                            <i class="fas fa-download me-2"></i>Qlik Sense ArchivedLogs
+                            <i class="fas fa-archive me-2"></i>Qlik归档日志
                         </a>
                         <a class="nav-link" href="#" data-path="D:\\DataShare">
-                            <i class="fas fa-hard-drive me-2"></i>DataShare
+                            <i class="fas fa-database me-2"></i>数据共享区
+                        </a>
+                        <a class="nav-link" href="#" data-path="C:\\Windows\\System32">
+                            <i class="fas fa-cogs me-2"></i>系统文件
+                        </a>
+                        <a class="nav-link" href="#" data-path="C:\\Users">
+                            <i class="fas fa-users me-2"></i>用户目录
                         </a>
                     </div>
                 </div>
@@ -163,23 +490,28 @@
                 <!-- 工具栏 -->
                 <div class="toolbar d-flex flex-column">
                     <div class="d-flex align-items-center mb-3">
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-light" id="btnBack">
+                        <div class="btn-group me-2">
+                            <button class="btn btn-sm btn-light" id="btnBack" title="返回">
                                 <i class="fas fa-arrow-left"></i>
                             </button>
-                            <button class="btn btn-sm btn-light" id="btnForward">
+                            <button class="btn btn-sm btn-light" id="btnForward" title="前进">
                                 <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
-                        <button class="btn btn-sm btn-light" id="btnUp">
+                        <button class="btn btn-sm btn-light me-2" id="btnUp" title="上级目录">
                             <i class="fas fa-arrow-up"></i>
                         </button>
-                        <button class="btn btn-sm btn-light" id="btnClear">
+                        <button class="btn btn-sm btn-light me-2" id="btnClear" title="清除内容">
                             <i class="bi bi-journal-x"></i>
                         </button>
-                        <input type="text" class="path-input mb-0 flex-grow-1 mx-lg-2" placeholder="输入路径">
-                        <input type="text" class="search-box mb-0 flex-grow-1 mx-lg-1" placeholder="搜索">
-                        <!--<nav class="breadcrumb mb-0 flex-grow-1 mx-2"></nav>-->
+                        <div class="position-relative me-2">
+                            <i class="fas fa-map-marker-alt" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pixel-border); text-shadow: 1px 1px 0px white;"></i>
+                            <input type="text" class="path-input mb-0 flex-grow-1 ps-4" placeholder="输入文件路径">
+                        </div>
+                        <div class="position-relative">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pixel-border); text-shadow: 1px 1px 0px white;"></i>
+                            <input type="text" class="search-box mb-0 flex-grow-1 ps-4" placeholder="搜索文件">
+                        </div>
                     </div>
                 </div>
 
@@ -198,9 +530,20 @@
 
                 <!-- 状态栏 -->
                 <div class="status-bar">
-                    <span></span>
-                    <span><i class="bi bi-folder2-open"></i>EnterFolder</span> <i class="bi bi-journal-text">LogViewer</i> <i class="bi bi-code-square">View Content</i> <i class="bi bi-file-earmark-arrow-down">Download</i><i class="bi bi-eye">TextViewer</i>
-                    <span><a href="https://github.com/moshowgame/SpringBootRemotePowershellAdmin">SRE(Server Remote Execution)</a>&nbsp;&nbsp;<a href="https://zhengkai.blog.csdn.net/">by Moshow</a></span>
+                    <span><i class="fas fa-coins"></i> 文件数量: <span id="fileCount">0</span></span>
+                    <span>
+                        <i class="fas fa-folder-open" title="进入文件夹"></i>
+                        <i class="fas fa-book ms-2" title="日志查看器"></i>
+                        <i class="fas fa-file-code ms-2" title="查看内容"></i>
+                        <i class="fas fa-download ms-2" title="下载文件"></i>
+                        <i class="fas fa-eye ms-2" title="文本查看器"></i>
+                    </span>
+                    <span>
+                        <i class="fas fa-gamepad"></i>
+                        <a href="https://github.com/moshowgame/SpringBootRemotePowershellAdmin" target="_blank">SRE文件管理器</a>
+                        <i class="fas fa-heart" style="color: var(--mario-red);"></i>
+                        <a href="https://zhengkai.blog.csdn.net/" target="_blank">by Moshow</a>
+                    </span>
                 </div>
             </div>
         </div>
@@ -240,12 +583,22 @@
 
         // 初始化
         $(document).ready(() => {
+            console.log('文档加载完成');
             loadPath(currentPath);
 
-            // 快速访问点击
-            $('.nav-link[data-path]').click(function(e) {
+            // 快速访问点击 - 使用事件委托确保动态元素也能响应
+            $(document).on('click', '.nav-link[data-path]', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                console.log('快速访问点击:', $(this).data('path'));
+                console.log('点击元素:', this);
                 loadPath($(this).data('path'));
+            });
+
+            // 调试：检查快速访问链接是否存在
+            console.log('快速访问链接数量:', $('.nav-link[data-path]').length);
+            $('.nav-link[data-path]').each(function(index) {
+                console.log(`链接${index}:`, $(this).data('path'));
             });
 
             // 返回上级目录
@@ -423,7 +776,8 @@
             });
 
             // 更新状态栏
-            $('.status-bar span:first').text(`${files.length} 个项目`);
+            $('#fileCount').text(files.length);
+            $('.status-bar span:first').html(`<i class="fas fa-coins"></i> 文件数量: ${files.length}`);
         }
 
         // 搜索过滤
