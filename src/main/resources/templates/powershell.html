@@ -433,23 +433,13 @@
             function initialize() {
                 $terminal.empty();
                 $terminal.append(`
-                        <div style="color: #f1c40f; margin: 15px 0; font-family: 'Courier New', monospace; text-align: center;">
-      ╔════════════════════════════════════════════════════════════╗<br>
-      ║                                                            ║<br>
-      ║  ░█▀▀░█▀▄░█▀▀░█▀█░█▀▀░▀█▀░█▀▀░█▀█░█▀▄░░░█▀█░█▀▀░█▀▀░█▀▀  ║<br>
-      ║  ░█░░░█▀▄░█▀▀░█░█░▀▀█░░█░░█░░░█░█░█░█░░░█▀▀░█▀▀░▀▀█░▀▀█  ║<br>
-      ║  ░▀▀▀░▀░▀░▀▀▀░▀░▀░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀░░░░▀░░░▀▀▀░▀▀▀░▀▀▀  ║<br>
-      ║                                                            ║<br>
-      ║                                                            ║<br>
-      ║  MICROSOFT'S TASK AUTOMATION AND CONFIGURATION FRAMEWORK   ║<br>
-      ║  OBJECT-BASED SHELL FOR SYSTEM ADMINISTRATION              ║<br>
-      ║  CROSS-PLATFORM SUPPORT: WINDOWS | LINUX | MACOS           ║<br>
-      ║                                                            ║<br>
-      ╚════════════════════════════════════════════════════════════╝<br>
-                        </div>
-                        <div style="margin-top: 20px; color: #95a5a6;">
-    (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/" style="color: #3498db;">CSDN</a> | <a href="https://github.com/moshowgame/windows-remote-admin" style="color: #3498db;">GITHUB</a> ).
-    安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
+                        <div style="color: #00ff00; font-family: 'Courier New', monospace;">
+    Windows PowerShell<br>
+    Copyright (C) Microsoft Corporation. All rights reserved.<br>
+    <br>
+    Try the new cross-platform PowerShell https://aka.ms/pscore6<br>
+    <br>
+    PS ${window.location.hostname}>_
                         </div>`
                 );
                 $input.focus();
