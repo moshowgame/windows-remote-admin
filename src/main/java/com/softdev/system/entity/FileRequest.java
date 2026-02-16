@@ -12,7 +12,7 @@ public class FileRequest {
     Date executionTime;
     String fileNamePattern;
     String keyWord;
-    String ticketNumber;
+    String purpose;
     String days;
     String clientIpAddress;
 }

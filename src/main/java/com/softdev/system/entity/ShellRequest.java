@@ -9,7 +9,7 @@ public class ShellRequest {
     String command;
     String userName;
     String executionType;
-    String ticketNumber;
+    String purpose;
     Date executionTime;
     String encoding;
     String clientIpAddress;

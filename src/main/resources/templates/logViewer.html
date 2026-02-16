@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>LogViewer</title>
+    <title>🎮 LogViewer - 马里奥像素风格</title>
 
     <!-- Bootstrap 5 CSS -->
     <link th:href="@{/static/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet"/>
@@ -13,169 +13,548 @@
     <!-- CodeMirror 5 CSS -->
     <link th:href="@{/static/codemirror/5.65.18/lib/codemirror.css}" rel="stylesheet"/>
     <link th:href="@{/static/codemirror/5.65.18/addon/search/matchesonscrollbar.css}" rel="stylesheet"/>
-    <link th:href="@{/static/codemirror/5.65.18/theme/idea.css}" rel="stylesheet"/>
+    
+    <style>
+        /* 马里奥像素风格主题 */
+        :root {
+            --mario-red: #e52521;
+            --mario-blue: #3c44aa;
+            --mario-green: #4bad4b;
+            --mario-yellow: #fbd000;
+            --mario-brown: #964b00;
+            --mario-skin: #fcb97d;
+            --pixel-bg: #6b8cff;
+            --pixel-border: #000000;
+            --pixel-highlight: #ff0000;
+            --pixel-text: #ffffff;
+        }
 
-    <!-- Prism.js CSS -->
-    <!--<link th:href="@{/static/prism/prism.css}" rel="stylesheet"/>-->
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+            overflow-x: hidden;
+            margin: 0;
+            position: relative;
+        }
 
+        /* 背景装饰元素 */
+        .background-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .mario-block {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: var(--mario-red);
+            border: 4px solid var(--pixel-border);
+            z-index: 1;
+        }
+
+        .mario-block.question {
+            background: var(--mario-yellow);
+            color: var(--pixel-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .coin {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--mario-yellow);
+            border: 2px solid var(--pixel-border);
+            border-radius: 50%;
+            animation: coinFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes coinFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .pipe {
+            position: absolute;
+            width: 60px;
+            background: var(--mario-green);
+            border: 4px solid var(--pixel-border);
+        }
+
+        .pipe-top {
+            height: 30px;
+            border-bottom: none;
+            border-radius: 30px 30px 0 0;
+        }
+
+        .pipe-stem {
+            height: 80px;
+            border-top: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        .cloud:before, .cloud:after {
+            content: "";
+            position: absolute;
+            background: white;
+            border: 3px solid var(--pixel-border);
+            border-radius: 50%;
+        }
+
+        /* 导航栏像素风格 */
+        .navbar-mario {
+            background: linear-gradient(to right, var(--mario-red), #c0392b) !important;
+            border: 4px solid var(--pixel-border);
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .navbar-mario::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--mario-yellow),
+                var(--mario-yellow) 15px,
+                var(--mario-red) 15px,
+                var(--mario-red) 30px
+            );
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            text-shadow: 3px 3px 0px var(--pixel-border);
+            letter-spacing: 2px;
+            color: var(--pixel-text) !important;
+        }
+
+        /* 卡片像素风格 */
+        .card-mario {
+            background: var(--pixel-bg);
+            border: 6px solid var(--pixel-border);
+            box-shadow: 12px 12px 0px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .card-mario::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: repeating-linear-gradient(
+                90deg,
+                var(--pixel-highlight),
+                var(--pixel-highlight) 15px,
+                var(--pixel-bg) 15px,
+                var(--pixel-bg) 30px
+            );
+        }
+
+        .card-header-mario {
+            background: linear-gradient(to right, var(--mario-blue), #2980b9);
+            color: var(--pixel-text);
+            border: 4px solid var(--pixel-border);
+            font-weight: bold;
+            text-shadow: 2px 2px 0px var(--pixel-border);
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        /* 表单元素像素风格 */
+        .form-control-mario {
+            background: white;
+            border: 4px solid var(--pixel-border);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            padding: 10px;
+        }
+
+        .form-control-mario:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.25rem rgba(60, 68, 170, 0.25);
+            border-color: var(--mario-blue);
+        }
+
+        .btn-mario {
+            background: linear-gradient(to bottom, var(--mario-green), #27ae60);
+            color: var(--pixel-text);
+            border: 4px solid var(--pixel-border);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+            text-shadow: 2px 2px 0px var(--pixel-border);
+        }
+
+        .btn-mario:hover {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.3);
+            background: linear-gradient(to bottom, #27ae60, #219653);
+        }
+
+        .btn-mario:active {
+            transform: translate(6px, 6px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.3);
+        }
+
+        /* 侧边栏文件列表 */
+        .list-group-item-mario {
+            background: white;
+            border: 2px solid var(--pixel-border);
+            margin-bottom: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .list-group-item-mario:hover {
+            background: var(--mario-yellow);
+            transform: translate(2px, 2px);
+        }
+
+        .list-group-item-mario.active {
+            background: var(--mario-green);
+            color: var(--pixel-text);
+        }
+
+        /* CodeMirror 自定义样式 */
+        .CodeMirror {
+            border: 4px solid var(--pixel-border) !important;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        .CodeMirror-gutters {
+            background: var(--mario-yellow) !important;
+            border-right: 2px solid var(--pixel-border) !important;
+        }
+
+        .CodeMirror-linenumber {
+            color: var(--pixel-border) !important;
+            font-weight: bold !important;
+        }
+
+        /* 高亮搜索结果 */
+        .highlight {
+            background-color: var(--mario-yellow) !important;
+            color: var(--pixel-border) !important;
+            font-weight: bold !important;
+        }
+
+        /* 底部信息 */
+        .footer-info {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--mario-brown);
+            font-size: 0.9rem;
+            text-shadow: 1px 1px 0px white;
+        }
+
+        .footer-info a {
+            color: var(--mario-blue);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .footer-info a:hover {
+            color: var(--mario-red);
+            text-decoration: underline;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-<!-- 导航栏 -->
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-        <span class="navbar-brand">LogViewer</span>
-        <div class="d-flex">
-            <div class="form-check form-switch text-light me-3">
-                (c) Powered by Moshow ( <a href="https://zhengkai.blog.csdn.net/">CSDN</a> | <a href="https://github.com/moshowgame/windows-remote-admin">GITHUB</a> )
-            </div>
-        </div>
+    <!-- 背景装饰元素 -->
+    <div class="background-elements">
+        <!-- 云朵 -->
+        <div class="cloud" style="top: 50px; left: 100px; width: 80px; height: 40px;"></div>
+        <div class="cloud" style="top: 120px; right: 150px; width: 100px; height: 50px;"></div>
+        
+        <!-- 管道 -->
+        <div class="pipe pipe-top" style="bottom: 50px; right: 100px; width: 60px;"></div>
+        <div class="pipe pipe-stem" style="bottom: 50px; right: 100px; width: 60px;"></div>
+        
+        <!-- 金币 -->
+        <div class="coin" style="top: 80px; right: 300px;"></div>
+        <div class="coin" style="top: 150px; left: 250px;"></div>
     </div>
-</nav>
 
-<div class="container-fluid">
-    <div class="row mt-3">
-        <!-- 侧边栏 -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <p id="fileName"></p>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush" id="fileListSidebar"></ul>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-dark navbar-mario">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-scroll"></i> LOGVIEWER - 日志查看器
+            </span>
+            <div class="d-flex">
+                <div class="form-check form-switch text-light me-3">
+                    <i class="fas fa-heart" style="color: var(--mario-red);"></i>
+                    Powered by Moshow | 
+                    <a href="https://zhengkai.blog.csdn.net/" target="_blank">
+                        <i class="fab fa-blogger"></i> CSDN
+                    </a> | 
+                    <a href="https://github.com/moshowgame/windows-remote-admin" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                    <i class="fas fa-heart" style="color: var(--mario-red);"></i>
                 </div>
             </div>
         </div>
-        <!-- 主编辑器区域 -->
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-header">
-                    <label>文件名</label><input type="text" id="fileNamePattern" class="form-control ms-3" placeholder="匹配文件名" th:value="${fileNamePattern}">
-                    <label>包含文本</label><input type="text" id="keyWord" class="form-control ms-3" placeholder="关键字" th:value="${keyWord}">
-                    <label>查询范围(天数)</label><input type="number" id="days" class="form-control ms-3" placeholder="天数" min="1" max="999" value="1">
-                    <input type="button" id="searchBtn" class="form-control ms-3 btn btn-outline-primary" value="搜索">
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row mt-3">
+            <!-- 侧边栏 -->
+            <div class="col-md-3">
+                <div class="card card-mario">
+                    <div class="card-header card-header-mario">
+                        <i class="fas fa-folder-open"></i> 文件列表
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="card-header bg-white border-0">
+                            <p id="fileName" class="mb-2 fw-bold"></p>
+                        </div>
+                        <ul class="list-group list-group-flush" id="fileListSidebar"></ul>
+                    </div>
                 </div>
-                <div class="card-body p-0 d-flex flex-column">
-                    <input type="text" id="searchInput" class="form-control ms-3" placeholder="搜索日志内容(高亮显示)">
-                    <div class="flex-grow-1">
-                        <!-- 替换 <pre> 为 <textarea> -->
-                        <textarea id="logEditor" style="height: 100%; border-left: 1px solid #ddd;"></textarea>
+            </div>
+            
+            <!-- 主编辑器区域 -->
+            <div class="col-md-9">
+                <div class="card card-mario">
+                    <div class="card-header card-header-mario">
+                        <i class="fas fa-search"></i> 日志搜索与查看
+                    </div>
+                    <div class="card-body p-3">
+                        <!-- 搜索控件 -->
+                        <div class="row mb-3 g-2">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">文件名匹配</label>
+                                <input type="text" id="fileNamePattern" class="form-control form-control-mario" placeholder="log">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">包含关键词</label>
+                                <input type="text" id="keyWord" class="form-control form-control-mario" placeholder="ERROR">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold">查询天数</label>
+                                <input type="number" id="days" class="form-control form-control-mario" placeholder="1" min="1" max="999" value="1">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" id="searchBtn" class="btn btn-mario w-100">
+                                    <i class="fas fa-search"></i> 搜索
+                                </button>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" id="refreshBtn" class="btn btn-mario w-100">
+                                    <i class="fas fa-sync-alt"></i> 刷新
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 内容搜索 -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">内容搜索 (实时高亮)</label>
+                            <input type="text" id="searchInput" class="form-control form-control-mario" placeholder="输入关键词进行高亮搜索...">
+                        </div>
+                        
+                        <!-- 编辑器区域 -->
+                        <div class="border rounded" style="min-height: 500px;">
+                            <textarea id="logEditor" name="logEditor"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- 脚本依赖 -->
-<script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
-<script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <!-- 底部信息 -->
+    <div class="footer-info">
+        <i class="fas fa-mario" style="color: var(--mario-red);"></i>
+        Windows Remote Admin - 专为Windows远程管理而生
+        <i class="fas fa-mario" style="color: var(--mario-red);"></i>
+    </div>
 
-<!-- CodeMirror 5 JavaScript -->
-<script th:src="@{/static/codemirror/5.65.18/lib/codemirror.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/mode/loadmode.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/mode/verilog/verilog.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/search.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/searchcursor.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/scroll/annotatescrollbar.js}"></script>
-<script th:src="@{/static/codemirror/5.65.18/addon/search/matchesonscrollbar.js}"></script>
+    <!-- 脚本依赖 -->
+    <script th:src="@{/static/jquery/3.7.1/jquery.min.js}"></script>
+    <script th:src="@{/static/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
 
-<!-- Prism.js JavaScript -->
-<!--<script th:src="@{/static/prism/prism.js}"></script>-->
+    <!-- CodeMirror 5 JavaScript -->
+    <script th:src="@{/static/codemirror/5.65.18/lib/codemirror.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/addon/mode/loadmode.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/mode/verilog/verilog.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/addon/search/search.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/addon/search/searchcursor.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/addon/scroll/annotatescrollbar.js}"></script>
+    <script th:src="@{/static/codemirror/5.65.18/addon/search/matchesonscrollbar.js}"></script>
 
-<script th:inline="javascript">
-    $(function() {
-        const readUrl = /*[[ @{/read} ]]*/ '';
-        const listPlusUrl = /*[[ @{/listPlus} ]]*/ '';
-        const filePath = /*[[${filePath}]]*/ '';
-        const fileNamePattern = /*[[${fileNamePattern}]]*/ '';
-        const keyWord = /*[[${keyWord}]]*/ '';
-        $('#fileName').html('<i class="bi bi-folder2-open"></i> '+filePath);
-        let originalContent = "";
+    <script th:inline="javascript">
+        $(function() {
+            const readUrl = /*[[ @{/read} ]]*/ '';
+            const listPlusUrl = /*[[ @{/listPlus} ]]*/ '';
+            const filePath = /*[[${filePath}]]*/ '';
+            const fileNamePattern = /*[[${fileNamePattern}]]*/ '';
+            const keyWord = /*[[${keyWord}]]*/ '';
+            
+            $('#fileName').html('<i class="fas fa-folder"></i> 当前路径: ' + filePath);
+            let originalContent = "";
 
-        // 初始化CodeMirror 5编辑器
-        const editor = CodeMirror.fromTextArea(document.getElementById('logEditor'), {
-            lineNumbers: true,
-            // 确保 mode 设置正确
-            mode: 'verilog',
-            // mode: 'text/x-log',
-            theme: 'idea',
-            readOnly: true,
-            // 添加自动高度配置
-            viewportMargin: Infinity,
-            autoRefresh: true
-        });
-        // 添加窗口resize监听
-        window.addEventListener('resize', () => editor.refresh());
-        // 搜索文本高亮功能
-        $('#searchInput').on('input', function() {
-            const query = $(this).val();
-            if (query) {
-                editor.getWrapperElement().querySelectorAll('.CodeMirror-searching').forEach(el => el.classList.remove('CodeMirror-searching'));
-                const cursor = editor.getSearchCursor(query);
-                while (cursor.findNext()) {
-                    editor.markText(cursor.from(), cursor.to(), { className: 'highlight' });
+            // 初始化CodeMirror 5编辑器
+            const textarea = document.getElementById('logEditor');
+            const editor = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/plain',
+                theme: 'default',
+                readOnly: true,
+                viewportMargin: Infinity,
+                autoRefresh: true,
+                lineWrapping: true
+            });
+            
+            // 设置编辑器高度
+            editor.setSize('100%', '500px');
+            
+            // 安全的setValue包装函数
+            function safeSetValue(cm, value) {
+                try {
+                    const content = value || '';
+                    cm.setValue(typeof content === 'string' ? content : String(content));
+                    cm.refresh();
+                } catch (e) {
+                    console.error('Error setting editor value:', e);
+                    cm.setValue('⚠️ 内容加载出现错误');
+                    cm.refresh();
                 }
-            } else {
-                editor.getWrapperElement().querySelectorAll('.CodeMirror-searching').forEach(el => el.classList.remove('CodeMirror-searching'));
             }
-        });
+            
+            // 添加窗口resize监听
+            window.addEventListener('resize', () => editor.refresh());
 
-        // 搜索按钮点击事件
-        $('#searchBtn').click(function() {
-            $.ajax({
-                url: listPlusUrl,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ 
-                    filePath: filePath, 
-                    fileNamePattern: $('#fileNamePattern').val(), 
-                    keyWord: $('#keyWord').val(),
-                    days: $('#days').val() // 新增天数参数
-                }),
-                success: function(response) {
-                    renderFileListSidebar(response.data);
-                },
-                error: function(error) {
-                    console.error('Error searching files:', error);
+            // 搜索文本高亮功能
+            $('#searchInput').on('input', function() {
+                const query = $(this).val();
+                // 清除之前的高亮
+                editor.operation(function() {
+                    for (let i = 0; i < editor.lineCount(); i++) {
+                        editor.removeLineClass(i, "wrap", "highlight-line");
+                    }
+                });
+                
+                if (query) {
+                    const cursor = editor.getSearchCursor(query, CodeMirror.Pos(0, 0));
+                    while (cursor.findNext()) {
+                        editor.markText(cursor.from(), cursor.to(), { 
+                            className: 'highlight' 
+                        });
+                    }
                 }
             });
-        });
 
-        // 渲染侧边栏文件列表
-        function renderFileListSidebar(files) {
-            const $fileListSidebar = $('#fileListSidebar').empty();
-            files.forEach(file => {
-                const $listItem = $('<li class="list-group-item list-group-item-action">' + file.name + '</li>');
-                $listItem.click(function() {
-                    $.ajax({
-                        url: readUrl,
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ filePath: filePath + "\\" + file.name }),
-                        success: function(response) {
-                            originalContent = response.data;
-                            editor.setValue(originalContent); // 更新CodeMirror内容
-                            editor.refresh();
-                        },
-                        error: function(error) {
-                            console.error('Error reading file:', error);
-                        }
-                    });
+            // 搜索按钮点击事件
+            $('#searchBtn').click(function() {
+                const $btn = $(this);
+                const originalText = $btn.html();
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> 搜索中...');
+                
+                $.ajax({
+                    url: listPlusUrl,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 
+                        filePath: filePath, 
+                        fileNamePattern: $('#fileNamePattern').val(), 
+                        keyWord: $('#keyWord').val(),
+                        days: $('#days').val()
+                    }),
+                    success: function(response) {
+                        renderFileListSidebar(response.data);
+                        $btn.prop('disabled', false).html(originalText);
+                    },
+                    error: function(error) {
+                        console.error('Error searching files:', error);
+                        alert('搜索失败: ' + (error.responseJSON?.msg || '未知错误'));
+                        $btn.prop('disabled', false).html(originalText);
+                    }
                 });
-                $fileListSidebar.append($listItem);
             });
-        }
-    });
-</script>
-<style>
-    .highlight {
-        background-color: yellow;
-    }
-    /* 添加CSS */
-    .CodeMirror {
-        flex: 1;
-        min-height: calc(90vh - 180px); /* 动态获取浏览器的高度然后减去200px */
-    }
-</style>
+
+            // 刷新按钮
+            $('#refreshBtn').click(function() {
+                location.reload();
+            });
+
+            // 渲染侧边栏文件列表
+            function renderFileListSidebar(files) {
+                const $fileListSidebar = $('#fileListSidebar').empty();
+                files.forEach(file => {
+                    const $listItem = $(`
+                        <li class="list-group-item list-group-item-mario">
+                            <i class="fas fa-file-alt"></i> ${file.name}
+                            <span class="badge bg-secondary float-end">${file.size}</span>
+                        </li>
+                    `);
+                    $listItem.click(function() {
+                        $(this).addClass('active').siblings().removeClass('active');
+                        $.ajax({
+                            url: readUrl,
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ filePath: filePath + "\\" + file.name }),
+                            beforeSend: function() {
+                                safeSetValue(editor, '🎮 正在加载文件内容...');
+                            },
+                            success: function(response) {
+                                // 确保response.data存在且为字符串
+                                originalContent = response || '';
+                                if (typeof originalContent !== 'string') {
+                                    originalContent = String(originalContent);
+                                }
+                                safeSetValue(editor, originalContent);
+                                editor.scrollTo(0, 0); // 滚动到顶部
+                                $('#searchInput').val('').trigger('input'); // 清空搜索
+                            },
+                            error: function(error) {
+                                console.error('Error reading file:', error);
+                                const errorMessage = "❌ 文件读取失败: " + (error.responseJSON?.msg || error.statusText || '未知错误');
+                                safeSetValue(editor, errorMessage);
+                            }
+                        });
+                    });
+                    $fileListSidebar.append($listItem);
+                });
+            }
+
+            // 页面加载完成后自动搜索
+            $('#searchBtn').click();
+        });
+    </script>
 </body>
 </html>

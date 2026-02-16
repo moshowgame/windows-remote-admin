@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import com.softdev.system.entity.FileInfo;
 import com.softdev.system.entity.FileRequest;
 import com.softdev.system.service.FileSystemService;
+import com.softdev.system.util.AuditUtil;
 import com.softdev.system.util.ResponseUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -70,14 +71,9 @@ public class FileController {
     @PostMapping("/list")
     public Object listFile(@RequestBody FileRequest fileRequest, HttpServletRequest request) throws IOException {
         fileRequest.setExecutionType("list");
-        fileRequest.setExecutionTime(new Date());
 
-        //从session里面获取用户名和单据号，注入实体中
-        HttpSession session = request.getSession(false);
-        fileRequest.setUserName(session.getAttribute("entitledUser")+"");
-        fileRequest.setTicketNumber(session.getAttribute("ticketNumber")+"");
-        // 获取客户端IP地址
-        fileRequest.setClientIpAddress(getClientIpAddress(request));
+        // 统一填充审计信息
+        AuditUtil.populateAuditInfo(fileRequest, request);
 
         // 确保路径合法化
         Path normalizedPath = Paths.get(fileRequest.getFilePath()).normalize();
@@ -89,14 +85,9 @@ public class FileController {
     @PostMapping("/listPlus")
     public Object listFilePlus(@RequestBody FileRequest fileRequest,HttpServletRequest request) throws IOException {
         fileRequest.setExecutionType("list");
-        fileRequest.setExecutionTime(new Date());
 
-        //从session里面获取用户名和单据号，注入实体中
-        HttpSession session = request.getSession(false);
-        fileRequest.setUserName(session.getAttribute("entitledUser")+"");
-        fileRequest.setTicketNumber(session.getAttribute("ticketNumber")+"");
-        // 获取客户端IP地址
-        fileRequest.setClientIpAddress(getClientIpAddress(request));
+        // 统一填充审计信息
+        AuditUtil.populateAuditInfo(fileRequest, request);
 
         // 确保路径合法化
         Path normalizedPath = Paths.get(fileRequest.getFilePath()).normalize();
@@ -163,13 +154,9 @@ public class FileController {
     @PostMapping("/download")
     public ResponseEntity<Resource> downloadFile(@RequestBody FileRequest fileRequest,HttpServletRequest request) {
         fileRequest.setExecutionType("download");
-        fileRequest.setExecutionTime(new Date());
-        //从session里面获取用户名和单据号，注入实体中
-        HttpSession session = request.getSession(false);
-        fileRequest.setUserName(session.getAttribute("entitledUser")+"");
-        fileRequest.setTicketNumber(session.getAttribute("ticketNumber")+"");
-        // 获取客户端IP地址
-        fileRequest.setClientIpAddress(getClientIpAddress(request));
+        
+        // 统一填充审计信息
+        AuditUtil.populateAuditInfo(fileRequest, request);
 
         String filePath = fileRequest.getFilePath().replaceAll("//","");
         log.info("Audit Log - FileDownloadRequest:{} {}",filePath, fileRequest);
@@ -187,16 +174,31 @@ public class FileController {
                 .body(resource);
     }
 
+    @PostMapping("/normalizedPath")
+    public Object normalizedPath(@RequestBody FileRequest fileRequest, HttpServletRequest request) {
+        fileRequest.setExecutionType("normalize");
+        
+        // 统一填充审计信息
+        AuditUtil.populateAuditInfo(fileRequest, request);
+        
+        try {
+            // 规范化路径
+            Path normalizedPath = Paths.get(fileRequest.getFilePath()).normalize();
+            log.info("Audit Log - Normalizing path: {} -> {}", fileRequest.getFilePath(), normalizedPath.toString());
+            
+            return ResponseUtil.success(normalizedPath.toString());
+        } catch (Exception e) {
+            log.error("Error normalizing path: {}", fileRequest.getFilePath(), e);
+            return ResponseUtil.fail(ResponseUtil.StatusCode.INTERNAL_ERROR, "路径规范化失败: " + e.getMessage());
+        }
+    }
+    
     @PostMapping("/read")
     public Object read(@RequestBody FileRequest fileRequest,HttpServletRequest request) throws IOException {
         fileRequest.setExecutionType("read");
-        fileRequest.setExecutionTime(new Date());
-        //从session里面获取用户名和单据号，注入实体中
-        HttpSession session = request.getSession(false);
-        fileRequest.setUserName(session.getAttribute("entitledUser")+"");
-        fileRequest.setTicketNumber(session.getAttribute("ticketNumber")+"");
-        // 获取客户端IP地址
-        fileRequest.setClientIpAddress(getClientIpAddress(request));
+        
+        // 统一填充审计信息
+        AuditUtil.populateAuditInfo(fileRequest, request);
 
         Path path = Paths.get(fileRequest.getFilePath()).normalize();
         log.info("Audit Log - Read File Request:{} ",fileRequest);
