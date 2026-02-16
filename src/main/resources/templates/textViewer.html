@@ -229,6 +229,22 @@
             color: var(--pixel-border) !important;
             font-weight: bold !important;
         }
+        
+        /* 搜索匹配项高亮 */
+        .ace_marker-layer .ace_selected-word {
+            background-color: rgba(251, 208, 0, 0.7) !important;
+            border: 2px solid var(--mario-red) !important;
+            border-radius: 2px;
+        }
+        
+        .ace_marker-layer .ace_selection {
+            background-color: rgba(251, 208, 0, 0.5) !important;
+        }
+        
+        /* 当前行高亮 */
+        .ace_marker-layer .ace_active-line {
+            background-color: rgba(60, 68, 170, 0.1) !important;
+        }
 
         /* 底部信息 */
         .footer-info {
@@ -374,6 +390,11 @@
             editor.setOption("scrollPastEnd", 0.1);
             editor.setShowPrintMargin(false); // 隐藏打印边距线
             
+            // 启用搜索功能
+            editor.setOption("highlightActiveLine", true);
+            editor.setOption("highlightSelectedWord", true);
+            // 不要手动设置$search，让Ace Editor自己处理
+            
             // 设置编辑器样式
             document.getElementById('logEditor').style.border = '4px solid #000000';
             
@@ -431,18 +452,45 @@
 
             // 搜索功能
             $('#searchInput').on('input', function() {
-                const query = $(this).val();
-                if (query) {
-                    editor.find(query, {
+                const query = $(this).val().trim();
+                
+                // 清除之前的搜索结果
+                try {
+                    editor.findAll('', {
                         backwards: false,
                         wrap: true,
                         caseSensitive: false,
                         wholeWord: false,
                         regExp: false,
-                        highlightAll: true
+                        highlightAll: false
                     });
-                } else {
+                } catch (e) {
+                    // 如果findAll失败，使用clearSelection作为备选方案
                     editor.clearSelection();
+                }
+                
+                if (query) {
+                    // 执行新的搜索
+                    try {
+                        const options = {
+                            backwards: false,
+                            wrap: true,
+                            caseSensitive: false,
+                            wholeWord: false,
+                            regExp: false,
+                            highlightAll: true
+                        };
+                        
+                        const found = editor.find(query, options);
+                        
+                        // 如果找到匹配项，滚动到第一个匹配位置
+                        if (found) {
+                            const cursor = editor.getCursorPosition();
+                            editor.scrollToLine(cursor.row, true, true, function() {});
+                        }
+                    } catch (e) {
+                        console.error('Search error:', e);
+                    }
                 }
             });
 
@@ -450,7 +498,20 @@
             $('#clearSearch').click(function() {
                 $('#searchInput').val('');
                 editor.clearSelection();
-                editor.findAll('', {highlightAll: false}); // 清除所有高亮
+                try {
+                    editor.findAll('', {
+                        backwards: false,
+                        wrap: true,
+                        caseSensitive: false,
+                        wholeWord: false,
+                        regExp: false,
+                        highlightAll: false
+                    }); // 清除所有高亮
+                } catch (e) {
+                    // 备选方案
+                    editor.clearSelection();
+                }
+                editor.focus();
             });
 
             // 刷新按钮
@@ -485,11 +546,32 @@
                 if (e.ctrlKey && e.key === 'f') {
                     e.preventDefault();
                     $('#searchInput').focus();
+                    $('#searchInput').select();
                 }
                 // ESC 清除搜索
                 if (e.key === 'Escape') {
                     $('#clearSearch').click();
                 }
+                // Enter键在搜索框中查找下一个匹配项
+                if (e.key === 'Enter' && document.activeElement.id === 'searchInput') {
+                    e.preventDefault();
+                    const query = $('#searchInput').val().trim();
+                    if (query) {
+                        editor.findNext();
+                        const cursor = editor.getCursorPosition();
+                        editor.scrollToLine(cursor.row, true, true, function() {});
+                    }
+                }
+            });
+            
+            // 搜索框获得焦点时的处理
+            $('#searchInput').focus(function() {
+                $(this).select(); // 自动选中所有文本
+            });
+            
+            // 搜索框失去焦点时清除选中
+            $('#searchInput').blur(function() {
+                // 可以在这里添加失去焦点时的处理逻辑
             });
         });
     </script>

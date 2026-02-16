@@ -201,10 +201,10 @@ mvn package -DskipTests
 mvn spring-boot:run
 
 # 生产模式启动
-java -jar target/WindowsRemoteAdmin-1.0.0.jar
+java -jar target/WindowsRemoteAdmin-2026.jar
 
 # 后台运行（Linux/macOS）
-nohup java -jar target/WindowsRemoteAdmin-1.0.0.jar > app.log 2>&1 &
+nohup java -jar target/WindowsRemoteAdmin-2026.jar > app.log 2>&1 &
 ```
 
 #### 4. 访问验证
