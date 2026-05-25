@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,64 +13,53 @@ import (
 
 	"windows-remote-admin-go/internal/config"
 	"windows-remote-admin-go/internal/handler"
+	"windows-remote-admin-go/internal/logger"
 	"windows-remote-admin-go/internal/middleware"
 	"windows-remote-admin-go/internal/service"
 )
 
 func main() {
-	// 加载配置
+	// ========== 初始化日志系统 ==========
+	logger.Init("logs")
+	defer logger.Sync()
+
 	cfg := config.DefaultConfig()
 
-	// 设置 Gin 模式
 	gin.SetMode(gin.ReleaseMode)
 
-	// 创建 Gin 引擎
 	engine := gin.New()
-	engine.Use(gin.Logger())
+	engine.Use(gin.LoggerWithWriter(logger.GetGinWriter()))
 	engine.Use(gin.Recovery())
 
-	// 加载模板
 	engine.LoadHTMLGlob("web/templates/*")
-
-	// 模板函数已通过 LoadHTMLGlob 自动加载
-
-	// 静态资源服务
 	engine.Static("/static", "./web/static")
 
-	// Session 存储
 	store := cookie.NewStore([]byte(cfg.SessionKey))
 	store.Options(sessions.Options{
 		Path:     "/",
-		MaxAge:   86400, // 24小时
+		MaxAge:   86400,
 		HttpOnly: true,
 	})
 	engine.Use(sessions.Sessions("wra_session", store))
 
-	// 初始化服务
 	csvPath := cfg.CSVPath
-	// 尝试多个路径寻找 CSV
 	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
 		csvPath = filepath.Join("data", "entitlement.csv")
 	}
 	entitlementSvc := service.GetEntitlementServiceWithFS(csvPath, &dataFS)
 
-	// 创建处理器
 	authHandler := handler.NewAuthHandler(entitlementSvc)
 	psHandler := handler.NewPowerShellHandler()
 	fileHandler := handler.NewFileHandler()
 
 	// ---- 路由注册 ----
 
-	// 不需要认证的页面路由
 	engine.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/login")
 	})
 	engine.GET("/login", authHandler.LoginPage)
-
-	// 不需要认证的 API 路由
 	engine.POST("/login", authHandler.Login)
 
-	// 页面路由（需要认证，由中间件处理）
 	pages := engine.Group("/")
 	pages.Use(middleware.AuthRequired())
 	{
@@ -82,37 +70,30 @@ func main() {
 		pages.GET("/logmonitor", fileHandler.LogViewerPage)
 	}
 
-	// API 路由
 	api := engine.Group("/")
 	api.Use(middleware.AuthRequired())
 	{
-		// PowerShell
 		api.POST("/execute", psHandler.Execute)
-
-		// 文件管理
 		api.POST("/list", fileHandler.ListFiles)
 		api.POST("/listPlus", fileHandler.ListFilesPlus)
 		api.POST("/download", fileHandler.DownloadFile)
 		api.POST("/normalizedPath", fileHandler.NormalizePath)
 		api.POST("/read", fileHandler.ReadFile)
 		api.POST("/upload", fileHandler.UploadFile)
-
-		// 登出
 		api.POST("/logout", authHandler.Logout)
 	}
 
-	// 启动服务器
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	log.Println(strings.Repeat("=", 60))
-	log.Println("  Windows Remote Admin (Go Edition)")
-	log.Println("  Portable Windows Management Tool")
-	log.Printf("  Port: %s", cfg.Port)
-	log.Printf("  URL:  http://localhost%s/", addr)
-	log.Println("  GitHub: https://github.com/moshowgame/windows-remote-admin")
-	log.Println(strings.Repeat("=", 60))
+	logger.Infof(strings.Repeat("=", 60))
+	logger.Infof("  Windows Remote Admin (Go Edition)")
+	logger.Infof("  Portable Windows Management Tool")
+	logger.Infof("  Port: %s", cfg.Port)
+	logger.Infof("  URL:  http://localhost%s/", addr)
+	logger.Infof("  GitHub: https://github.com/moshowgame/windows-remote-admin")
+	logger.Infof(strings.Repeat("=", 60))
 
 	if err := engine.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Errorf("Failed to start server: %v", err)
 		os.Exit(1)
 	}
 }

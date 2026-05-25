@@ -25,6 +25,7 @@
   - [文本编辑器](#文本编辑器)
   - [日志监控器](#日志监控器)
   - [认证与安全](#认证与安全)
+- [日志系统](#日志系统)
 - [技术架构](#技术架构)
 - [快速开始](#快速开始)
 - [部署指南](#部署指南)
@@ -52,7 +53,7 @@
 | **单二进制部署** | 编译后仅需一个 `.exe` 文件，无需 JVM、无需配置文件 |
 | **零依赖运行** | 前端资源、模板、数据全部内嵌到二进制中 |
 | **马里奥像素风格 UI** | 复古游戏主题，操作体验有趣且专业 |
-| **跨会话审计** | 完整记录用户操作日志，支持追溯 |
+| **结构化审计日志** | 11 个操作审计点 + 30 天自动轮转（zap + lumberjack） |
 | **轻量高效** | 内存占用 < 20MB，启动时间 < 1 秒 |
 
 ---
@@ -331,7 +332,7 @@ CLIXML Filter (正则清理)
 | **Session 管理** | Cookie-based，24 小时过期，HttpOnly 标记防 XSS |
 | **白名单路由** | `/login`, `/static/*` 等公开路径免认证 |
 | **AJAX 区分** | API 请求未认证返回 401 JSON；页面请求重定向 `/login` |
-| **审计日志** | 记录用户、IP、操作内容、时间戳 |
+| **审计日志** | 11 个操作点结构化记录，JSON 格式，30 天自动轮转 |
 | **文件大小限制** | 读取 10MB、上传 100MB 上限 |
 | **MIME 类型检查** | 仅允许文本类文件读取，阻止二进制泄露 |
 | **路径安全** | 自动规范化路径，防止目录遍历攻击 |
@@ -346,6 +347,83 @@ admin,admin123
 ```
 
 > **提示**: 生产环境请修改默认密码！CSV 格式便于批量管理用户。
+
+---
+
+## 📋 日志系统
+
+### 日志文件输出
+
+程序启动后，日志自动输出到 **可执行文件所在目录** 下的 `logs/` 文件夹：
+
+```
+windows-remote-admin.exe
+└── logs/
+    ├── app.log        # 应用运行日志（启动/错误/警告）
+    ├── audit.log      # 审计日志（用户操作记录）⭐
+    └── access.log     # HTTP 访问日志（请求记录）
+```
+
+> **路径说明**：日志目录始终跟随 exe 文件位置，无论从哪个目录启动程序。
+
+### 三类日志对比
+
+| 日志文件 | 内容 | 输出目标 | 格式 | 典型用途 |
+|----------|------|----------|------|----------|
+| **app.log** | 应用生命周期、错误、警告 | 文件 + 控制台 | JSON + 彩色文本 | 排查启动问题、运行异常 |
+| **audit.log** | 用户登录/命令执行/文件操作等 | 仅文件（安全） | JSON 结构化 | 安全审计、行为追溯 |
+| **access.log** | HTTP 请求记录（Gin 框架生成） | 仅文件 | JSON | 流量分析、接口监控 |
+
+### 自动维护策略（Lumberjack）
+
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| **MaxSize** | 10 MB | 单个日志文件超过 10MB 时自动切割 |
+| **MaxBackups** | 30 个 | 最多保留 30 个历史备份文件 |
+| **MaxAge** | 30 天 | 超过 30 天的旧日志自动删除 ⏰ |
+| **Compress** | 开启 | 历史日志自动 GZip 压缩（`.gz`） |
+
+> 审计合规：日志默认保留 **30 天**，满足大多数安全审计要求。可通过修改 `internal/logger/logger.go` 调整。
+
+### 审计日志示例
+
+**audit.log** 输出的结构化 JSON 记录：
+
+```json
+{"level":"INFO","time":"2026-05-26 00:16:56.422","caller":"handler/auth.go:73","msg":"用户登录成功","username":"admin","purpose":"运维检查","ip":"192.168.1.100"}
+{"level":"INFO","time":"2026-05-26 00:17:02.336","caller":"handler/powershell.go:49","msg":"PowerShell 命令执行","username":"admin","command":"Get-Process","ip":"192.168.1.100"}
+{"level":"INFO","time":"2026-05-26 00:17:10.445","caller":"handler/file.go:71","msg":"下载文件","username":"admin","path":"C:\\Logs\\app.log","ip":"192.168.1.100"}
+{"level":"INFO","time":"2026-05-26 00:17:15.112","caller":"middleware/auth.go:50","msg":"未授权访问被拦截","path":"/execute","method":"POST","ip":"10.0.0.5"}
+```
+
+### 覆盖的用户操作审计点
+
+以下所有用户行为都会自动记录到 `audit.log`：
+
+| 操作类型 | 触发条件 | 记录字段 |
+|----------|----------|----------|
+| ✅ 登录成功 | POST `/login` 验证通过 | `username`, `purpose`, `ip` |
+| ❌ 登录失败 | POST `/login` 密码错误 | `username`, `ip` |
+| 🚪 登出 | POST `/logout` | `username`, `ip` |
+| ⚡ 命令执行 | POST `/execute` 执行 PS | `username`, `command`, `encoding`, `ip` |
+| 📂 列出目录 | POST `/list` 浏览文件夹 | `username`, `path`, `ip` |
+| 🔍 搜索文件 | POST `/listPlus` 条件查询 | `username`, `pattern`, `keyword`, `ip` |
+| 📥 下载文件 | POST `/download` 下载 | `username`, `path`, `ip` |
+| 📖 读取文件 | POST `/read` 打开文本 | `username`, `path`, `ip` |
+| 📤 上传文件 | POST `/upload` 上传 | `username`, `targetPath`, `sizeBytes`, `replaced`, `ip` |
+| 🔀 路径规范化 | POST `/normalizedPath` | `original`, `normalized`, `ip` |
+| 🚫 未授权访问 | 中间件拦截无 Session 请求 | `path`, `method`, `ip` |
+
+### 技术实现
+
+```
+uber-go/zap (高性能结构化日志)
+├── appCore   → lumberjack.Writer → logs/app.log     + os.Stdout (控制台)
+├── auditCore → lumberjack.Writer → logs/audit.log   (仅文件，安全)
+└── accessCore→ lumberjack.Writer → logs/access.log  (仅文件)
+                                    ↑
+                              MaxSize: 10MB, MaxAge: 30天, Compress: true
+```
 
 ---
 
@@ -423,6 +501,9 @@ windows-remote-admin-go/
 │   │   ├── filesystem.go        #   文件系统操作服务
 │   │   └── powershell.go        #   PowerShell 执行引擎
 │   │
+│   ├── logger/                   # 日志系统（结构化日志 + 自动维护）
+│   │   └── logger.go           #   zap + lumberjack 日志框架
+│   │
 │   └── util/
 │       └── response.go         # 统一响应封装工具
 │
@@ -466,6 +547,7 @@ windows-remote-admin-go/
 | **日志查看器** | CodeMirror 5 | 搜索能力强，可定制 |
 | **Shell 引擎** | os/exec + powershell.exe | 原生调用，无第三方依赖 |
 | **资源嵌入** | //go:embed | 零外部依赖部署 |
+| **日志框架** | uber-go/zap + lumberjack | 结构化日志 + 自动切割清理 |
 
 ---
 
