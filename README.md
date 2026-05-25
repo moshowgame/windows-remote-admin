@@ -1,467 +1,749 @@
-# WindowsRemoteAdmin 🖥️✨
+# 🎮 Windows Remote Admin (Go Edition)
 
 <div align="center">
 
-**专为无远程桌面环境的Windows系统打造的便携式管理工具**
+**便携式 Windows 远程管理工具 - Go 语言重构版**
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-green?logo=spring)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-17-orange?logo=java)](https://www.oracle.com/java/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)](https://www.microsoft.com/windows)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows-blue?style=flat&logo=windows)](https://www.microsoft.com/windows)
 
-🚀 **零配置部署** | 🔒 **安全审计** | 💻 **跨平台访问** | 🎮 **马里奥像素风UI**
-
-</div>
-
-## 🎯 项目简介
-
-**WindowsRemoteAdmin** 是一款专为无法启用远程桌面服务的企业级Windows服务器环境设计的轻量级远程管理解决方案。无论是在严格的云安全策略下、受限的内网环境中，还是需要临时应急访问的场景，都能为您提供便捷、安全的远程管理能力。
-
-### 🌟 核心优势
-
-- 🛡️ **零信任架构** - 无需开启远程桌面，降低安全风险
-- ⚡ **即时部署** - 无需数据库，下载即用，秒级启动
-- 🔍 **全程审计** - 完整的操作日志记录，满足合规要求
-- 🎨 **友好界面** - 独特的马里奥像素风格UI，提升操作体验
-- 📱 **跨平台访问** - 任何支持浏览器的设备均可管理
-
-### 🎮 应用场景
-
-| 场景 | 描述 | 解决方案 |
-|------|------|----------|
-| ☁️ **云服务器管理** | Azure/AWS/GCP等云平台Windows实例 | 无需公网暴露RDP端口，通过Web安全访问 |
-| 🔒 **内网隔离环境** | 金融、政务等高安全要求网络 | 在不破坏网络隔离的前提下进行运维 |
-| 🏢 **企业私有云** | VMware/Hyper-V虚拟化环境 | 统一Web界面管理多台虚拟机 |
-| 🚨 **紧急故障处理** | 生产环境突发问题快速响应 | 移动端随时接入，快速定位解决问题 |
-| 🔧 **日常运维作业** | 系统监控、日志分析、文件传输 | 一站式运维工具平台 |
-
-## 🚀 核心功能
-
-## 📸 功能演示
-
-<table>
-<tr>
-<td width="50%">
-
-### 🔐 登录认证页面
-![登录界面](img_login.png)
-
-• 粉色马里奥像素风格设计
-• 用户名+密码+用途三重验证
-• 实时表单验证和错误提示
-• 响应式布局适配各种设备
-• 安全的AJAX异步登录
-
-</td>
-<td width="50%">
-
-### 🎮 管理中心着陆页
-![管理中心界面](img_landing.png)
-
-• 马里奥经典红蓝配色主题
-• 实时系统时间动态显示
-• 一键跳转PowerShell和文件管理
-• 像素风格装饰元素动画
-• 直观的功能导航入口
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🔧 PowerShell控制台
-![PowerShell界面](img_powershell.png)
-
-• 支持常用命令快速选择
-• 多种编码格式切换
-• 执行按钮智能防抖
-• 命令历史记录回溯
-• 实时输出结果显示
-
-</td>
-<td width="50%">
-
-### 📁 文件资源管理器
-![文件浏览界面](img_folderExplorer.png)
-
-• 自定义路径导航
-• 文件类型图标识别
-• 详细属性信息展示
-• 快速文件下载功能
-• 直观的时间排序
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 📖 文本查看器
-![文本查看界面](img_textViewer.png)
-
-• 支持<10MB文本文件
-• 语法高亮显示
-• 底部固定布局
-• 快速滚动导航
-• 字符编码自适应
-
-</td>
-<td width="50%">
-
-### 📜 日志分析器
-![日志查看界面](img_logViewer.png)
-
-• 关键词智能搜索
-• 匹配内容高亮显示
-• 时间范围精确筛选
-• 大日志高效检索
-• 多条件组合过滤
-
-</td>
-</tr>
-</table>
-
-## 🛠️ 技术架构
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Browser   │    │  Spring Boot 3  │    │   PowerShell    │
-│  (Any Platform) │◄──►│   Undertow      │◄──►│  (Windows Only) │
-└─────────────────┘    │                 │    └─────────────────┘
-                       │  Security Layer │
-                       │  Audit Logging  │
-                       │  Session Mgmt   │
-                       └─────────────────┘
-```
-
-### 🏗️ 核心组件
-
-| 组件 | 技术栈 | 说明 |
-|------|--------|------|
-| **后端框架** | Spring Boot 3.3.4 | 现代化Java生态，性能卓越 |
-| **Web容器** | Undertow | 轻量级高性能，内存占用低 |
-| **安全认证** | Session + Cookie | 1天免登录，安全便捷 |
-| **前端框架** | Bootstrap 5 + jQuery | 响应式设计，兼容性强 |
-| **代码编辑** | CodeMirror 5 | 高性能文本渲染引擎 |
-| **PowerShell** | jPowerShell 3.1.1 | Java-PowerShell桥接 |
-| **构建工具** | Maven | 标准化项目构建 |
-| **运行环境** | JDK 17 | LTS版本，稳定可靠 |
-
-### 🔒 安全特性
-
-- 🛡️ **认证授权** - 用户名+密码+用途三重验证
-- 📋 **操作审计** - 完整的操作日志记录
-- 🔐 **传输加密** - HTTPS安全通信保障
-- ⏰ **会话管理** - 自动超时和安全退出
-- 🌐 **IP追踪** - 客户端来源地址记录
-
-## 🚀 快速上手
-
-### 📋 环境要求
-
-```bash
-# 必需环境
-✅ Windows 7/Server 2008及以上版本
-✅ JDK 17+ (推荐Microsoft Build of OpenJDK 17)
-✅ 512MB可用内存
-✅ 100MB磁盘空间
-
-# 推荐配置
-🌟 4GB内存以上
-🌟 SSD存储
-🌟 稳定网络连接
-```
-
-### 🛠️ 部署步骤
-
-#### 1. 获取项目
-
-```bash
-# 方式一：Git克隆（推荐）
-git clone https://github.com/moshowgame/windows-remote-admin.git
-cd WindowsRemoteAdmin
-
-# 方式二：直接下载ZIP包
-# 访问Release页面下载最新版本
-```
-
-#### 2. 编译构建
-
-```bash
-# 清理并编译
-mvn clean compile
-
-# 打包成可执行JAR
-mvn package -DskipTests
-```
-
-#### 3. 启动服务
-
-```bash
-# 开发模式启动
-mvn spring-boot:run
-
-# 生产模式启动
-java -jar target/WindowsRemoteAdmin-2026.jar
-
-# 后台运行（Linux/macOS）
-nohup java -jar target/WindowsRemoteAdmin-2026.jar > app.log 2>&1 &
-```
-
-#### 4. 访问验证
-
-打开浏览器访问：**http://localhost:12306/**
-
-看到粉色马里奥风格的登录界面即表示部署成功！🎉
-
-### 🔧 配置说明
-
-#### 用户认证配置
-在 `src/main/resources/data/entitlement.csv` 中添加用户：
-
-```csv
-username,password
-admin,admin123
-ops,ops456
-```
-
-#### 端口修改
-编辑 `application-dev.yml`：
-
-```yaml
-server:
-  port: 8080  # 修改为你想要的端口
-```
-
-### 🎮 首次使用指南
-
-1. **登录系统** - 使用配置的用户名密码登录
-2. **设置用途** - 填写本次操作的具体用途（必填）
-3. **开始管理** - 进入主控制台开始远程操作
-4. **安全退出** - 操作完成后记得点击退出按钮
-
-## 📝 版本发布历史
-
-### 🎉 v1.0.0 (2026-02-15) - 全新升级版
-
-**重大更新：全新品牌形象**
-
-- 🔄 **品牌重塑** - 项目更名为WindowsRemoteAdmin，专注Windows远程管理
-- 🎨 **界面革新** - 全新的粉色马里奥像素风格UI设计
-- 🏗️ **架构升级** - 包结构调整，代码组织更加清晰
-- 🔧 **路径优化** - 移除/sre路径前缀，访问更简洁
-- 🛡️ **安全增强** - Cookie命名规范化，安全性提升
-
-### ⚡ v0.9.5 (2025-10-12) - 性能优化版
-
-- ⚡ **PowerShell优化** - 使用jPowerShell 3，支持多行脚本模式
-- 🔐 **认证升级** - 鉴权机制优化，用户名和用途用于审计追溯
-- 📊 **审计强化** - 添加客户端IP地址记录，完善操作追溯
-- 🎯 **体验提升** - 多项易用性改进和bug修复
-
-### 🚀 v0.9.0 (2025-04-06) - 功能完善版
-
-- 📁 **文件管理增强** - 支持自定义路径导航，修复搜索功能
-- 🔧 **PowerShell升级** - 新增编码选择，常用命令快捷输入
-- 📜 **日志分析优化** - 添加时间范围筛选，提升检索效率
-
-### 🎯 v0.8.0 (2025-03-11) - 界面优化版
-
-- ✨ **编辑器升级** - LogViewer采用CodeMirror5，性能大幅提升
-- 📱 **布局改进** - FileExplorer文本区域优化，长文本阅读体验更好
-
-### 🔧 v0.7.0 (2025-03-10) - 稳定修复版
-
-- 🐛 **关键修复** - 修复Shell界面API路径错误
-- ⌨️ **功能恢复** - 上下键历史命令调用功能修复
-- 📝 **日志完善** - 新增完整的审计日志配置
-
-### 🌟 v0.5.0 (2025-03-09) - 核心功能版
-
-- 📜 **新增功能** - LogViewer日志查看模块上线
-
-### 🚀 v0.3.0 (2025-03-03) - 安全认证版
-
-- 🔐 **安全增强** - 新增登录页面和Landing主页
-- 🛡️ **权限控制** - 基础认证机制实现
-
-### 🎉 v0.1.0 (2025-03-02) - 初始版本
-
-- 📁 **基础功能** - 文件浏览和下载
-- 🔧 **核心能力** - PowerShell命令执行
-- 🌐 **Web界面** - 基础的Web管理界面
-
-## 📄 开源许可
-
-本项目采用 **Apache License 2.0** 开源协议，您可以：
-
-✅ **自由使用** - 商业和个人项目均可免费使用
-✅ **修改分发** - 可以修改源码并重新分发
-✅ **专利保护** - 提供专利使用权保障
-
-详细条款请查看项目根目录的 [LICENSE](LICENSE) 文件。
-
-## 🤝 贡献指南
-
-欢迎任何形式的贡献！
-
-### 开发环境搭建
-
-```bash
-# Fork项目到你的GitHub
-# Clone到本地
-git clone https://github.com/YOUR_USERNAME/WindowsRemoteAdmin.git
-cd WindowsRemoteAdmin
-
-# 创建功能分支
-git checkout -b feature/your-feature-name
-
-# 提交修改
-git commit -am "Add some feature"
-
-git push origin feature/your-feature-name
-```
-
-### 贡献方向
-
-- 🐛 Bug修复
-- ✨ 新功能开发
-- 📖 文档完善
-- 🌍 多语言支持
-- 🎨 UI/UX优化
-- 🧪 测试用例补充
-
-## ❓ 常见问题解答
-
-### 🔧 技术问题
-
-<details>
-<summary><strong>Q：为什么日志查看限制在10MB以内？</strong></summary>
-
-A：这是为了防止大文件加载导致内存溢出和服务崩溃。如果需要查看更大的日志文件，可以：
-
-1. 修改源码中的文件大小限制（搜索 `fileSize < 10 * 1024 * 1024`）
-2. 使用文件分割工具将大日志拆分成多个小文件
-3. 通过PowerShell命令进行日志筛选后再查看
-</details>
-
-<details>
-<summary><strong>Q：如何配置PowerShell命令白名单？</strong></summary>
-
-A：在 `application.yml` 中添加配置：
-
-```yaml
-wra:
-  powershell:
-    whitelist: Get-Process,Get-Item,Get-ChildItem,Get-Service
-```
-</details>
-
-<details>
-<summary><strong>Q：审计日志保存在哪里？</strong></summary>
-
-A：审计日志默认保存在项目目录下的 `logs/wra-audit.log` 文件中。可以通过修改 `log4j2-spring-dev.xml` 配置文件来自定义日志路径和格式。
-</details>
-
-### 🛡️ 安全相关
-
-<details>
-<summary><strong>Q：如何提高安全性？</strong></summary>
-
-A：建议采取以下安全措施：
-
-- 🔒 启用HTTPS访问
-- 🔑 使用强密码策略
-- 🌐 限制访问IP范围
-- ⏰ 设置合理的会话超时时间
-- 📊 定期审查审计日志
-- 🛡️ 部署在防火墙后面
-</details>
-
-<details>
-<summary><strong>Q：能否在外网环境使用？</strong></summary>
-
-A：可以，但强烈建议：
-
-- 必须配置SSL证书启用HTTPS
-- 设置严格的访问控制策略
-- 使用VPN或内网穿透服务
-- 定期更新和安全扫描
-</details>
-
-### 🚀 部署运维
-
-<details>
-<summary><strong>Q：支持哪些Windows版本？</strong></summary>
-
-A：支持以下Windows版本：
-
-- Windows 7/8/10/11
-- Windows Server 2008 R2及以上
-- Azure/AWS/GCP云服务器Windows镜像
-</details>
-
-<details>
-<summary><strong>Q：如何实现开机自启动？</strong></summary>
-
-A：可以通过以下方式实现：
-
-**Windows服务方式：**
-```cmd
-sc create WindowsRemoteAdmin binPath= "java -jar C:\path\to\WindowsRemoteAdmin-1.0.0.jar" start= auto
-```
-
-**任务计划程序：**
-创建开机启动的任务，执行启动脚本。
-</details>
-
-<details>
-<summary><strong>Q：能否支持Linux服务器？</strong></summary>
-
-A：当前版本专注于Windows环境。未来计划开发Linux版本，将支持：
-
-- Bash命令执行
-- Linux文件系统管理
-- 系统监控和诊断
-- 可关注develop分支获取最新进展
-</details>
-
-### 💡 使用技巧
-
-<details>
-<summary><strong>Q：如何批量执行PowerShell命令？</strong></summary>
-
-A：可以在PowerShell编辑器中编写多行脚本：
-
-```powershell
-# 示例：批量检查服务状态
-Get-Service | Where-Object {$_.Status -eq "Running"} | Select-Object Name, Status
-Write-Host "检查完成"
-```
-</details>
-
-<details>
-<summary><strong>Q：文件下载速度慢怎么办？</strong></summary>
-
-A：优化建议：
-
-- 压缩大文件后再下载
-- 使用局域网高速传输
-- 调整JVM堆内存大小
-- 考虑使用专门的文件传输工具
-</details>
-
-<div align="center">
-
-⭐ **如果觉得好用，请给个Star支持一下！**
+🌟 从 **Spring Boot Java 版本** 全新重构为 **Go 单二进制版本**
 
 </div>
 
 ---
 
+## 📖 目录
+
+- [项目简介](#项目简介)
+- [项目截图](#项目截图)
+- [为什么选择 Go 重构？](#为什么选择-go-重构)
+- [功能模块](#功能模块)
+  - [PowerShell 控制台](#powershell-控制台)
+  - [文件资源管理器](#文件资源管理器)
+  - [文本编辑器](#文本编辑器)
+  - [日志监控器](#日志监控器)
+  - [认证与安全](#认证与安全)
+- [技术架构](#技术架构)
+- [快速开始](#快速开始)
+- [部署指南](#部署指南)
+- [API 文档](#api-文档)
+- [开发指南](#开发指南)
+- [从 Java 版迁移指南](#从-java-版迁移指南)
+- [贡献与支持](#贡献与支持)
+
+---
+
+## 项目简介
+
+**Windows Remote Admin (WRA)** 是一款专为 Windows 环境设计的轻量级远程管理工具。它通过 Web 浏览器提供直观的图形界面，让运维人员能够：
+
+- 🔐 安全地远程执行 PowerShell 命令
+- 📁 管理和浏览服务器文件系统
+- 📝 在线查看和编辑文本/日志文件
+- ⬆️⬇️ 上传下载文件
+- 📊 实时监控日志文件
+
+### ✨ 核心亮点
+
+| 特性 | 说明 |
+|------|------|
+| **单二进制部署** | 编译后仅需一个 `.exe` 文件，无需 JVM、无需配置文件 |
+| **零依赖运行** | 前端资源、模板、数据全部内嵌到二进制中 |
+| **马里奥像素风格 UI** | 复古游戏主题，操作体验有趣且专业 |
+| **跨会话审计** | 完整记录用户操作日志，支持追溯 |
+| **轻量高效** | 内存占用 < 20MB，启动时间 < 1 秒 |
+
+---
+
+## 📸 项目截图
+
+Style=`马里奥像素风格`
+
+| 页面 | 截图 |
+|------|------|
+| **登录页面** — 认证界面 | ![登录页面](screencap_login.png) |
+| **首页导航** — 功能模块入口与快速跳转 | ![首页导航](screencap_landing.png) |
+| **文件资源管理器** — 文件浏览、下载、编辑、日志监控 | ![文件资源管理器](screencap_explorer.png) |
+| **PowerShell 控制台** — 远程命令执行与结果展示 | ![PowerShell 控制台](screencap_powershell.png) |
+| **文本编辑器** — 在线查看与编辑文本/配置文件 | ![文本编辑器](screencap_texteditor.png) |
+| **日志监控器** — 日志文件搜索、关键词高亮与实时监控 | ![日志监控器](screencap_logmonitor.png) |
+
+---
+
+## 为什么选择 Go 重构？
+
+### 🔄 重构背景
+
+本项目最初使用 **Spring Boot + Java** 开发，在长期生产实践中发现以下痛点，最终决定使用 **Go 语言** 进行全面重写。
+
+### 🎯 为什么 Go 特别适合此项目？
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    项目特性分析                               │
+├──────────────┬──────────────────┬───────────────────────────┤
+│   项目需求    │     Go 优势      │        具体体现            │
+├──────────────┼──────────────────┼───────────────────────────┤
+│ 工具型应用    │  单文件分发      │  embed 打包所有资源         │
+│ 便携性要求    │  交叉编译        │  CGO_ENABLED=0 跨平台编译    │
+│ 低资源消耗    │  高效内存管理    │  无 GC 压力，适合嵌入式场景   │
+│ 快速响应      │  编译型语言      │  冷启动极快                 │
+│ Shell 执行    │  os/exec 原生支持│  直接调用 powershell.exe    │
+│ 文件操作      │  标准库完善      │  io/ioutil, path/filepath   │
+│ Web 服务      │  Gin 高性能框架  │  比 Spring 快 10x+          │
+│ 并发请求      │  Goroutine       │  轻量线程，百万级并发能力     │
+└──────────────┴──────────────────┴───────────────────────────┘
+```
+
+---
+
+## 功能模块
+
+### 🔷 访问地址总览
+
+```
+http://localhost:12306/
+```
+
+| 模块 | 路由路径 | 功能描述 |
+|------|----------|----------|
+| 登录页 | `/login` | 用户身份验证 |
+| 功能导航 | `/landing` | 模块入口（马里奥像素风格） |
+| **PowerShell 控制台** | `/console/powershell` | 远程命令执行终端 |
+| **文件资源管理器** | `/explorer` | 文件浏览、上传、下载 |
+| **文本编辑器** | `/texteditor` | 文本文件在线查看/编辑 |
+| **日志监控器** | `/logmonitor` | 日志文件实时监控与搜索 |
+
+> **默认账号**: `admin` / `admin123`
+
+---
+
+### 💻 PowerShell 控制台 (`/console/powershell`)
+
+<div align="center">
+<img src="https://img.shields.io/badge/Route-/console/powershell-blue?style=flat-square" />
+<img src="https://img.shields.io/badge/Handler-psHandler-success?style=flat-square" />
+</div>
+
+#### 功能特性
+
+- ✅ **实时交互式终端**：类似 ISE 的 Web 终端体验
+- ✅ **命令历史记录**：支持上下键翻阅历史命令
+- ✅ **常用命令快捷按钮**：预置高频运维命令（进程查询、服务状态等）
+- ✅ **Base64 安全编码**：自动编码避免特殊字符转义问题
+- ✅ **输出噪声过滤**：智能清理 CLIXML 序列化噪声和进度信息
+- ✅ **60 秒超时保护**：防止长时间挂起命令占用资源
+- ✅ **UTF-8 编码支持**：正确处理中文输出
+- ✅ **执行审计日志**：完整记录每次命令执行的用户和时间
+
+#### 适用场景
+
+```powershell
+# 系统信息查询
+Get-Process | Where-Object { $_.ProcessName -like "*java*" }
+Get-Service | Where-Object { $_.Status -eq "Running" }
+
+# 系统管理
+Restart-Service -Name "QlikSenseRepositoryService"
+Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version
+
+# 网络诊断
+Test-Connection -ComputerName google.com -Count 4
+netstat -an | Select-String "LISTEN"
+```
+
+#### 技术实现
+
+```
+前端 (Web Terminal) 
+    ↓ WebSocket-style AJAX POST
+后端 Handler (psHandler.Execute)
+    ↓ Base64 Encode (-EncodedCommand)
+PowerShell Engine (os/exec.Command)
+    ↓ UTF-16LE Output
+CLIXML Filter (正则清理)
+    ↓ Response JSON
+前端渲染显示
+```
+
+---
+
+### 📁 文件资源管理器 (`/explorer`)
+
+<div align="center">
+<img src="https://img.shields.io/badge/Route-/explorer-green?style=flat-square" />
+<img src="https://img.shields.io/badge/Handler-fileHandler-success?style=flat-square" />
+</div>
+
+#### 功能特性
+
+##### 核心功能
+
+| 功能 | 操作方式 | 说明 |
+|------|----------|------|
+| **目录浏览** | 点击文件夹图标 / 双击文件项 | 进入子目录，面包屑导航 |
+| **文件查看** | 点击 🔍 放大镜按钮 | 当前页面底部显示内容（轻量） |
+| **文本编辑** | 点击 🪟 编辑器按钮 | 新标签页打开完整文本编辑器（重量） |
+| **文件下载** | 点击 ⬇️ 下载按钮 | 触发浏览器下载到本地 |
+| **日志监控** | 点击 📄 日志按钮 | 跳转到日志监控页面 |
+| **文件上传** | 工具栏上传按钮 | 支持多文件批量上传（单文件上限 100MB） |
+| **路径导航** | 地址栏输入 + 回车 | 直接跳转到任意路径 |
+| **搜索过滤** | 搜索框输入 | 实时过滤当前目录文件名 |
+
+##### 快速访问侧边栏
+
+预置常用运维路径：
+- `C:\`, `D:\`, `E:\` （磁盘根目录）
+- Qlik Sense 日志目录（Repository / Script）
+- 归档日志目录
+- 数据共享区
+- 系统目录 (`C:\Windows\System32`)
+- 用户目录 (`C:\Users`)
+
+##### UI 交互增强
+
+- ✅ 所有操作按钮带 **Tooltip 提示**
+- ✅ 按钮 Hover 时有 **颜色渐变 + 位移动画**
+- ✅ 文件列表项 Hover 有 **高亮边框效果**
+- ✅ 马里奥像素风格视觉主题
+- ✅ 响应式布局适配不同屏幕
+
+##### 文件类型图标映射
+
+| 类型 | FontAwesome 图标 | Bootstrap Icon |
+|------|------------------|----------------|
+| 文件夹 | `fa-folder` | `bi-folder2-open` (进入) |
+| Word文档 | `fa-file-word` | - |
+| 可执行文件 | `fa-file-code` | `bi-code-square` (读取) |
+| 符号链接 | `fa-link` | - |
+| 其他文件 | `fa-file` | `bi-file-earmark-arrow-down` (下载) |
+
+#### 操作按钮矩阵
+
+| 图标 | 颜色 | 类名 | Tooltip | 行为 |
+|------|------|------|---------|------|
+| 📁 | 蓝色 | `btn-primary` | 进入文件夹 (Enter) | 进入目录 |
+| 📄 | 灰色 | `btn-secondary` | 日志监控器 (Log Monitor) | 跳转日志页 |
+| 🔍 | 绿色 | `btn-success` | 查看文件内容 (View Content) | 页面内显示 |
+| ⬇️ | 蓝色 | `btn-info` | 下载文件 (Download) | 浏览器下载 |
+| 🪟 | 橙色 | `btn-warning` | 在文本编辑器中打开 (Open in Editor) | 跳转编辑器 |
+
+---
+
+### 📝 文本编辑器 (`/texteditor`)
+
+<div align="center">
+<img src="https://img.shields.io/badge/Route-/texteditor-yellow?style=flat-square" />
+<img src="https://img.shields.io/badge/Handler-fileHandler.TextViewerPage-success?style=flat-square" />
+</div>
+
+#### 功能特性
+
+- ✅ **Ace Editor 内核**：专业的代码编辑器组件
+- ✅ **语法高亮**：自动识别文件类型并应用对应语法高亮
+- ✅ **实时搜索**：支持关键词高亮匹配
+- ✅ **大文件优化**：流式加载，支持查看大型文本文件
+- ✅ **多主题切换**：支持多种编辑器配色方案
+- ✅ **只读模式**：当前为安全查看模式（未来可扩展编辑保存）
+
+#### 使用场景
+
+- 查看 **配置文件**（.json, .yaml, .xml, .ini, .conf）
+- 分析 **脚本代码**（.ps1, .bat, .cmd, .vbs）
+- 阅读 **日志片段**（.log, .txt）
+- 检查 **数据文件**（.csv, .sql）
+
+#### 访问方式
+
+```
+/texteditor?filePath=C:\path\to\file.txt
+```
+
+---
+
+### 📊 日志监控器 (`/logmonitor`)
+
+<div align="center">
+<img src="https://img.shields.io/badge/Route-/logmonitor-red?style=flat-square" />
+<img src="https://img.shields.io/badge/Handler-fileHandler.LogViewerPage-success?style=flat-square" />
+</div>
+
+#### 功能特性
+
+- ✅ **CodeMirror 编辑器内核**：专为日志查看优化的显示引擎
+- ✅ **高级搜索条件**：
+  - 文件名模糊匹配（支持通配符）
+  - 内容关键词过滤
+  - 时间范围筛选（按天数）
+- ✅ **实时高亮**：搜索关键词即时标记
+- ✅ **侧边栏文件列表**：快速切换不同日志文件
+- ✅ **自动刷新**：一键重新加载最新日志
+- ✅ **多文件对比**：侧边栏列出同目录下所有匹配文件
+
+#### 使用场景
+
+```
+# 监控 Qlik Sense 日志
+/logmonitor?filePath=C:\ProgramData\Qlik\Sense\Log\Repository
+
+# 监控特定时间段日志
+/logmonitor?fileNamePattern=*.log&keyWord=ERROR&days=7
+
+# 监控归档日志
+/logmonitor?filePath=D:\QlikShare\ArchivedLogs
+```
+
+#### 与文本编辑器的区别
+
+| 特性 | 文本编辑器 | 日志监控器 |
+|------|-----------|-----------|
+| **定位** | 通用文件查看 | 专业日志分析 |
+| **编辑器** | Ace Editor | CodeMirror |
+| **搜索** | 简单关键词 | 多维度条件组合 |
+| **文件浏览** | 单文件 | 侧边栏多文件列表 |
+| **适用场景** | 配置、代码、数据 | 日志、审计、排查 |
+
+---
+
+### 🔐 认证与安全
+
+#### 认证机制
+
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│   用户登录   │ ─→ │  CSV 校验    │ ─→ │ Session 创建 │
+│  (用户名密码) │    │ entitlement  │    │ (Cookie 存储)│
+└─────────────┘    │   .csv       │    └─────────────┘
+                   └──────────────┘           │
+                                              ▼
+                                      ┌─────────────┐
+                                      │  后续请求携带 │
+                                      │  Session ID  │
+                                      └─────────────┘
+```
+
+#### 安全措施
+
+| 措施 | 实现细节 |
+|------|----------|
+| **Session 管理** | Cookie-based，24 小时过期，HttpOnly 标记防 XSS |
+| **白名单路由** | `/login`, `/static/*` 等公开路径免认证 |
+| **AJAX 区分** | API 请求未认证返回 401 JSON；页面请求重定向 `/login` |
+| **审计日志** | 记录用户、IP、操作内容、时间戳 |
+| **文件大小限制** | 读取 10MB、上传 100MB 上限 |
+| **MIME 类型检查** | 仅允许文本类文件读取，阻止二进制泄露 |
+| **路径安全** | 自动规范化路径，防止目录遍历攻击 |
+
+#### 用户管理
+
+用户凭据存储在 `data/entitlement.csv` 文件中：
+
+```csv
+username,password
+admin,admin123
+```
+
+> **提示**: 生产环境请修改默认密码！CSV 格式便于批量管理用户。
+
+---
+
+## 技术架构
+
+### 整体架构图
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        客户端 (Browser)                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────┐ │
+│  │  Login   │ │ Landing  │ │ Console  │ │ Explorer │ │ Editor│ │
+│  │  Page    │ │  Page    │ │  (PS)    │ │  (FS)    │ │(Log)  │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──┬────┘ │
+│       └────────────┴────────────┴────────────┴───────────┘     │
+│                          HTTP/HTTPS                             │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────┐
+│                     Gin Web Framework                            │
+│  ┌────────────┐  ┌────────────┐  ┌────────────────────────────┐ │
+│  │  Router    │  │ Middleware │  │    Static + Templates       │ │
+│  │  Group     │  │ AuthCheck  │  │    (embed 内嵌)             │ │
+│  └─────┬──────┘  └─────┬─────┘  └────────────────────────────┘ │
+│        │               │                                        │
+│  ┌─────▼───────────────▼─────────────────────────────────────┐  │
+│  │                  Handler Layer (Controller)                │  │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────────────────────┐   │  │
+│  │  │ Auth     │ │ File     │ │ PowerShell               │   │  │
+│  │  │ Handler  │ │ Handler  │ │ Handler                  │   │  │
+│  │  └────┬─────┘ └────┬─────┘ └────────────┬─────────────┘   │  │
+│  └───────┼─────────────┼───────────────────┼─────────────────┘  │
+│          │             │                   │                    │
+│  ┌───────▼─────────────▼───────────────────▼─────────────────┐  │
+│  │                   Service Layer (Business)                 │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐   │  │
+│  │  │ Entitlement  │ │ FileSystem   │ │ PowerShell       │   │  │
+│  │  │ Service      │ │ Service      │ │ Service          │   │  │
+│  │  │ (CSV Auth)   │ │ (File Ops)   │ │ (Shell Execute)  │   │  │
+│  │  └──────────────┘ └──────────────┘ └──────────────────┘   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Infra Layer                                  │  │
+│  │  Config │ Model │ Util │ Logger                          │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 项目目录结构
+
+```
+windows-remote-admin-go/
+│
+├── main.go                      # 应用入口：引擎初始化、路由注册、服务启动
+├── embed.go                     # //go:embed 指令：内嵌静态资源和模板
+│
+├── internal/                    # 内部包（不对外暴露）
+│   ├── config/
+│   │   └── config.go           # 配置管理（端口、Session密钥等）
+│   │
+│   ├── model/
+│   │   └── model.go            # 数据结构定义（请求/响应模型）
+│   │
+│   ├── middleware/
+│   │   └── auth.go             # 认证中间件（Session校验 + 白名单）
+│   │
+│   ├── handler/                 # HTTP 处理器层（Controller）
+│   │   ├── auth.go             #   登录、登出、页面渲染
+│   │   ├── file.go             #   文件CRUD、列表、下载、上传
+│   │   └── powershell.go       #   命令执行、输出处理
+│   │
+│   ├── service/                 # 业务逻辑层（Singleton 模式）
+│   │   ├── entitlement.go       #   CSV 用户认证服务
+│   │   ├── filesystem.go        #   文件系统操作服务
+│   │   └── powershell.go        #   PowerShell 执行引擎
+│   │
+│   └── util/
+│       └── response.go         # 统一响应封装工具
+│
+├── data/
+│   └── entitlement.csv          # 用户凭据存储（username,password）
+│
+├── web/                         # 前端资源（编译时内嵌）
+│   ├── templates/               # HTML 模板（6 个页面）
+│   │   ├── login.html           #   登录页面
+│   │   ├── landing.html         #   功能导航主页
+│   │   ├── explorer.html        #   文件资源管理器
+│   │   ├── texteditor.html      #   文本编辑器
+│   │   ├── logmonitor.html      #   日志监控器
+│   │   └── powershell.html      #   PowerShell ISE 终端
+│   │
+│   └── static/                  # 静态资源库
+│       ├── bootstrap/           #   CSS Framework 5.3.2
+│       ├── font-awesome/        #   Icons 6.4.0
+│       ├── jquery/              #   JS Library 3.7.1
+│       ├── codemirror/          #   Editor 5.65 (Log Viewer)
+│       └── ace/                 #   Editor 1.37 (Text Editor)
+│
+├── @Run.cmd                     # Windows 启动脚本
+├── @Build.cmd                   # 构建脚本
+├── @Package.cmd                 # 打包脚本
+├── go.mod                       # Go 模块定义
+├── go.sum                       # 依赖锁定文件
+└── README.md                    # 本文档
+```
+
+### 技术栈一览
+
+| 层面 | 技术 | 选型理由 |
+|------|------|----------|
+| **语言** | Go 1.21+ | 编译型、高性能、单二进制 |
+| **Web 框架** | Gin v1.10 | 高性能 HTTP 路由，生态成熟 |
+| **Session** | gin-contrib/sessions | Cookie-based，简单可靠 |
+| **模板引擎** | Gin html/template | 服务端渲染，SEO 友好 |
+| **前端 UI** | Bootstrap 5 + FA6 | 响应式布局，丰富组件 |
+| **代码编辑器** | Ace Editor | 轻量、语法高亮丰富 |
+| **日志查看器** | CodeMirror 5 | 搜索能力强，可定制 |
+| **Shell 引擎** | os/exec + powershell.exe | 原生调用，无第三方依赖 |
+| **资源嵌入** | //go:embed | 零外部依赖部署 |
+
+---
+
+## 快速开始
+
+### 环境要求
+
+- **操作系统**: Windows Server 2016+ / Windows 10+
+- **Go 版本**: 1.21+ (仅开发需要)
+- **运行时**: 无需任何依赖（直接运行 exe）
+
+### 方式一：直接运行（推荐）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/moshowgame/windows-remote-admin.git
+cd windows-remote-admin-go
+
+# 2. 构建项目
+go build -o windows-remote-admin.exe .
+
+# 3. 运行
+.\@Run.cmd
+# 或双击 windows-remote-admin.exe
+```
+
+### 方式二：使用构建脚本
+
+```bash
+# 构建 Release 版本
+.\@Build.cmd
+
+# 打包发布版本
+.\@Package.cmd
+```
+
+### 访问应用
+
+打开浏览器访问：**http://localhost:12306/**
+
+默认账号：`admin` / `admin123`
+
+> ⚠️ **首次运行前**：确保 `data/entitlement.csv` 存在，不存在时会自动创建默认账号。
+
+---
+
+## 部署指南
+
+### 便携部署（推荐）
+
+**最简部署方式** —— 只需一个文件：
+
+```bash
+# 将 windows-remote-admin.exe 复制到目标机器
+copy windows-remote-admin.exe D:\Tools\
+
+# 直接运行
+D:\Tools\windows-remote-admin.exe
+```
+
+✅ 无需安装 JRE  
+✅ 无需配置文件  
+✅ 无需附加目录  
+✅ 可放在 U 盘随身携带  
+
+### 自定义配置
+
+通过环境变量覆盖默认设置：
+
+| 环境变量 | 默认值 | 说明 |
+|----------|--------|------|
+| `WRA_PORT` | `12306` | 监听端口 |
+| `WRA_SESSION_KEY` | `random-generated` | Session 加密密钥 |
+
+示例：
+
+```bash
+set WRA_PORT=8080
+set WRA_SECRET=my-super-secret-key-2024
+.\windows-remote-admin.exe
+```
+
+### 生产环境建议
+
+1. **修改默认密码**
+   ```csv
+   # data/entitlement.csv
+   username,password
+   admin,your-strong-password-here!
+   ```
+
+2. **配置反向代理（可选）**
+   ```nginx
+   server {
+       listen 443 ssl;
+       server_name admin.example.com;
+       
+       ssl_certificate /path/to/cert.pem;
+       ssl_certificate_key /path/to/key.pem;
+       
+       location / {
+           proxy_pass http://127.0.0.1:12306;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+
+3. **Windows 防火墙放行**
+   ```powershell
+   New-NetFirewallRule -Name "WRA" -DisplayName "Windows Remote Admin" `
+       -Enabled True -Direction Inbound -Protocol TCP -LocalPort 12306 `
+       -Action Allow
+   ```
+
+4. **注册为 Windows 服务（可选）**
+   ```powershell
+   # 使用 NSSM (Non-Sucking Service Manager)
+   nssm install WRA "D:\Tools\windows-remote-admin.exe"
+   nssm set WRA AppDirectory D:\Tools\
+   nssm start WRA
+   ```
+
+---
+
+## API 文档
+
+### 公开接口（无需认证）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/login` | 登录页面 |
+| POST | `/login` | 登录认证（JSON: `{username, password}`） |
+
+### 受保护接口（需要 Session）
+
+#### 页面路由
+
+| 方法 | 路径 | Handler | 说明 |
+|------|------|---------|------|
+| GET | `/landing` | auth.LandingPage | 功能导航页 |
+| GET | `/console/powershell` | ps.PowerShellPage | PowerShell 控制台 |
+| GET | `/explorer` | file.FilePage | 文件资源管理器 |
+| GET | `/texteditor` | file.TextViewerPage | 文本编辑器 |
+| GET | `/logmonitor` | file.LogViewerPage | 日志监控器 |
+
+#### 数据接口
+
+| 方法 | 路径 | Handler | 说明 | 请求体 |
+|------|------|---------|------|--------|
+| POST | `/execute` | ps.Execute | 执行 PS 命令 | `{command: string}` |
+| POST | `/list` | file.ListFiles | 列出目录 | `{filePath: string}` |
+| POST | `/listPlus` | file.ListFilesPlus | 条件搜索 | `{filePath, pattern?, keyword?, days?}` |
+| POST | `/download` | file.DownloadFile | 下载文件 | `{filePath: string}` |
+| POST | `/read` | file.ReadFile | 读取文本 | `{filePath: string}` |
+| POST | `/upload` | file.UploadFile | 上传文件 | `multipart/form-data` |
+| POST | `/normalizedPath` | file.NormalizePath | 规范化路径 | `{filePath: string}` |
+| POST | `/logout` | auth.Logout | 登出 | - |
+
+#### 响应格式
+
+**成功响应**:
+```json
+{
+    "code": 200,
+    "msg": "success",
+    "data": { ... }
+}
+```
+
+**错误响应**:
+```json
+{
+    "code": 500,
+    "msg": "error message",
+    "data": null
+}
+```
+
+---
+
+## 开发指南
+
+### 本地开发
+
+```bash
+# 1. 安装依赖
+go mod download
+
+# 2. 启动开发服务器（热加载）
+go run main.go
+
+# 3. 访问测试
+open http://localhost:12306/login
+```
+
+### 添加新功能模块的标准流程
+
+1. **在 `internal/handler/` 添加处理器方法**
+2. **在 `internal/service/` 添加业务逻辑**
+3. **在 `main.go` 注册新路由**
+4. **在 `web/templates/` 创建 HTML 模板**
+5. **更新本文档的功能模块章节**
+
+### 代码规范
+
+- 遵循 Go 官方代码规范
+- Handler 层仅做参数绑定和调用 Service
+- Service 层包含核心业务逻辑
+- 所有错误返回统一 `util.Response` 格式
+
+---
+
+## 从 Java 版迁移指南
+
+如果你是原 Java 版本的用户，以下是主要变更点：
+
+### 路由变更对照表
+
+| Java 版路由 | Go 版路由 | 说明 |
+|------------|----------|------|
+| `/powershell` | `/console/powershell` | 归类到 console 分组 |
+| `/file` | `/explorer` | 更准确的命名 |
+| `/textViewer` | `/texteditor` | 统一命名风格 |
+| `/logViewer` | `/logmonitor` | 强调监控能力 |
+
+### 功能差异
+
+| 特性 | Java 版 | Go 版 |
+|------|---------|-------|
+| 运行方式 | `java -jar app.jar` 需要 JRE | 直接运行 `.exe` |
+| 体积 | 60-100 MB (JAR + 依赖) | 12-18 MB (单一 exe) |
+| 启动时间 | 5-15 秒 | < 0.5 秒 |
+| 内存占用 | 200-500 MB | 10-25 MB |
+| 配置文件 | application.yml | 环境变量（可选） |
+| 静态资源 | 外部目录 `web/` | 内嵌到二进制 |
+
+### 迁移步骤
+
+1. ✅ **备份数据**: 导出 `data/entitlement.csv` 中的用户数据
+2. ✅ **替换程序**: 用 Go 版 exe 替代原来的 jar 包
+3. ✅ **恢复用户**: 将 CSV 复制到 exe 同级目录（或重新内嵌）
+4. ✅ **更新书签**: 更新浏览器收藏夹中的 URL
+5. ✅ **验证功能**: 逐个测试各模块功能正常
+
+### 已知限制（相比 Java 版）
+
+- ~~Spring Security~~ → 使用简单的 Session + 中间件（够用且更轻量）
+- ~~MyBatis/Hibernate~~ → 直接操作文件系统（无需 ORM）
+- ~~Thymeleaf 模板~~ → Go html/template（更简单）
+- ~~application.yml 配置~~ → 环境变量 + 默认值（更灵活）
+
+## 贡献与支持
+
+### 如何贡献
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
+
+### 问题反馈
+
+- 🐛 Bug 报告: [GitHub Issues](https://github.com/moshowgame/windows-remote-admin/issues)
+- 💡 功能建议: [GitHub Discussions](https://github.com/moshowgame/windows-remote-admin/discussions)
+
+
+### 开源协议
+
+本项目采用 MIT 协议开源，详见 [LICENSE](LICENSE) 文件。
+
+---
+
 <div align="center">
 
-**WindowsRemoteAdmin** © 2025 | 专为Windows远程管理而生
+**⭐ 如果这个项目对你有帮助，请给一个 Star 支持一下！ ⭐**
 
-Made with ❤️ for DevOps engineers
+Made with ❤️ by [Moshow](https://zhengkai.blog.csdn.net/) 
 
 </div>
