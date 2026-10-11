@@ -1,0 +1,41 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Windows 服务</div>
+        <h2 class="page-title"><i class="ti ti-settings me-1"></i>服务管理</h2>
+        <div class="text-secondary mt-1">启停 / 重启 / 切换启动类型；所有操作记录审计日志</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-md-5 col-lg-4">
+            <div class="position-relative">
+              <input type="search" id="svc-kw" name="kw" class="form-control form-control-sm ps-4"
+                     placeholder="搜索名称 / 显示名 / 账户…" value="<%= kw %>" autocomplete="off"
+                     hx-get="/services/list" hx-target="#svc-table-region" hx-swap="innerHTML"
+                     hx-trigger="input changed delay:400ms, search">
+              <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+            </div>
+          </div>
+          <div class="col text-md-end small text-secondary">
+            列表来自 Win32_Service（CIM），操作即时生效
+          </div>
+        </div>
+      </div>
+      <div id="svc-table-region">
+        <%- include('../partials/services-list', { services, kw, stats, msg }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/layout-bottom') %>

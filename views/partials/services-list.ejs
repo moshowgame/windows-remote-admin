@@ -1,0 +1,94 @@
+<%# 服务列表片段：统计条 + 表格行（搜索/操作后整块刷新） %>
+<% if (msg) { %>
+<div class="alert alert-danger alert-dismissible m-2 mb-0" role="alert">
+  <i class="ti ti-alert-triangle me-1"></i><%= msg %>
+</div>
+<% } %>
+
+<div class="d-flex flex-wrap gap-2 align-items-center px-3 pt-3">
+  <span class="badge bg-secondary-lt">共 <%= stats.total %> 项</span>
+  <span class="badge bg-success-lt">运行中 <%= stats.running %></span>
+  <span class="badge bg-secondary-lt">已停止 <%= stats.stopped %></span>
+  <span class="badge bg-azure-lt">自动启动未运行 <%= stats.autoNotRunning %></span>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover table-vcenter card-table">
+    <thead>
+      <tr>
+        <th>服务</th>
+        <th style="width:9%">状态</th>
+        <th style="width:10%">启动类型</th>
+        <th style="width:8%">PID</th>
+        <th style="width:20%">登录账户</th>
+        <th style="width:17%" class="text-end">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!services.length) { %>
+      <tr><td colspan="6" class="text-center text-secondary py-4">没有匹配的服务</td></tr>
+      <% } %>
+      <% services.forEach(function (s) { %>
+      <%
+        const running = s.State === 'Running';
+        const stateCls = running ? 'bg-success-lt' : (s.State === 'Stopped' ? 'bg-secondary-lt' : 'bg-warning-lt');
+        const modeShort = s.StartMode === 'Auto' ? 'auto' : (s.StartMode === 'Manual' ? 'manual' : 'disabled');
+        const modeInfo = { auto: ['自动', 'bg-azure-lt'], manual: ['手动', 'bg-secondary-lt'], disabled: ['已禁用', 'bg-red-lt'] }[modeShort];
+      %>
+      <tr>
+        <td>
+          <div class="d-flex align-items-center text-truncate" title="<%= s.PathName || '' %>">
+            <i class="ti ti-settings <%= running ? 'text-success' : 'text-secondary' %> me-2"></i>
+            <div class="text-truncate">
+              <div class="text-truncate"><%= s.DisplayName || s.Name %></div>
+              <div class="small text-secondary font-monospace text-truncate"><%= s.Name %></div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge <%= stateCls %>"><%= running ? '运行中' : s.State %></span></td>
+        <td><span class="badge <%= modeInfo[1] %>"><%= modeInfo[0] %></span></td>
+        <td class="font-monospace"><%= s.ProcessId || '-' %></td>
+        <td class="small text-secondary text-truncate font-monospace"><%= s.StartName || '-' %></td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm" role="group">
+            <% if (!running) { %>
+            <button class="btn btn-outline-success" title="启动"
+                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
+                    hx-vals='{"name":"<%= s.Name %>","action":"start","kw":"<%= kw %>"}'>
+              <i class="ti ti-player-play"></i>
+            </button>
+            <% } else { %>
+            <button class="btn btn-outline-secondary" title="停止"
+                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
+                    hx-vals='{"name":"<%= s.Name %>","action":"stop","kw":"<%= kw %>"}'>
+              <i class="ti ti-player-stop"></i>
+            </button>
+            <button class="btn btn-outline-azure" title="重启"
+                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
+                    hx-vals='{"name":"<%= s.Name %>","action":"restart","kw":"<%= kw %>"}'>
+              <i class="ti ti-refresh"></i>
+            </button>
+            <% } %>
+            <div class="btn-group" role="group">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="启动类型">
+                <i class="ti ti-toggle-left-right"></i>
+              </button>
+              <div class="dropdown-menu dropdown-menu-end">
+                <% ['auto', 'manual', 'disabled'].forEach(function (m) { %>
+                <button class="dropdown-item <%= m === modeShort ? 'active' : '' %>"
+                        hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
+                        hx-vals='{"name":"<%= s.Name %>","action":"mode","mode":"<%= m %>","kw":"<%= kw %>"}'>
+                  <i class="ti <%= m === 'auto' ? 'ti-clock-bolt' : (m === 'manual' ? 'ti-hand-click' : 'ti-ban') %> me-1"></i>
+                  <%= m === 'auto' ? '自动' : (m === 'manual' ? '手动' : '已禁用') %>
+                  <% if (m === modeShort) { %><i class="ti ti-check ms-1"></i><% } %>
+                </button>
+                <% }); %>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
