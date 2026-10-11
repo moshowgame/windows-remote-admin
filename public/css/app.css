@@ -139,6 +139,25 @@
   border-radius: 2px;
 }
 
+/* ---- 日志 Grep 搜索 ---- */
+.grep-view {
+  height: auto;
+  max-height: 40vh;
+}
+.log-grep-hit {
+  background: rgba(241, 196, 15, 0.12);
+  border-left: 3px solid #f1c40f;
+  padding-left: 0.4rem;
+}
+.log-grep-ctx {
+  opacity: 0.62;
+  border-left: 3px solid transparent;
+  padding-left: 0.4rem;
+}
+.grep-block.grep-pinned {
+  border: 1px solid rgba(241, 196, 15, 0.45);
+}
+
 /* ---- 错误兜底页 ---- */
 .wra-error-box {
   min-height: calc(100vh - 15rem);

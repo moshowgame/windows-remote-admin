@@ -51,8 +51,180 @@
     <div id="log-content-region">
       <%- include('../partials/log-content') %>
     </div>
+
+    <div class="card mt-3" id="grep-card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-text-search me-1"></i>Grep 搜索（全文件）</h3>
+        <span class="text-secondary small ms-2">不区分大小写 · 上下文组自动合并 · 结果可固定后继续查其他关键字</span>
+      </div>
+      <div class="card-body">
+        <form id="grep-form" autocomplete="off">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-6 col-12">
+              <label class="form-label small mb-1">关键字</label>
+              <input id="grep-keyword" class="form-control form-control-sm font-monospace" placeholder="例如 error" spellcheck="false">
+            </div>
+            <div class="col-md-2 col-4">
+              <label class="form-label small mb-1">前后各 N 行</label>
+              <input id="grep-context" type="number" min="0" max="20" value="5" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 col-4">
+              <label class="form-label small mb-1">本批上限</label>
+              <input id="grep-limit" type="number" min="1" max="200" value="50" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 col-4">
+              <button type="submit" class="btn btn-primary btn-sm w-100" id="grep-submit">
+                <i class="ti ti-search me-1"></i>搜索
+              </button>
+            </div>
+          </div>
+        </form>
+        <div id="grep-results" class="mt-3"></div>
+      </div>
+    </div>
   </div>
 </div>
+
+<script>
+  /* Grep 搜索：结果块（可固定/删除/继续扫描），新搜索自动移除未固定的旧块 */
+  (function () {
+    'use strict';
+    var form = document.getElementById('grep-form');
+    var results = document.getElementById('grep-results');
+    if (!form || !results) return;
+
+    var blocks = {}; // id -> { el, body, keyword, context, start, total, scanned, hasMore, busy, done }
+    var seq = 0;
+
+    function file() {
+      var card = document.getElementById('log-card');
+      return card ? (card.dataset.file || '') : '';
+    }
+
+    function fmtMB(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+    /* 渲染行：匹配片段 <mark> 高亮（DOM 构建 + textContent 防注入） */
+    function renderSegments(container, segments, keyword) {
+      var kw = keyword.toLowerCase();
+      segments.forEach(function (seg) {
+        var d = document.createElement('div');
+        if (seg.skip != null) {
+          d.className = 'text-secondary text-center small my-1';
+          d.textContent = '··· 跳过 ' + seg.skip + ' 行 ···';
+          container.appendChild(d);
+          return;
+        }
+        d.className = seg.m ? 'log-line log-grep-hit' : 'log-line log-grep-ctx';
+        var lower = seg.t.toLowerCase(), i = 0;
+        while (true) {
+          var idx = kw ? lower.indexOf(kw, i) : -1;
+          if (idx < 0) { d.appendChild(document.createTextNode(seg.t.slice(i))); break; }
+          if (idx > i) d.appendChild(document.createTextNode(seg.t.slice(i, idx)));
+          var mark = document.createElement('mark');
+          mark.textContent = seg.t.slice(idx, idx + kw.length);
+          d.appendChild(mark);
+          i = idx + kw.length;
+        }
+        container.appendChild(d);
+      });
+    }
+
+    function header(block) {
+      var st = block.done ? (block.endReached ? '已扫完全文件' : '可继续扫描') : '扫描中…';
+      return block.keyword + ' · 前后各 ' + block.context + ' 行 · 命中 ' + block.total +
+             ' · 已扫 ' + fmtMB(block.scanned) + ' · ' + st;
+    }
+
+    function refreshHeader(block) {
+      block.el.querySelector('.grep-meta').textContent = header(block);
+      var btn = block.el.querySelector('.grep-more');
+      if (btn) btn.classList.toggle('d-none', !block.hasMore || block.busy || block.done);
+    }
+
+    function createBlock(keyword, context) {
+      var id = 'g' + (++seq);
+      var el = document.createElement('div');
+      el.className = 'card card-sm mb-2 grep-block';
+      el.innerHTML =
+        '<div class="card-header py-1 px-2 d-flex align-items-center">' +
+        '  <i class="ti ti-text-search text-secondary me-1"></i>' +
+        '  <span class="grep-meta small text-secondary text-truncate flex-grow-1"></span>' +
+        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-pin" title="固定该结果（新搜索不覆盖）"><i class="ti ti-pin"></i></button>' +
+        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-remove" title="移除"><i class="ti ti-x"></i></button>' +
+        '</div>' +
+        '<div class="card-body p-0"><div class="log-view grep-view"><div class="grep-body"></div></div></div>';
+      el.dataset.id = id;
+      el.querySelector('.grep-pin').addEventListener('click', function () {
+        var pinned = el.classList.toggle('grep-pinned');
+        this.innerHTML = pinned ? '<i class="ti ti-pin-filled text-warning"></i>' : '<i class="ti ti-pin"></i>';
+      });
+      el.querySelector('.grep-remove').addEventListener('click', function () {
+        delete blocks[id];
+        el.remove();
+      });
+      var more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'btn btn-sm btn-ghost-secondary d-none m-1 grep-more';
+      more.innerHTML = '<i class="ti ti-player-play me-1"></i>继续扫描';
+      more.addEventListener('click', function () { scan(id); });
+      el.querySelector('.card-header').appendChild(more);
+      results.appendChild(el);
+      var block = blocks[id] = { el: el, body: el.querySelector('.grep-body'), keyword: keyword, context: context, start: 0, total: 0, scanned: 0, hasMore: false, busy: false, done: false };
+      refreshHeader(block);
+      return block;
+    }
+
+    function scan(id) {
+      var block = blocks[id];
+      if (!block || block.busy) return;
+      block.busy = true;
+      refreshHeader(block);
+      var url = '/logs/grep?file=' + encodeURIComponent(file()) +
+        '&keyword=' + encodeURIComponent(block.keyword) +
+        '&context=' + block.context + '&limit=' + limitInput.value + '&start=' + block.start;
+      fetch(url, { headers: { Accept: 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (data) {
+          renderSegments(block.body, data.segments || [], block.keyword);
+          block.start = data.next || 0;
+          block.total += data.matches || 0;
+          block.scanned += data.scanned || 0;
+          block.hasMore = !!data.hasMore;
+          block.done = !!data.endReached;
+          block.endReached = !!data.endReached;
+        })
+        .catch(function (err) {
+          var d = document.createElement('div');
+          d.className = 'text-danger small p-2';
+          d.textContent = 'Grep 搜索失败：' + err.message;
+          block.body.appendChild(d);
+        })
+        .finally(function () {
+          block.busy = false;
+          refreshHeader(block);
+        });
+    }
+
+    var limitInput = document.getElementById('grep-limit');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = file();
+      var keyword = document.getElementById('grep-keyword').value.trim();
+      if (!f) { results.innerHTML = '<div class="text-secondary small">请先在上方选择日志文件。</div>'; return; }
+      if (!keyword) return;
+      // 移除未固定的旧块（固定的保留，可对照多个关键字）
+      Object.keys(blocks).forEach(function (id) {
+        if (!blocks[id].el.classList.contains('grep-pinned')) {
+          blocks[id].el.remove();
+          delete blocks[id];
+        }
+      });
+      var context = Math.max(0, Math.min(parseInt(document.getElementById('grep-context').value, 10) || 5, 20));
+      var block = createBlock(keyword, context);
+      scan(block.el.dataset.id);
+    });
+  })();
+</script>
 
 <script>
   /* 关键词回车 → 按当前文件重新拉取内容（含高亮与 SSE 重挂载） */

@@ -72,6 +72,129 @@ async function tailHtml(file, keyword, maxLines = 500) {
   return readWindow(file, st.size, keyword, maxLines);
 }
 
+// grep 模式：从字节游标 start 向后流式扫描，返回匹配行 + 前/后各 context 行上下文。
+// 关键字不区分大小写（includes 匹配）；上下文组重叠自动合并（组间插入 {skip:N} 省略提示）。
+// 游标精确到字节（逐行累计含换行的字节数），翻页无重复无遗漏；大文件单批最多扫 32MB。
+// 返回 { segments: [{t, m} | {skip}], next, hasMore, matches, scanned, endReached }
+async function scanGrep(file, { keyword, context = 5, limit = 50, start = 0 }) {
+  const CHUNK = 4 * 1024 * 1024;     // 单块读取 4MB
+  const MAX_SCAN = 32 * 1024 * 1024; // 单次请求最多扫描 32MB
+  const MAX_OUT = 512 * 1024;        // 输出预算：超出后本块内静默（游标仍精确推进）
+
+  const st = await fsp.stat(file);
+  const lower = keyword.toLowerCase();
+  const segments = [];
+  const beforeBuf = [];              // 前 context 行缓冲 [{ no, t }]
+  let offset = start;
+  let lineNo = 0;
+  let groupEnd = 0;                  // 活动上下文组的结束行号（绝对行号）
+  let lastEnd = 0;                   // 最后输出的绝对行号
+  let matches = 0;
+  let scanned = 0;
+  let outBytes = 0;
+  let muted = false;
+  let next = start;
+  let hitLimit = false;
+
+  // 统一输出：自动补组间省略提示；返回是否需要中断（limit/输出预算）
+  const emit = (no, t, m) => {
+    if (muted) return;
+    if (lastEnd > 0 && no > lastEnd + 1) {
+      segments.push({ skip: no - lastEnd - 1 });
+      outBytes += 32;
+    }
+    segments.push({ t, m });
+    outBytes += Buffer.byteLength(t) + 8;
+    lastEnd = no;
+    if (outBytes > MAX_OUT) muted = true;
+  };
+
+  const fh = await fsp.open(file, 'r');
+  try {
+    let carry = '';
+    const lineRe = /.*(?:\r\n|\r|\n)|.+$/g;
+    scan:
+    while (offset < st.size && scanned < MAX_SCAN) {
+      const len = Math.min(CHUNK, st.size - offset);
+      const buf = Buffer.alloc(len);
+      await fh.read(buf, 0, len, offset);
+      scanned += len;
+      const chunkStart = offset;
+      offset += len;
+      const chunkStr = buf.toString('utf8');
+      const carryChars = carry.length;
+      const carryBytes = Buffer.byteLength(carry, 'utf8');
+      const text = carry + chunkStr;
+      carry = '';
+      let consumed = 0; // 本块内已处理完整行的字节数（含 carry，按 UTF-8 字节计）
+
+      lineRe.lastIndex = 0;
+      let m;
+      while ((m = lineRe.exec(text)) !== null) {
+        const raw = m[0];
+        if (!/\r\n|\r|\n$/.test(raw)) { carry = raw; break; } // 半行留给下一块
+        consumed = carryBytes + Buffer.byteLength(chunkStr.slice(0, lineRe.lastIndex - carryChars), 'utf8');
+        lineNo++;
+        const t = raw.replace(/\r\n|\r|\n$/, '');
+        const hit = lower ? t.toLowerCase().includes(lower) : false;
+
+        if (hit) {
+          matches++;
+          groupEnd = lineNo + context;
+          // 先补输出缓冲里的前置上下文（行号 > lastEnd 且 >= 匹配行 - context）
+          const needFrom = lineNo - context;
+          for (const b of beforeBuf) {
+            if (b.no > lastEnd && b.no >= needFrom) emit(b.no, b.t, false);
+          }
+          emit(lineNo, t, true);
+        } else if (lineNo <= groupEnd && lineNo > lastEnd) {
+          emit(lineNo, t, false);
+        }
+
+        beforeBuf.push({ no: lineNo, t });
+        if (beforeBuf.length > context) beforeBuf.shift();
+
+        if (matches >= limit) { next = chunkStart + consumed; hitLimit = true; break scan; }
+      }
+
+      next = chunkStart + consumed; // 半行未被消费，下次从其行首继续
+      if (carry && offset >= st.size) {
+        // 文件末尾的最后一行（无换行符）：按完整行处理
+        lineNo++;
+        const t = carry;
+        const hit = lower ? t.toLowerCase().includes(lower) : false;
+        if (hit) {
+          matches++;
+          groupEnd = lineNo + context;
+          const needFrom = lineNo - context;
+          for (const b of beforeBuf) {
+            if (b.no > lastEnd && b.no >= needFrom) emit(b.no, b.t, false);
+          }
+          emit(lineNo, t, true);
+        } else if (lineNo <= groupEnd && lineNo > lastEnd) {
+          emit(lineNo, t, false);
+        }
+        beforeBuf.push({ no: lineNo, t });
+        if (beforeBuf.length > context) beforeBuf.shift();
+        carry = '';
+        next = offset; // 已扫到文件尾
+      }
+    }
+  } finally {
+    await fh.close().catch(() => {});
+  }
+
+  if (matches >= limit && !hitLimit) hitLimit = true;
+  return {
+    segments,
+    next,
+    hasMore: next < st.size,
+    matches,
+    scanned,
+    endReached: next >= st.size,
+  };
+}
+
 // 通配符 → 正则（* / ? ）
 function globToRegex(pattern) {
   const s = String(pattern || '*').replace(/[.+^${}()|[\]\\]/g, '\\$&');
@@ -200,6 +323,23 @@ module.exports = async function logsRoutes(app) {
       before: r.before,
       hasMore: r.hasMore,
     });
+  });
+
+  // grep 模式：全文件流式扫描，返回匹配行 + 前/后各 context 行（JSON，前端渲染）
+  // start 为字节游标：结果超过 limit 时精确停在匹配行末，继续扫描无重复无遗漏
+  app.get('/logs/grep', async (request, reply) => {
+    const full = resolveUserPath(request.query.file);
+    const st = await fsp.stat(full).catch(() => null);
+    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    const keyword = String(request.query.keyword || '').trim();
+    if (!keyword) throw new PathError('关键字不能为空');
+    let context = parseInt(request.query.context, 10);
+    if (!Number.isFinite(context) || context < 0) context = 5;
+    if (context > 20) context = 20;
+    const limit = Math.min(Math.max(parseInt(request.query.limit, 10) || 50, 1), 200);
+    const start = Math.max(parseInt(request.query.start, 10) || 0, 0);
+    const r = await scanGrep(full, { keyword, context, limit, start });
+    return reply.send(r);
   });
 
   // SSE 实时跟踪：fs.watch 父目录 + offset 追加读，500ms 节流
