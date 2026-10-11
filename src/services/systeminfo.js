@@ -70,8 +70,9 @@ function formatUptime(bootStr) {
 }
 
 // 系统快照（OS/CPU/内存/磁盘/运行时间）
+// sessionKey 'system'：独立长驻会话，与控制台用户会话互不干扰；轮询时免 PowerShell 冷启动
 async function getSnapshot() {
-  const r = await ps.execute(SNAPSHOT_CMD, { timeoutMs: QUICK_TIMEOUT_MS });
+  const r = await ps.execute(SNAPSHOT_CMD, { timeoutMs: QUICK_TIMEOUT_MS, sessionKey: 'system' });
   const d = r.ok ? safeJson(r.output) : null;
   if (!d) return { ok: false };
 
@@ -107,7 +108,7 @@ async function getSnapshot() {
 
 // Top 10 进程
 async function getTopProcesses() {
-  const r = await ps.execute(PROCESS_CMD, { timeoutMs: QUICK_TIMEOUT_MS });
+  const r = await ps.execute(PROCESS_CMD, { timeoutMs: QUICK_TIMEOUT_MS, sessionKey: 'system' });
   const arr = safeJson(r.output);
   if (!Array.isArray(arr)) return [];
   return arr.map((p) => ({

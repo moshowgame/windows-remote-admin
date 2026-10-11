@@ -233,7 +233,8 @@ module.exports = async function filesRoutes(app) {
     if (!st) throw new PathError('文件不存在');
     if (st.isDirectory()) throw new PathError('仅支持打开文件');
     // 路径经环境变量传入，脚本内用 $env: 引用：值不会被 PowerShell 解析器求值，杜绝命令注入
-    await ps.execute('Start-Process -LiteralPath $env:WRA_OPEN_TARGET', { timeoutMs: 15000, env: { WRA_OPEN_TARGET: full } });
+    // fresh: true → 一次性进程：临时环境变量按调用生效，不会残留在长驻会话中
+    await ps.execute('Start-Process -LiteralPath $env:WRA_OPEN_TARGET', { timeoutMs: 15000, fresh: true, env: { WRA_OPEN_TARGET: full } });
     audit(request, '服务器打开文件', { path: full });
     return reply.headers(toastHeader('已发送打开指令', 'info')).send('');
   });

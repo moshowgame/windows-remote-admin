@@ -60,7 +60,9 @@ module.exports = async function consoleRoutes(app) {
       });
     }
 
-    const result = await ps.execute(command, { timeoutMs: app.config.psTimeoutMs });
+    // 连续会话：按用户名隔离，cd / 变量等状态跨命令保留
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    const result = await ps.execute(command, { timeoutMs: app.config.psTimeoutMs, sessionKey: `user:${username}` });
     audit(request, 'PowerShell 命令执行', { command, durationMs: result.durationMs, ok: result.ok });
 
     return reply.view('partials/console-output', { command, result });
