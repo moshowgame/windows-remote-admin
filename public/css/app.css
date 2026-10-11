@@ -295,3 +295,182 @@
   background: transparent;
   color: #d6d6d6;
 }
+
+/* ============================================================
+   视觉升级 2.0：品牌渐变色系 / 卡片层次 / 组件精修（含暗色）
+   ============================================================ */
+
+/* ---- 品牌变量 ---- */
+:root {
+  --wra-brand: #4263eb;
+  --wra-brand-soft: #4dabf7;
+  --wra-grad-brand: linear-gradient(135deg, #4263eb 0%, #4dabf7 100%);
+  --wra-shadow-soft: 0 1px 2px rgba(15, 29, 58, 0.05), 0 4px 14px rgba(15, 29, 58, 0.06);
+  --wra-shadow-lift: 0 8px 24px rgba(15, 29, 58, 0.12);
+  --wra-radius: 14px;
+}
+[data-bs-theme="dark"] {
+  --wra-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.28), 0 4px 14px rgba(0, 0, 0, 0.30);
+  --wra-shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.48);
+  --wra-grad-brand: linear-gradient(135deg, #5c7cfa 0%, #74c0fc 100%);
+}
+
+/* ---- 页面背景光晕（浅/暗各一套，营造空间层次） ---- */
+body {
+  background:
+    radial-gradient(1100px 480px at 88% -12%, rgba(66, 99, 235, 0.09), transparent 62%),
+    radial-gradient(900px 460px at -12% 112%, rgba(34, 184, 207, 0.08), transparent 58%),
+    var(--tblr-body-bg, #f4f6fb);
+  background-attachment: fixed;
+}
+[data-bs-theme="dark"] body {
+  background:
+    radial-gradient(1100px 480px at 88% -12%, rgba(99, 125, 255, 0.10), transparent 62%),
+    radial-gradient(900px 460px at -12% 112%, rgba(34, 184, 207, 0.06), transparent 58%),
+    var(--tblr-body-bg, #1a2234);
+  background-attachment: fixed;
+}
+
+/* ---- 顶栏：毛玻璃 + 渐变 Logo + 导航胶囊 ---- */
+.navbar {
+  background: color-mix(in srgb, var(--tblr-bg-surface, #ffffff) 80%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--tblr-border-color, #e6e7eb) 60%, transparent);
+}
+.navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.navbar-brand i {
+  background: var(--wra-grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.navbar .nav-link {
+  border-radius: 9px;
+  padding-inline: 0.8rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.navbar .nav-link:hover {
+  background: color-mix(in srgb, var(--wra-brand) 9%, transparent);
+}
+.navbar .nav-link.active {
+  background: linear-gradient(135deg, rgba(66, 99, 235, 0.13), rgba(77, 171, 247, 0.13));
+  color: var(--wra-brand);
+  font-weight: 550;
+}
+[data-bs-theme="dark"] .navbar .nav-link.active { color: #8ea6ff; }
+
+/* ---- 卡片体系：大圆角 + 分层阴影 + 透明头部 ---- */
+.card {
+  border-radius: var(--wra-radius);
+  border-color: color-mix(in srgb, var(--tblr-border-color, #e6e7eb) 72%, transparent);
+  box-shadow: var(--wra-shadow-soft);
+  transition: box-shadow 0.2s ease;
+}
+.card:hover { box-shadow: var(--wra-shadow-lift); }
+.card-header {
+  background: transparent;
+  border-bottom-color: color-mix(in srgb, var(--tblr-border-color, #e6e7eb) 55%, transparent);
+}
+.card-title {
+  font-weight: 620;
+  letter-spacing: 0.01em;
+}
+.card-title i { color: var(--wra-brand); }
+[data-bs-theme="dark"] .card-title i { color: #8ea6ff; }
+
+/* 概览统计卡：顶部渐变色条 + 悬停浮起 */
+#stat-cards .card { position: relative; overflow: hidden; }
+#stat-cards .card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--wra-grad-brand);
+  opacity: 0.9;
+}
+#stat-cards .card:hover { transform: translateY(-3px); }
+
+/* ---- 按钮：渐变主色 + 悬停微浮 ---- */
+.btn {
+  border-radius: 9px;
+  font-weight: 500;
+}
+.btn-primary {
+  border: 0;
+  background: linear-gradient(135deg, #4263eb, #4dabf7);
+  box-shadow: 0 4px 12px rgba(66, 99, 235, 0.28);
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  border: 0;
+  background: linear-gradient(135deg, #3b5bdb, #3b9ae1);
+  box-shadow: 0 6px 16px rgba(66, 99, 235, 0.40);
+  transform: translateY(-1px);
+}
+.btn-primary:disabled { transform: none; }
+
+/* ---- 表单：品牌聚焦光环 ---- */
+.form-control, .form-select {
+  border-radius: 9px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.form-control:focus, .form-select:focus {
+  border-color: color-mix(in srgb, var(--wra-brand) 55%, transparent);
+  box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.14);
+}
+
+/* ---- 表格：小号大写表头 + 行悬停品牌底色 ---- */
+.table > thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tblr-secondary, #6c757d);
+  background: color-mix(in srgb, var(--wra-brand) 5%, transparent);
+}
+.table tbody tr { transition: background 0.12s ease; }
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--wra-brand) 6%, transparent) !important;
+}
+[data-bs-theme="dark"] .table > thead th {
+  background: color-mix(in srgb, var(--wra-brand) 12%, transparent);
+}
+[data-bs-theme="dark"] .table tbody tr:hover {
+  background: color-mix(in srgb, var(--wra-brand) 14%, transparent) !important;
+}
+
+/* ---- 徽章 / 进度条 ---- */
+.badge { border-radius: 6px; font-weight: 550; }
+.progress-bar { background: var(--wra-grad-brand); }
+
+/* ---- 页面标题渐变图标 ---- */
+.page-title {
+  font-weight: 680;
+  letter-spacing: -0.015em;
+}
+.page-title i {
+  background: var(--wra-grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- 终端 / 日志 / 预览深色块圆角，与卡片统一 ---- */
+.wra-terminal, .log-view, .wra-preview-pre { border-radius: 10px; }
+
+/* ---- 编辑器边框与圆角随主题 ---- */
+.ed-wrap {
+  border-radius: 10px;
+  border-color: color-mix(in srgb, var(--tblr-border-color, #dce1e8) 85%, transparent);
+}
+
+/* ---- 暗色卡片：半透明表面 + 光晕背景形成层次 ---- */
+[data-bs-theme="dark"] .card {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: color-mix(in srgb, var(--tblr-bg-surface-dark, #1a1d24) 90%, transparent);
+}
