@@ -1,0 +1,7 @@
+<%# 浏览刷新复合片段（POST /files/browse 响应）：主区 OOB + 最近访问 OOB %>
+<div id="file-main" hx-swap-oob="true">
+  <%- include('file-card') %>
+</div>
+<div id="recent-panel" hx-swap-oob="true">
+  <%- include('recent-list') %>
+</div>

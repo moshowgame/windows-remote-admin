@@ -1,0 +1,55 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-settings me-2"></i>设置</h2>
+    </div>
+    <div class="col-auto text-secondary small">快速访问即时生效 · 系统参数修改需重启</div>
+  </div>
+</div>
+
+<div id="settings-main">
+  <%- include('../partials/settings-form') %>
+</div>
+
+<script>
+  /* 设置页交互：快速访问动态增删行 */
+  (function () {
+    'use strict';
+    var rows = document.getElementById('qa-rows');
+    var addBtn = document.getElementById('qa-add');
+    if (!rows || !addBtn) return;
+
+    function rowHtml() {
+      var div = document.createElement('div');
+      div.className = 'row g-2 mb-2 qa-row';
+      div.innerHTML =
+        '<div class="col-4"><input name="label" class="form-control" placeholder="名称" maxlength="50"></div>' +
+        '<div class="col-7"><input name="path" class="form-control font-monospace" placeholder="例如 C:\\data" spellcheck="false"></div>' +
+        '<div class="col-1"><button type="button" class="btn btn-ghost-danger w-100 qa-del" title="删除此行"><i class="ti ti-x"></i></button></div>';
+      return div;
+    }
+
+    addBtn.addEventListener('click', function () {
+      rows.appendChild(rowHtml());
+      var inputs = rows.querySelectorAll('.qa-row:last-child input');
+      if (inputs.length) inputs[0].focus();
+    });
+
+    rows.addEventListener('click', function (e) {
+      var del = e.target.closest && e.target.closest('.qa-del');
+      if (!del) return;
+      var row = del.closest('.qa-row');
+      var list = rows.querySelectorAll('.qa-row');
+      // 至少保留一行
+      if (list.length <= 1) {
+        rows.replaceChild(rowHtml(), row);
+        return;
+      }
+      row.remove();
+    });
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

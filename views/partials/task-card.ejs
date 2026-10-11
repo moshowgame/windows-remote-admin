@@ -1,0 +1,37 @@
+<%# 单个任务卡片（locals: task） %>
+<div class="card mb-2" id="task-<%= task.id %>">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex align-items-center gap-2">
+      <% if (task.status === 'running') { %>
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <% } else if (task.status === 'done') { %>
+        <i class="ti ti-circle-check text-success fs-4"></i>
+      <% } else if (task.status === 'error') { %>
+        <i class="ti ti-circle-x text-danger fs-4"></i>
+      <% } else { %>
+        <i class="ti ti-clock text-secondary fs-4"></i>
+      <% } %>
+      <div class="flex-grow-1 wra-minw0">
+        <div class="small fw-medium text-truncate"><%= task.title %></div>
+        <div class="progress mt-1" style="height: 4px">
+          <div class="progress-bar <%= task.status === 'error' ? 'bg-danger' : task.status === 'done' ? 'bg-success' : '' %>"
+               style="width: <%= task.percent %>%" role="progressbar"></div>
+        </div>
+        <div class="small text-secondary mt-1 text-truncate">
+          <% if (task.status === 'error' && task.error) { %>
+            <span class="text-danger"><%= task.error %></span>
+          <% } else if (task.status === 'done' && task.resultPath) { %>
+            已生成：<span class="font-monospace"><%= task.resultPath %></span>
+          <% } else { %>
+            <%= task.detail %>
+          <% } %>
+        </div>
+      </div>
+      <% if (task.status === 'done' || task.status === 'error') { %>
+        <button class="btn btn-sm btn-ghost-secondary" type="button" onclick="this.closest('.card').remove()" title="移除">
+          <i class="ti ti-x"></i>
+        </button>
+      <% } %>
+    </div>
+  </div>
+</div>

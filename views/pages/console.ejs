@@ -1,0 +1,138 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-terminal-2 me-2"></i>PowerShell 控制台</h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      超时 <%= Math.round(timeoutMs / 1000) %>s · 输出上限 2MB
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- 左侧：快捷命令分组 -->
+  <div class="col-lg-3 order-lg-2">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-bolt me-1"></i>快捷命令</h3>
+      </div>
+      <div class="card-body p-2" style="max-height: 65vh; overflow-y: auto;">
+        <% for (const group of quickCommands) { %>
+          <div class="mb-3">
+            <div class="text-secondary small mb-1">
+              <i class="ti <%= group.icon %> me-1"></i><%= group.name %>
+            </div>
+            <% for (const cmd of group.items) { %>
+              <button class="btn btn-outline-secondary w-100 text-start text-truncate mb-1 font-monospace"
+                      style="font-size: 0.75rem;"
+                      hx-post="/console/execute"
+                      hx-vals='<%= JSON.stringify({ command: cmd }) %>'
+                      hx-target="#console-output"
+                      hx-swap="beforeend scroll:#terminal-box:bottom"
+                      title="<%= cmd %>"><%= cmd %></button>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：终端输出 + 输入行 -->
+  <div class="col-lg-9 order-lg-1">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title"><i class="ti ti-square-rounded-letter-p me-1"></i>终端输出</h3>
+        <button id="console-clear" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+          <i class="ti ti-eraser me-1"></i>清屏
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div id="terminal-box" class="wra-terminal">
+          <div id="console-output">
+            <div class="wra-term-block text-secondary">PowerShell 就绪。输入命令（Enter 执行 / ↑↓ 翻历史）或点击右侧快捷命令。</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer p-2">
+        <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
+              hx-swap="beforeend scroll:#terminal-box:bottom"
+              hx-disabled-elt="find button[type=submit]"
+              class="d-flex gap-2 align-items-center">
+          <span class="wra-term-prompt ps-2 font-monospace">PS&gt;</span>
+          <input name="command" id="console-input" class="form-control font-monospace"
+                 autocomplete="off" spellcheck="false"
+                 placeholder="输入 PowerShell 命令，Enter 执行" autofocus>
+          <button type="submit" class="btn btn-primary px-3">
+            <i class="ti ti-player-play me-1"></i>执行
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* 控制台专属交互：历史上下键（localStorage）/ 清屏 / 焦点管理 */
+  (function () {
+    'use strict';
+    var KEY = 'wra_ps_history';
+    var MAX = 100;
+    var input = document.getElementById('console-input');
+    var form = document.getElementById('console-form');
+    var output = document.getElementById('console-output');
+    var box = document.getElementById('terminal-box');
+    var idx = -1;   // 当前历史指针（-1 = 不在历史中）
+    var draft = ''; // 未提交草稿
+
+    function loadHistory() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; }
+    }
+    function saveHistory(cmds) {
+      try { localStorage.setItem(KEY, JSON.stringify(cmds)); } catch (e) { /* 忽略 */ }
+    }
+    function scrollToBottom() { box.scrollTop = box.scrollHeight; }
+
+    input.addEventListener('keydown', function (e) {
+      var cmds = loadHistory();
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (idx === -1) { draft = input.value; idx = cmds.length; }
+        if (idx > 0) { idx -= 1; input.value = cmds[idx] || ''; }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (idx !== -1) {
+          idx += 1;
+          if (idx >= cmds.length) { input.value = draft; idx = -1; draft = ''; }
+          else { input.value = cmds[idx] || ''; }
+        }
+      } else if (e.key === 'Enter') {
+        var cmd = input.value.trim();
+        if (cmd) {
+          // 去重后追加，保留最近 MAX 条
+          cmds = cmds.filter(function (c) { return c !== cmd; });
+          cmds.push(cmd);
+          saveHistory(cmds.slice(-MAX));
+        }
+        idx = -1; draft = '';
+      }
+    });
+
+    // 提交成功后清空输入框并回焦
+    form.addEventListener('htmx:afterRequest', function (e) {
+      if (e.detail.successful) input.value = '';
+      input.focus();
+      scrollToBottom();
+    });
+    output.addEventListener('htmx:afterSwap', scrollToBottom);
+
+    // 清屏
+    document.getElementById('console-clear').addEventListener('click', function () {
+      output.innerHTML = '<div class="wra-term-block text-secondary">已清屏。</div>';
+      input.focus();
+    });
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

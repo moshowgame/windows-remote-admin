@@ -1,0 +1,20 @@
+<%# 最近访问列表（locals: recent 路径数组） %>
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="ti ti-history me-1"></i>最近访问</h3>
+  </div>
+  <% if (!recent || recent.length === 0) { %>
+    <div class="card-body text-secondary small">暂无记录</div>
+  <% } else { %>
+    <ul class="list-group list-group-flush">
+      <% for (const r of recent) { %>
+        <li class="list-group-item px-2 py-1">
+          <a href="#" class="text-decoration-none d-block text-truncate" title="<%= r %>"
+             hx-post="/files/browse" hx-vals="<%= JSON.stringify({ path: r }) %>" hx-swap="none">
+            <i class="ti ti-folder me-1 text-warning"></i><%= r.split('\\').pop().split('/').pop() || r %>
+          </a>
+        </li>
+      <% } %>
+    </ul>
+  <% } %>
+</div>

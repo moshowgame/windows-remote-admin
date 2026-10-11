@@ -1,0 +1,21 @@
+<% /* 终端输出片段：命令回显 + 输出 + 状态/耗时（追加到 #console-output） */ %>
+<div class="wra-term-block">
+  <div class="wra-term-cmd">
+    <span class="wra-term-prompt">PS&gt;</span>
+    <span class="text-info"><%= command %></span>
+  </div>
+  <% if (result.output) { %>
+    <pre class="wra-term-out <%= result.ok ? '' : 'text-danger' %>"><%= result.output %></pre>
+  <% } else { %>
+    <pre class="wra-term-out text-secondary">(无输出)</pre>
+  <% } %>
+  <div class="wra-term-meta">
+    <% if (result.ok) { %>
+      <i class="ti ti-check text-success me-1"></i><span class="text-success">成功</span>
+    <% } else { %>
+      <i class="ti ti-x text-danger me-1"></i><span class="text-danger">失败</span>
+    <% } %>
+    <span class="text-secondary">· 退出码 <%= result.exitCode %> · 耗时 <%= result.durationMs %> ms</span>
+    <% if (result.timedOut) { %><span class="text-warning">· 已超时强制终止</span><% } %>
+  </div>
+</div>

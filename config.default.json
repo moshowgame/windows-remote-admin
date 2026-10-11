@@ -1,0 +1,17 @@
+{
+  "port": 12306,
+  "psTimeoutMs": 60000,
+  "uploadMaxMb": 100,
+  "readMaxMb": 10,
+  "previewPageLines": 500,
+  "extractMaxMb": 2048,
+  "extractMaxFiles": 20000,
+  "enableServerOpen": false,
+  "pathWhitelist": [],
+  "quickAccess": [
+    { "label": "C 盘根目录", "path": "C:\\" },
+    { "label": "Windows 临时目录", "path": "C:\\Windows\\Temp" },
+    { "label": "ProgramData", "path": "C:\\ProgramData" }
+  ],
+  "logRetentionDays": 30
+}

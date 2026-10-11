@@ -1,0 +1,20 @@
+<%# 日志文件列表（locals: files, file, keyword, autoPick） %>
+<% if (!files || files.length === 0) { %>
+  <div class="text-secondary small py-3 text-center">未找到匹配的日志文件</div>
+<% } else { %>
+  <div class="list-group list-group-flush">
+    <% for (const f of files) { %>
+      <a href="#" class="list-group-item list-group-item-action px-2 py-2 <%= f.path === file ? 'active' : '' %>"
+         hx-get="/logs/content" hx-vals="<%= JSON.stringify({ file: f.path, keyword: keyword }) %>"
+         hx-target="#log-content-region" hx-swap="innerHTML">
+        <div class="text-truncate small fw-medium"><i class="ti ti-file-text me-1"></i><%= f.name %></div>
+        <div class="text-truncate small <%= f.path === file ? '' : 'text-secondary' %>" title="<%= f.path %>"><%= f.dir %></div>
+        <div class="small <%= f.path === file ? '' : 'text-secondary' %>"><%= f.mtimeText %> · <%= f.sizeText %></div>
+      </a>
+    <% } %>
+  </div>
+  <% if (autoPick && file) { %>
+    <span class="d-none" hx-get="/logs/content" hx-vals="<%= JSON.stringify({ file: file, keyword: keyword }) %>"
+          hx-target="#log-content-region" hx-trigger="load" hx-swap="innerHTML"></span>
+  <% } %>
+<% } %>

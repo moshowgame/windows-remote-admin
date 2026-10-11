@@ -1,0 +1,278 @@
+/* 自定义样式（终端样式等随后续批次补充） */
+.navbar-brand i {
+  font-size: 1.4rem;
+  vertical-align: -0.2em;
+}
+
+.footer {
+  font-size: 0.8rem;
+}
+
+/* PowerShell 终端样式 */
+.wra-terminal {
+  background: #14161a;
+  color: #d6d6d6;
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  height: 60vh;
+  overflow-y: auto;
+}
+
+.wra-term-block {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #26282e;
+}
+
+.wra-term-cmd {
+  margin-bottom: 0.25rem;
+}
+
+.wra-term-prompt {
+  color: #4fd1c5;
+  font-weight: 600;
+}
+
+.wra-term-out {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0 0 0.25rem;
+  color: #d6d6d6;
+}
+
+.wra-term-meta {
+  font-size: 0.72rem;
+  font-family: system-ui, sans-serif;
+}
+
+/* ---- 文件资源管理器 ---- */
+.wra-trunc {
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1400px) {
+  .wra-trunc {
+    max-width: 260px;
+  }
+}
+
+.wra-minw0 {
+  min-width: 0;
+}
+
+/* 预览文本（深色，与终端一致） */
+.wra-preview-pre {
+  background: #14161a;
+  color: #d6d6d6;
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0.75rem;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---- 文本编辑器 ---- */
+.ed-wrap {
+  display: flex;
+  height: 62vh;
+  border: 1px solid #dce1e8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.ed-nums {
+  width: 56px;
+  flex-shrink: 0;
+  padding: 0.5rem 0.25rem;
+  text-align: right;
+  color: #9aa5b5;
+  background: #f6f8fa;
+  border-right: 1px solid #dce1e8;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ed-input {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  padding: 0.5rem 0.75rem;
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+/* ---- 日志监控 ---- */
+.log-view {
+  background: #14161a;
+  color: #d6d6d6;
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  height: 65vh;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.log-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 1.13rem;
+}
+
+.log-view mark {
+  background: #f1c40f;
+  color: #111;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+/* ---- 错误兜底页 ---- */
+.wra-error-box {
+  min-height: calc(100vh - 15rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- 全局请求进度条 ---- */
+#wra-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, #206bc4, #4299e1, #d63939);
+  z-index: 3000;
+  transition: width 0.25s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   现代化 UI 打磨：动效 / 滚动条 / 吸顶页头 / 主题 / 登录页
+   ============================================================ */
+
+/* 大屏铺满：≥1400px 时容器按百分比流式（默认 96%，可调 --wra-page-max，设为 100% 即完全铺满） */
+:root { --wra-page-max: 96%; }
+@media (min-width: 1400px) {
+  .container-xl { max-width: var(--wra-page-max); }
+}
+
+/* 页面进入动画（仅整页加载触发，HTMX 局部替换不重放） */
+@keyframes wra-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.page {
+  animation: wra-page-in 0.25s ease;
+  /* 不用 fill-mode: both —— 结束后保留的 transform 会创建层叠上下文，
+     把页内 z-index 模态压到 body 直挂的 .modal-backdrop 之下（遮罩盖住模态=页面假死） */
+}
+
+/* 细滚动条（页面级 + 容器内） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.6); }
+
+/* 文本选中色 */
+::selection {
+  background: rgba(66, 153, 225, 0.35);
+}
+
+/* 吸顶毛玻璃页头（覆盖 page-body 顶部留白，滚动时无缝贴合视口顶部） */
+.page-body { padding-top: 0; }
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding: 0.75rem 0.75rem;
+  margin: 0 -0.25rem 1rem;
+  border-radius: 8px;
+  background: var(--tblr-bg-surface, #f6f8fb);
+  background: color-mix(in srgb, var(--tblr-bg-surface, #f6f8fb) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--tblr-border-color, #e6e7eb) 55%, transparent);
+}
+
+/* Dashboard 统计卡悬停浮起 */
+#stat-cards .card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+#stat-cards .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 29, 58, 0.08);
+}
+
+/* 主题切换按钮 */
+#theme-toggle {
+  font-size: 1.05rem;
+  transition: transform 0.15s ease;
+}
+#theme-toggle:hover { transform: rotate(18deg); }
+
+/* 登录页 */
+.wra-login-body {
+  background:
+    radial-gradient(1100px 560px at 82% -12%, rgba(66, 153, 225, 0.16), transparent 60%),
+    radial-gradient(900px 520px at -8% 108%, rgba(214, 57, 57, 0.10), transparent 55%),
+    var(--tblr-body-bg, #f6f8fb);
+}
+.wra-logo-tile {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #fff;
+  background: linear-gradient(135deg, #206bc4, #4299e1);
+  box-shadow: 0 10px 24px rgba(32, 107, 196, 0.35);
+}
+.wra-login-card { border: 0; }
+.wra-login-theme {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1040;
+  font-size: 1.05rem;
+}
+
+/* 暗色主题：编辑器自定义组件适配 */
+[data-bs-theme="dark"] .ed-wrap {
+  background: var(--tblr-bg-surface-dark, #1a1d24);
+  border-color: #2b3242;
+}
+[data-bs-theme="dark"] .ed-nums {
+  background: rgba(0, 0, 0, 0.25);
+  border-right-color: #2b3242;
+  color: #64748b;
+}
+[data-bs-theme="dark"] .ed-input {
+  background: transparent;
+  color: #d6d6d6;
+}

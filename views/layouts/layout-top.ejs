@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23006fd6'/%3E%3Cpath d='M6 7h12M6 12h12M6 17h12' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='6' cy='7' r='1.6' fill='%23ffb02e'/%3E%3Ccircle cx='6' cy='12' r='1.6' fill='%2342d39d'/%3E%3C/svg%3E">
+  <script>
+    /* 主题初始化：localStorage > 系统偏好（尽早执行避免闪烁） */
+    (function () {
+      try {
+        var t = localStorage.getItem('wra_theme');
+        if (t !== 'dark' && t !== 'light') {
+          t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', t);
+      } catch (e) { /* 忽略 */ }
+    })();
+  </script>
+  <title><%= title %> · Windows Remote Admin</title>
+  <link rel="stylesheet" href="/static/css/tabler.min.css">
+  <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
+  <link rel="stylesheet" href="/static/css/app.css?v=20261011">
+</head>
+<body hx-headers='{"X-CSRF-Token":"<%= csrf %>", "X-Requested-With":"htmx"}'>
+<div class="page">
+  <!-- 侧边栏 -->
+  <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+    <div class="container-fluid">
+      <h1 class="navbar-brand navbar-brand-autodark">
+        <a href="/dashboard" class="text-decoration-none">
+          <i class="ti ti-server-2 me-1"></i>WRA
+        </a>
+      </h1>
+      <div class="navbar-nav flex-row d-lg-none">
+        <div class="nav-item dropdown">
+          <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+            <span class="avatar avatar-sm bg-blue-lt"><%= (username || 'A').charAt(0).toUpperCase() %></span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            <form hx-post="/logout" hx-swap="none">
+              <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i>登出</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="菜单">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="sidebar-menu">
+        <ul class="navbar-nav pt-lg-3">
+          <li class="nav-item <%= active === 'dashboard' ? 'active' : '' %>">
+            <a class="nav-link" href="/dashboard">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-dashboard"></i></span>
+              <span class="nav-link-title">系统概览</span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'console' ? 'active' : '' %>">
+            <a class="nav-link" href="/console">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-terminal-2"></i></span>
+              <span class="nav-link-title">PowerShell</span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'files' ? 'active' : '' %>">
+            <a class="nav-link" href="/files">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-folder"></i></span>
+              <span class="nav-link-title">文件管理</span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'editor' ? 'active' : '' %>">
+            <a class="nav-link" href="/editor">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-pencil"></i></span>
+              <span class="nav-link-title">文本编辑器</span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'logs' ? 'active' : '' %>">
+            <a class="nav-link" href="/logs">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-file-text"></i></span>
+              <span class="nav-link-title">日志监控</span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'settings' ? 'active' : '' %>">
+            <a class="nav-link" href="/settings">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-settings"></i></span>
+              <span class="nav-link-title">设置</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <div class="page-wrapper">
+    <!-- 顶栏 -->
+    <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
+      <div class="container-xl">
+        <div class="navbar-nav flex-row order-md-last align-items-center ms-auto">
+          <a href="#" class="nav-link px-2" id="theme-toggle" aria-label="切换主题" title="切换亮/暗主题">
+            <i class="ti ti-moon"></i>
+          </a>
+          <div class="nav-item dropdown">
+            <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+              <span class="avatar avatar-sm bg-blue-lt"><%= (username || 'A').charAt(0).toUpperCase() %></span>
+              <div class="d-none d-xl-block ps-2">
+                <div><%= username %></div>
+                <div class="mt-1 small text-secondary">管理员</div>
+              </div>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+              <form hx-post="/logout" hx-swap="none">
+                <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i>登出</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="container-xl">

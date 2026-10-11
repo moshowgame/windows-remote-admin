@@ -1,0 +1,82 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-file-text me-2"></i>日志监控</h2>
+    </div>
+    <div class="col-auto text-secondary small">SSE 实时跟踪 · 关键词高亮 · 关闭页面即断开</div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4 order-lg-2">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-filter me-1"></i>日志文件</h3>
+      </div>
+      <div class="card-body pb-2">
+        <form hx-get="/logs/files" hx-target="#log-file-list" hx-swap="innerHTML" class="mb-2">
+          <input type="hidden" name="keyword" value="<%= keyword %>">
+          <div class="mb-2">
+            <label class="form-label small mb-1">扫描目录</label>
+            <input name="dir" class="form-control form-control-sm font-monospace" value="<%= dir %>" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-7">
+              <label class="form-label small mb-1">文件名匹配</label>
+              <input name="pattern" class="form-control form-control-sm font-monospace" value="<%= pattern %>" placeholder="*.log*" spellcheck="false">
+            </div>
+            <div class="col-5">
+              <label class="form-label small mb-1">最近（天）</label>
+              <input name="days" type="number" min="1" max="365" class="form-control form-control-sm" value="<%= days %>">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="ti ti-search me-1"></i>扫描
+          </button>
+        </form>
+        <div>
+          <label class="form-label small mb-1">关键词高亮</label>
+          <input id="log-keyword" class="form-control form-control-sm" value="<%= keyword %>" placeholder="输入关键词后回车刷新内容" autocomplete="off">
+        </div>
+      </div>
+      <div id="log-file-list" class="card-body pt-0" style="max-height: 55vh; overflow-y: auto">
+        <%- include('../partials/log-file-list') %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8 order-lg-1">
+    <div id="log-content-region">
+      <%- include('../partials/log-content') %>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* 关键词回车 → 按当前文件重新拉取内容（含高亮与 SSE 重挂载） */
+  (function () {
+    'use strict';
+    var input = document.getElementById('log-keyword');
+    if (!input) return;
+
+    function refresh() {
+      var card = document.getElementById('log-card');
+      var file = card ? card.dataset.file : '';
+      if (!file) return;
+      htmx.ajax('GET', '/logs/content', {
+        values: { file: file, keyword: input.value },
+        target: '#log-content-region',
+        swap: 'innerHTML',
+      });
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); refresh(); }
+    });
+    input.addEventListener('change', refresh);
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

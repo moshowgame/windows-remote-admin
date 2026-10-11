@@ -1,0 +1,70 @@
+'use strict';
+
+// PowerShell 控制台路由 + 快捷命令分组（只读查询为主，运维常用场景）
+const ps = require('../services/powershell');
+const audit = require('../hooks/audit');
+
+const quickCommands = [
+  {
+    name: '系统',
+    icon: 'ti-device-desktop',
+    items: [
+      'Get-ComputerInfo | Select-Object WindowsProductName, OsBuildNumber, OsArchitecture',
+      'systeminfo',
+      'Get-Date -Format "yyyy-MM-dd HH:mm:ss"',
+    ],
+  },
+  {
+    name: '进程',
+    icon: 'ti-list-details',
+    items: [
+      'Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Name, Id, WS',
+      'Get-Process | Where-Object { $_.CPU -gt 60 } | Select-Object Name, Id, CPU',
+    ],
+  },
+  {
+    name: '服务',
+    icon: 'ti-settings',
+    items: [
+      'Get-Service | Where-Object Status -eq "Running" | Select-Object -First 20 Name, DisplayName',
+      'Get-Service | Where-Object StartType -eq "Automatic" | Where-Object Status -ne "Running"',
+    ],
+  },
+  {
+    name: '网络',
+    icon: 'ti-network',
+    items: [
+      'ipconfig /all',
+      'Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort',
+      'Test-Connection -ComputerName localhost -Count 2',
+    ],
+  },
+  {
+    name: '磁盘',
+    icon: 'ti-database',
+    items: [
+      'Get-Volume | Format-Table DriveLetter, FileSystemLabel, Size, SizeRemaining',
+      'Get-PSDrive -PSProvider FileSystem',
+    ],
+  },
+];
+
+module.exports = async function consoleRoutes(app) {
+  // 执行命令：返回终端输出片段（beforeend 追加）
+  app.post('/console/execute', async (request, reply) => {
+    const command = String((request.body && request.body.command) || '').trim();
+    if (!command) {
+      return reply.view('partials/console-output', {
+        command: '',
+        result: { ok: false, output: '命令不能为空', durationMs: 0, exitCode: -1, timedOut: false },
+      });
+    }
+
+    const result = await ps.execute(command, { timeoutMs: app.config.psTimeoutMs });
+    audit(request, 'PowerShell 命令执行', { command, durationMs: result.durationMs, ok: result.ok });
+
+    return reply.view('partials/console-output', { command, result });
+  });
+};
+
+module.exports.quickCommands = quickCommands;

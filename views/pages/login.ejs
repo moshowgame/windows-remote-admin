@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23006fd6'/%3E%3Cpath d='M6 7h12M6 12h12M6 17h12' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='6' cy='7' r='1.6' fill='%23ffb02e'/%3E%3Ccircle cx='6' cy='12' r='1.6' fill='%2342d39d'/%3E%3C/svg%3E">
+  <script>
+    /* 主题初始化：localStorage > 系统偏好（尽早执行避免闪烁） */
+    (function () {
+      try {
+        var t = localStorage.getItem('wra_theme');
+        if (t !== 'dark' && t !== 'light') {
+          t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', t);
+      } catch (e) { /* 忽略 */ }
+    })();
+  </script>
+  <title>登录 · Windows Remote Admin</title>
+  <link rel="stylesheet" href="/static/css/tabler.min.css">
+  <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
+  <link rel="stylesheet" href="/static/css/app.css?v=20261011">
+</head>
+<body class="d-flex flex-column wra-login-body" hx-headers='{"X-CSRF-Token":"<%= csrf %>"}'>
+<a href="#" class="nav-link wra-login-theme" id="theme-toggle" aria-label="切换主题" title="切换亮/暗主题">
+  <i class="ti ti-moon"></i>
+</a>
+<div class="page page-center">
+  <div class="container container-tight py-4">
+    <div class="text-center mb-4">
+      <div class="wra-logo-tile mx-auto mb-3"><i class="ti ti-server-2"></i></div>
+      <h1 class="fs-2 mb-1 fw-bold">Windows Remote Admin</h1>
+      <div class="text-secondary">服务器远程运维工具</div>
+    </div>
+    <div class="card card-md shadow-lg wra-login-card">
+      <div class="card-body">
+        <h2 class="h2 text-center mb-4">登录</h2>
+        <div id="login-alert">
+          <% if (locals.error) { %>
+            <%- include('../partials/login-alert', { message: locals.error }) %>
+          <% } %>
+        </div>
+        <form hx-post="/login" hx-target="#login-alert" hx-swap="innerHTML" autocomplete="off" novalidate>
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <div class="mb-3">
+            <label class="form-label" for="login-username">用户名</label>
+            <input type="text" id="login-username" name="username" class="form-control" placeholder="用户名" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="login-password">密码</label>
+            <input type="password" id="login-password" name="password" class="form-control" placeholder="密码" autocomplete="current-password" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="login-purpose">使用目的</label>
+            <input type="text" id="login-purpose" name="purpose" class="form-control" placeholder="如：运维检查" required>
+          </div>
+          <div class="form-footer">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="ti ti-login me-1"></i>登录
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/js/htmx.min.js"></script>
+<script src="/static/js/tabler.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

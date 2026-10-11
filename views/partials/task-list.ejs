@@ -1,0 +1,8 @@
+<%# 任务列表（locals: tasks, oob — oob=true 时包裹 OOB 指令直接刷入 #task-panel） %>
+<% if (oob) { %><div hx-swap-oob="innerHTML:#task-panel"><% } %>
+<% if (!tasks || tasks.length === 0) { %>
+  <div class="text-secondary small px-1 py-2">暂无进行中的任务</div>
+<% } else { %>
+  <% for (const task of tasks) { %><%- include('task-card', { task: task }) %><% } %>
+<% } %>
+<% if (oob) { %></div><% } %>

@@ -1,0 +1,13 @@
+<% /* Top 10 进程表格片段（手动刷新） */ %>
+<% if (!procs.length) { %>
+  <tr><td colspan="4" class="text-center text-secondary">N/A（采集失败或 PowerShell 不可用）</td></tr>
+<% } else { %>
+  <% for (const p of procs) { %>
+    <tr>
+      <td><i class="ti ti-window me-1 text-secondary"></i><%= p.name %></td>
+      <td class="w-1"><%= p.id %></td>
+      <td class="w-1 text-end"><%= p.wsText %></td>
+      <td class="w-1 text-end text-secondary"><%= p.cpuText %> s</td>
+    </tr>
+  <% } %>
+<% } %>

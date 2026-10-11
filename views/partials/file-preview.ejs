@@ -1,0 +1,67 @@
+<%# 预览模态内容（locals: name, path, kind, text/url/zip/info） %>
+<%# OOB 只替换标题内部文本，保留 <span id="preview-title"> 元素本身 %>
+<div id="preview-title-oob" hx-swap-oob="innerHTML:#preview-title"><%= name %></div>
+
+<% if (kind === 'text' && text) { %>
+  <div class="d-flex justify-content-between align-items-center mb-2 small text-secondary">
+    <span><i class="ti ti-file-text me-1"></i>文本 · <%= text.sizeText %> · 共 <%= text.totalLines %> 行</span>
+    <span>第 <%= text.page %> / <%= text.pages %> 页（每页 500 行）</span>
+  </div>
+  <pre class="wra-preview-pre"><%= text.lines.join('\n') %></pre>
+  <% if (text.pages > 1) { %>
+    <div class="d-flex justify-content-between mt-2">
+      <button class="btn btn-sm" type="button" <%= text.page > 1 ? '' : 'disabled' %>
+              hx-get="/files/preview" hx-vals="<%= JSON.stringify({ path: path, page: text.page - 1 }) %>"
+              hx-target="#preview-body" hx-swap="innerHTML">
+        <i class="ti ti-chevron-left me-1"></i>上一页
+      </button>
+      <button class="btn btn-sm" type="button" <%= text.page < text.pages ? '' : 'disabled' %>
+              hx-get="/files/preview" hx-vals="<%= JSON.stringify({ path: path, page: text.page + 1 }) %>"
+              hx-target="#preview-body" hx-swap="innerHTML">
+        下一页<i class="ti ti-chevron-right ms-1"></i>
+      </button>
+    </div>
+  <% } %>
+<% } else if (kind === 'image') { %>
+  <div class="text-center">
+    <img class="img-fluid rounded border" src="<%= url %>" alt="<%= name %>">
+  </div>
+  <div class="text-secondary small mt-2">
+    图片预览 · <a href="<%= url %>&dl=1"><i class="ti ti-download me-1"></i>下载原图</a>
+  </div>
+<% } else if (kind === 'zip' && zip) { %>
+  <div class="small text-secondary mb-2">
+    压缩包共 <%= zip.total %> 项<%= zip.total > zip.entries.length ? `（仅显示前 ${zip.entries.length} 项）` : '' %>
+  </div>
+  <div class="table-responsive" style="max-height: 55vh; overflow: auto">
+    <table class="table table-sm table-vcenter">
+      <thead>
+        <tr><th>条目</th><th class="w-1">大小</th></tr>
+      </thead>
+      <tbody>
+        <% for (const en of zip.entries) { %>
+          <tr>
+            <td class="font-monospace small text-break">
+              <i class="ti <%= en.isDir ? 'ti-folder text-warning' : 'ti-file' %> me-1"></i><%= en.name %>
+            </td>
+            <td class="text-secondary text-nowrap small"><%= en.isDir ? '—' : en.sizeText %></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <div class="empty py-4">
+    <div class="empty-header"><i class="ti ti-file fs-1"></i></div>
+    <p class="empty-title">二进制文件不支持内容预览</p>
+    <div class="empty-action">
+      <a class="btn btn-primary btn-sm" href="/files/download?path=<%= encodeURIComponent(path) %>">
+        <i class="ti ti-download me-1"></i>下载文件
+      </a>
+    </div>
+  </div>
+  <dl class="row small mb-0">
+    <dt class="col-3">大小</dt><dd class="col-9"><%= info.sizeText %></dd>
+    <dt class="col-3">修改时间</dt><dd class="col-9"><%= info.mtimeText %></dd>
+  </dl>
+<% } %>

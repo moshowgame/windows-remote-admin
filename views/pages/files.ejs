@@ -1,0 +1,512 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-folder me-2"></i>文件资源管理器</h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      上传上限 <%= uploadMaxMb %>MB · 解压上限 <%= extractMaxMb %>MB / <%= extractMaxFiles %> 项<%= whitelistOn ? ' · 白名单模式' : '' %>
+    </div>
+  </div>
+</div>
+
+<div id="upload-result-region"></div>
+
+<div class="row g-3">
+  <div class="col-lg-9">
+    <div id="file-main">
+      <%- include('../partials/file-card') %>
+    </div>
+    <div class="mt-3" id="task-panel"
+         hx-ext="sse" sse-connect="/files/tasks/stream" sse-swap="task-progress" hx-swap="innerHTML">
+      <div class="text-secondary small px-1">暂无进行中的任务</div>
+    </div>
+  </div>
+
+  <div class="col-lg-3">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-bookmarks me-1"></i>快速访问</h3>
+      </div>
+      <ul class="list-group list-group-flush">
+        <% for (const qa of quickAccess) { %>
+          <li class="list-group-item px-2 py-1">
+            <a href="#" class="text-decoration-none d-block text-truncate" title="<%= qa.path %>"
+               hx-post="/files/browse" hx-vals="<%= JSON.stringify({ path: qa.path }) %>" hx-swap="none">
+              <i class="ti ti-folder me-1 text-warning"></i><%= qa.label || qa.path %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-star me-1"></i>收藏</h3>
+      </div>
+      <ul class="list-group list-group-flush" id="fav-list"></ul>
+    </div>
+    <div id="recent-panel">
+      <%- include('../partials/recent-list') %>
+    </div>
+  </div>
+</div>
+
+<%# 新建文件夹 %>
+<div class="modal modal-blur fade" id="modal-mkdir" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <form class="modal-content" id="mkdir-form" hx-post="/files/mkdir" hx-swap="none">
+      <input type="hidden" name="path">
+      <input type="hidden" name="sort">
+      <input type="hidden" name="order">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-folder-plus me-1"></i>新建文件夹</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">文件夹名称</label>
+        <input name="name" class="form-control" required maxlength="200" placeholder="例如：backup">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">创建</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%# 重命名 %>
+<div class="modal modal-blur fade" id="modal-rename" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <form class="modal-content" id="rename-form" hx-post="/files/rename" hx-swap="none">
+      <input type="hidden" name="path">
+      <input type="hidden" name="sort">
+      <input type="hidden" name="order">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-edit me-1"></i>重命名</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">新名称</label>
+        <input name="name" class="form-control" required maxlength="200">
+        <div class="small text-secondary mt-1 text-truncate" id="rename-old"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">确定</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%# 删除确认（目录需输名） %>
+<div class="modal modal-blur fade" id="modal-delete" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <form class="modal-content" id="delete-form" hx-post="/files/delete" hx-swap="none">
+      <input type="hidden" name="path">
+      <input type="hidden" name="sort">
+      <input type="hidden" name="order">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="ti ti-trash me-1"></i>删除确认</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">确定要删除 <strong class="text-break" id="del-name"></strong> 吗？此操作不可恢复。</p>
+        <div id="del-confirm-block" class="d-none">
+          <label class="form-label small text-danger">删除的是文件夹，请输入其名称以确认：</label>
+          <input id="del-confirm-input" name="confirmName" class="form-control" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" id="del-confirm-btn" class="btn btn-danger" disabled>
+          <i class="ti ti-trash me-1"></i>删除
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%# 预览模态（自管控制器：显示/遮罩/ESC 由页面脚本全权管理，不走 Bootstrap data-api；
+    打开时 JS 会把它提升为 body 直接子节点，避免 .page 层叠上下文把模态压到遮罩之下） %>
+<div class="modal modal-blur fade" id="preview-modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-truncate"><i class="ti ti-eye me-1"></i><span id="preview-title">预览</span></h5>
+        <button type="button" class="btn-close" data-preview-close aria-label="关闭"></button>
+      </div>
+      <div class="modal-body" id="preview-body"></div>
+    </div>
+  </div>
+</div>
+
+<%# 压缩选中（隐藏表单，由 JS 动态填充 paths） %>
+<form id="compress-form" hx-post="/files/compress" hx-swap="none"></form>
+
+<script>
+  /* 文件资源管理器交互：多选 / 收藏 / 上传进度 / 模态填充 / 打包下载 */
+  (function () {
+    'use strict';
+    var FAV_KEY = 'wra_fav_paths';
+    var checked = new Set();
+
+    function $(id) { return document.getElementById(id); }
+    // WRA 由底部 app.js 定义；本脚本可能先于其执行，需兜底
+    function esc(s) {
+      if (window.WRA) return WRA.escapeHtml(s);
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function val(id) { var el = $(id); return el ? el.value : ''; }
+    function toast(msg, type) { if (window.WRA) WRA.showToast(msg, type); else window.alert(msg); }
+    function bodyHeaders() {
+      try { return JSON.parse(document.body.getAttribute('hx-headers') || '{}'); } catch (e) { return {}; }
+    }
+
+    // ---- 多选（跨目录保留） ----
+    document.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t.classList && t.classList.contains('file-check')) {
+        if (t.checked) checked.add(t.dataset.path);
+        else checked.delete(t.dataset.path);
+        updateSelectionUI();
+      }
+    });
+
+    function updateSelectionUI() {
+      var n = checked.size;
+      var el = $('selection-count');
+      if (el) el.textContent = n ? '已选 ' + n + ' 项' : '';
+      var c = $('btn-compress-selected'), d = $('btn-download-zip');
+      if (c) c.disabled = !n;
+      if (d) d.disabled = !n;
+    }
+
+    function restoreChecks() {
+      document.querySelectorAll('.file-check').forEach(function (cb) {
+        cb.checked = checked.has(cb.dataset.path);
+      });
+      updateSelectionUI();
+    }
+
+    // ---- 工具栏绑定（#file-main OOB 刷新后元素重建，需重绑） ----
+    function bindToolbar() {
+      var fav = $('btn-fav');
+      if (fav && !fav.dataset.bound) {
+        fav.dataset.bound = '1';
+        fav.addEventListener('click', toggleFav);
+      }
+      var dl = $('btn-download-zip');
+      if (dl && !dl.dataset.bound) {
+        dl.dataset.bound = '1';
+        dl.addEventListener('click', function () {
+          if (!checked.size) return;
+          window.location.href = '/files/download-zip?paths=' + encodeURIComponent(Array.from(checked).join('|'));
+        });
+      }
+      var comp = $('btn-compress-selected');
+      if (comp && !comp.dataset.bound) {
+        comp.dataset.bound = '1';
+        comp.addEventListener('click', function () {
+          if (!checked.size) return;
+          var form = $('compress-form');
+          var html = '<input type="hidden" name="sort" value="' + esc(val('cur-sort')) + '">' +
+                     '<input type="hidden" name="order" value="' + esc(val('cur-order')) + '">';
+          checked.forEach(function (p) {
+            html += '<input type="hidden" name="paths" value="' + esc(p) + '">';
+          });
+          form.innerHTML = html;
+          if (form.requestSubmit) form.requestSubmit();
+          else htmx.trigger(form, 'submit');
+        });
+      }
+
+      var upForm = $('upload-form');
+      if (upForm && !upForm.dataset.bound) {
+        upForm.dataset.bound = '1';
+        var upInput = $('upload-input');
+        var upBox = $('upload-progress-box'), upBar = $('upload-progress'), upText = $('upload-progress-text');
+        function fmtSize(n) {
+          if (n < 1024) return n + ' B';
+          var u = ['KB', 'MB', 'GB'], i = 0, v = n / 1024;
+          while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+          return v.toFixed(1) + ' ' + u[i];
+        }
+        upInput.addEventListener('change', function () {
+          if (!upInput.files.length) return;
+          if (upForm.requestSubmit) upForm.requestSubmit();
+          else htmx.trigger(upForm, 'submit');
+          upInput.value = '';
+        });
+        upForm.addEventListener('htmx:beforeRequest', function () {
+          upBox.classList.remove('d-none');
+          upBar.style.width = '0%';
+          upText.textContent = '上传中…';
+        });
+        upForm.addEventListener('htmx:xhr:progress', function (e) {
+          var d = e.detail || {};
+          if (!d.total) return;
+          var pct = Math.round((d.loaded / d.total) * 100);
+          upBar.style.width = pct + '%';
+          upText.textContent = '上传中 ' + pct + '%（' + fmtSize(d.loaded) + ' / ' + fmtSize(d.total) + '）';
+        });
+        upForm.addEventListener('htmx:afterRequest', function () {
+          setTimeout(function () { upBox.classList.add('d-none'); }, 600);
+        });
+      }
+    }
+
+    // ---- 路径输入回车跳转 ----
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.target.id !== 'current-path') return;
+      e.preventDefault();
+      var p = e.target.value.trim();
+      if (!p) return;
+      htmx.ajax('POST', '/files/browse', {
+        values: { path: p },
+        headers: bodyHeaders(),
+        target: 'body',
+        swap: 'none',
+      });
+    });
+
+    // ---- 收藏（localStorage） ----
+    function loadFavs() {
+      try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch (e) { return []; }
+    }
+    function saveFavs(f) {
+      try { localStorage.setItem(FAV_KEY, JSON.stringify(f)); } catch (e) { /* 忽略 */ }
+    }
+    function renderFavs() {
+      var ul = $('fav-list');
+      if (!ul) return;
+      var favs = loadFavs();
+      if (!favs.length) {
+        ul.innerHTML = '<li class="list-group-item text-secondary small">暂无收藏，点击工具栏「收藏」保存当前目录</li>';
+        return;
+      }
+      ul.innerHTML = favs.map(function (p) {
+        return '<li class="list-group-item d-flex align-items-center px-2 py-1">' +
+          '<a href="#" class="flex-grow-1 text-truncate text-decoration-none fav-go" data-path="' + esc(p.path) + '" title="' + esc(p.path) + '">' +
+          '<i class="ti ti-star-filled text-warning me-1"></i>' + esc(p.name) + '</a>' +
+          '<a href="#" class="fav-del ms-2 text-secondary" data-path="' + esc(p.path) + '" title="移除收藏"><i class="ti ti-x"></i></a>' +
+          '</li>';
+      }).join('');
+    }
+    function currentDir() { return val('current-path').trim(); }
+    function refreshFavIcon() {
+      var b = $('btn-fav');
+      if (!b) return;
+      var cur = currentDir().toLowerCase();
+      var on = loadFavs().some(function (p) { return p.path.toLowerCase() === cur; });
+      b.innerHTML = '<i class="ti ' + (on ? 'ti-star-filled text-warning' : 'ti-star') + ' me-1"></i>' + (on ? '已收藏' : '收藏');
+    }
+    function toggleFav() {
+      var cur = currentDir();
+      if (!cur) return;
+      var favs = loadFavs();
+      var parts = cur.replace(/[\\/]+$/, '').split(/[\\/]/);
+      var name = parts[parts.length - 1] || cur;
+      var idx = favs.findIndex(function (p) { return p.path.toLowerCase() === cur.toLowerCase(); });
+      if (idx >= 0) {
+        favs.splice(idx, 1);
+        toast('已取消收藏');
+      } else {
+        favs.unshift({ path: cur, name: name });
+        if (favs.length > 20) favs.length = 20;
+        toast('已收藏当前目录');
+      }
+      saveFavs(favs);
+      renderFavs();
+      refreshFavIcon();
+    }
+    document.addEventListener('click', function (e) {
+      var go = e.target.closest && e.target.closest('.fav-go');
+      if (go) {
+        e.preventDefault();
+        htmx.ajax('POST', '/files/browse', {
+          values: { path: go.dataset.path },
+          headers: bodyHeaders(),
+          target: 'body',
+          swap: 'none',
+        });
+        return;
+      }
+      var del = e.target.closest && e.target.closest('.fav-del');
+      if (del) {
+        e.preventDefault();
+        saveFavs(loadFavs().filter(function (p) { return p.path !== del.dataset.path; }));
+        renderFavs();
+        refreshFavIcon();
+      }
+    });
+
+    // ---- OOB 刷新后：恢复勾选 + 重绑工具栏 ----
+    document.body.addEventListener('htmx:oobAfterSwap', function (e) {
+      var id = e.detail && e.detail.target && e.detail.target.id;
+      if (id === 'file-main') {
+        restoreChecks();
+        bindToolbar();
+      }
+      if (id === 'recent-panel') refreshFavIcon();
+    });
+
+    // ---- 模态填充 ----
+    function fillSortOrder(form) {
+      form.querySelector('[name=sort]').value = val('cur-sort');
+      form.querySelector('[name=order]').value = val('cur-order');
+    }
+
+    var mkdirModal = $('modal-mkdir'), mkdirForm = $('mkdir-form');
+    if (mkdirModal) {
+      mkdirModal.addEventListener('show.bs.modal', function (e) {
+        if (!e.relatedTarget) return;
+        mkdirForm.querySelector('[name=path]').value = currentDir();
+        fillSortOrder(mkdirForm);
+        mkdirForm.querySelector('[name=name]').value = '';
+      });
+    }
+
+    var renameModal = $('modal-rename'), renameForm = $('rename-form');
+    if (renameModal) {
+      renameModal.addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        if (!btn) return;
+        renameForm.querySelector('[name=path]').value = btn.dataset.path;
+        renameForm.querySelector('[name=name]').value = btn.dataset.name || '';
+        fillSortOrder(renameForm);
+        $('rename-old').textContent = '原名称：' + (btn.dataset.name || '');
+      });
+    }
+
+    var delModal = $('modal-delete'), delForm = $('delete-form'),
+        delInput = $('del-confirm-input'), delBtn = $('del-confirm-btn');
+    if (delModal) {
+      delModal.addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        if (!btn) return;
+        delForm.querySelector('[name=path]').value = btn.dataset.path;
+        fillSortOrder(delForm);
+        delForm.querySelector('[name=confirmName]').value = '';
+        $('del-name').textContent = btn.dataset.name || '';
+        var isDir = btn.dataset.isdir === '1';
+        $('del-confirm-block').classList.toggle('d-none', !isDir);
+        delBtn.disabled = isDir; // 目录必须输名后才能点
+      });
+      delInput.addEventListener('input', function () {
+        delBtn.disabled = delInput.value.trim() !== ($('del-name').textContent || '').trim();
+      });
+    }
+
+    // 操作成功后关闭所属模态
+    [mkdirForm, renameForm, delForm].forEach(function (f) {
+      if (!f) return;
+      f.addEventListener('htmx:afterRequest', function (e) {
+        if (e.detail.successful) {
+          var modalEl = f.closest('.modal');
+          var inst = modalEl && window.bootstrap && bootstrap.Modal.getInstance(modalEl);
+          if (inst) inst.hide();
+        }
+      });
+    });
+
+    // ---- 预览模态：轻量自管控制器（Tabler 样式 + 纯 JS，不走 Bootstrap data-api） ----
+    // tabler.min.js 不导出 Modal 类；且模态标记位于 .page 内，.page 的入场动画会创建
+    // 层叠上下文把模态压到 body 直挂的 .modal-backdrop 之下（遮罩盖住模态=页面假死）。
+    // 因此：打开前把模态提升为 body 直接子节点，并完全自行管理显示/遮罩/ESC/关闭
+    var previewModal = $('preview-modal');
+    var previewBackdrop = null;
+    var previewPrevFocus = null;
+
+    // 提升到 body 层级，摆脱祖先层叠上下文（幂等）
+    if (previewModal && previewModal.parentElement !== document.body) {
+      document.body.appendChild(previewModal);
+    }
+
+    function openPreviewModal() {
+      if (!previewModal || previewModal.classList.contains('show')) return; // 换页重复 swap 无需重复打开
+      previewPrevFocus = document.activeElement;
+      previewBackdrop = document.createElement('div');
+      previewBackdrop.className = 'modal-backdrop fade show';
+      document.body.appendChild(previewBackdrop);
+      previewModal.style.display = 'block';
+      previewModal.removeAttribute('aria-hidden');
+      previewModal.setAttribute('aria-modal', 'true');
+      document.body.classList.add('modal-open');
+      document.body.style.overflow = 'hidden';
+      void previewModal.offsetHeight; // 强制 reflow，让 .show 过渡生效
+      previewModal.classList.add('show');
+      previewModal.focus();
+    }
+
+    function closePreviewModal() {
+      if (!previewModal || !previewModal.classList.contains('show')) return;
+      previewModal.classList.remove('show');
+      // 等 200ms 淡出过渡结束后再隐藏与清理（过渡期间再触发是无害 no-op）
+      setTimeout(function () {
+        previewModal.style.display = 'none';
+        previewModal.setAttribute('aria-hidden', 'true');
+        previewModal.removeAttribute('aria-modal');
+        if (previewBackdrop) { previewBackdrop.remove(); previewBackdrop = null; }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        if (previewPrevFocus && previewPrevFocus.focus) previewPrevFocus.focus();
+        previewPrevFocus = null;
+      }, 200);
+    }
+
+    // ESC / 关闭按钮 / 点击模态外暗区（遮罩）关闭
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && previewModal.classList.contains('show')) {
+        e.preventDefault();
+        closePreviewModal();
+      }
+    });
+    previewModal.addEventListener('click', function (e) {
+      if (e.target === previewModal || (e.target.closest && e.target.closest('[data-preview-close]'))) {
+        closePreviewModal();
+      }
+    });
+
+    // 成功：htmx 把内容 swap 进 #preview-body 后，才打开模态（失败路径不会触发，模态根本不出现）
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+      var t = e.detail && e.detail.target;
+      if (t && t.id === 'preview-body') openPreviewModal();
+    });
+
+    // 失败：直接 toast 报错，模态从未打开过，无需关闭
+    // 标记 wraHandled 后跳过 app.js 的全局 responseError toast，避免双重提示
+    document.body.addEventListener('htmx:responseError', function (e) {
+      var p = e.detail && e.detail.requestConfig && e.detail.requestConfig.path;
+      if (typeof p === 'string' && p.indexOf('/files/preview') === 0) {
+        var xhr = e.detail && e.detail.xhr;
+        var msg = decodeURIComponent(xhr && xhr.getResponseHeader('X-WRA-Error') || '') ||
+          'HTTP ' + (xhr && xhr.status || '?');
+        toast('文件浏览失败：' + msg, 'error');
+        e.detail.wraHandled = true;
+      }
+    });
+    // 网络异常（断网/服务重启）同样 toast
+    document.body.addEventListener('htmx:sendError', function (e) {
+      var p = e.detail && e.detail.requestConfig && e.detail.requestConfig.path;
+      if (typeof p === 'string' && p.indexOf('/files/preview') === 0) {
+        toast('文件浏览失败：网络异常', 'error');
+        e.detail.wraHandled = true;
+      }
+    });
+
+    // 初始化：app.js 在页面底部同步加载，DOMContentLoaded 时 WRA 一定就绪
+    function init() {
+      restoreChecks();
+      renderFavs();
+      refreshFavIcon();
+      bindToolbar();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

@@ -1,0 +1,99 @@
+<%# 文件表格行（locals: items, sort, order） %>
+<% if (!items || items.length === 0) { %>
+  <tr>
+    <td colspan="6" class="text-center text-secondary py-4">
+      <i class="ti ti-folder-off me-1"></i>此目录为空
+    </td>
+  </tr>
+<% } %>
+<% for (const it of items) { %>
+  <tr>
+    <td class="w-1">
+      <input class="form-check-input file-check m-0" type="checkbox" data-path="<%= it.path %>" aria-label="选择 <%= it.name %>">
+    </td>
+    <td class="w-1 text-center">
+      <i class="ti <%= it.icon %> fs-3"></i>
+    </td>
+    <td>
+      <% if (it.kind === 'dir') { %>
+        <a href="#" class="fw-medium text-decoration-none d-inline-block align-middle wra-trunc" title="<%= it.path %>"
+           hx-post="/files/browse" hx-vals="<%= JSON.stringify({ path: it.path, sort: sort, order: order }) %>" hx-swap="none"><%= it.name %></a>
+      <% } else { %>
+        <span class="d-inline-block align-middle wra-trunc" title="<%= it.path %>"><%= it.name %></span>
+      <% } %>
+    </td>
+    <td class="text-secondary text-nowrap"><%= it.sizeText %></td>
+    <td class="text-secondary text-nowrap"><%= it.mtimeText %></td>
+    <td class="text-end text-nowrap">
+      <div class="btn-group btn-group-sm">
+        <%# 主操作 %>
+        <% if (it.kind === 'dir') { %>
+          <button class="btn" type="button" title="进入目录"
+                  hx-post="/files/browse" hx-vals="<%= JSON.stringify({ path: it.path, sort: sort, order: order }) %>" hx-swap="none">
+            <i class="ti ti-folder-open"></i>
+          </button>
+        <% } else if (it.kind === 'zip') { %>
+          <button class="btn" type="button" title="解压到同级目录"
+                  hx-post="/files/extract" hx-vals="<%= JSON.stringify({ path: it.path }) %>" hx-swap="none">
+            <i class="ti ti-folder-plus"></i>
+          </button>
+        <% } else if (it.kind === 'binary') { %>
+          <a class="btn" href="/files/download?path=<%= encodeURIComponent(it.path) %>" title="下载">
+            <i class="ti ti-download"></i>
+          </a>
+        <% } else { %>
+          <button class="btn" type="button" title="预览"
+                  hx-get="/files/preview" hx-vals="<%= JSON.stringify({ path: it.path }) %>" hx-target="#preview-body" hx-swap="innerHTML">
+            <i class="ti ti-eye"></i>
+          </button>
+        <% } %>
+        <button class="btn dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="visually-hidden">更多操作</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end">
+          <% if (it.kind === 'dir') { %>
+            <button class="dropdown-item" type="button" hx-post="/files/compress" hx-vals="<%= JSON.stringify({ paths: [it.path] }) %>" hx-swap="none">
+              <i class="ti ti-file-zip me-1"></i>压缩
+            </button>
+            <div class="dropdown-divider"></div>
+          <% } else { %>
+            <button class="dropdown-item" type="button"
+                    hx-get="/files/preview" hx-vals="<%= JSON.stringify({ path: it.path }) %>" hx-target="#preview-body" hx-swap="innerHTML">
+              <i class="ti ti-eye me-1"></i><%= it.kind === 'binary' ? '信息预览' : '预览' %>
+            </button>
+            <% if (it.kind === 'text') { %>
+              <a class="dropdown-item" href="/editor?path=<%= encodeURIComponent(it.path) %>">
+                <i class="ti ti-pencil me-1"></i>编辑
+              </a>
+              <% if (it.name.toLowerCase().endsWith('.log')) { %>
+                <a class="dropdown-item" href="/logs?file=<%= encodeURIComponent(it.path) %>">
+                  <i class="ti ti-activity me-1"></i>日志监控
+                </a>
+              <% } %>
+            <% } %>
+            <% if (it.kind === 'zip') { %>
+              <button class="dropdown-item" type="button" hx-post="/files/extract" hx-vals="<%= JSON.stringify({ path: it.path }) %>" hx-swap="none">
+                <i class="ti ti-folder-plus me-1"></i>解压
+              </button>
+            <% } %>
+            <a class="dropdown-item" href="/files/download?path=<%= encodeURIComponent(it.path) %>">
+              <i class="ti ti-download me-1"></i>下载
+            </a>
+            <button class="dropdown-item" type="button" hx-post="/files/compress" hx-vals="<%= JSON.stringify({ paths: [it.path] }) %>" hx-swap="none">
+              <i class="ti ti-file-zip me-1"></i>压缩
+            </button>
+            <div class="dropdown-divider"></div>
+          <% } %>
+          <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modal-rename"
+                  data-path="<%= it.path %>" data-name="<%= it.name %>">
+            <i class="ti ti-edit me-1"></i>重命名
+          </button>
+          <button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#modal-delete"
+                  data-path="<%= it.path %>" data-name="<%= it.name %>" data-isdir="<%= it.isDirectory ? '1' : '0' %>">
+            <i class="ti ti-trash me-1"></i>删除
+          </button>
+        </div>
+      </div>
+    </td>
+  </tr>
+<% } %>
