@@ -4,3 +4,4 @@ data/.session-key
 data/entitlement.csv*
 .env
 config.json
+dist/

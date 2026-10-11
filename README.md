@@ -4,6 +4,21 @@
 
 技术栈：**Node.js + Fastify v5 + HTMX + Tabler (Bootstrap 5)**，无需数据库、无需注册服务，解压即用。
 
+## 为什么从 Go 重构为 Node.js
+
+本项目最初为 Go 实现（单二进制 + embed 静态资源）。随着文件资源管理器、类型感知预览、SSE 任务进度等**重前端交互**功能不断叠加，模板与静态资源改动越来越频繁，Go 版每次调整都要重新编译再分发，内网迭代链路偏长。重构后的主要取舍：
+
+| 维度 | Go 版 | Node.js 版（当前） |
+|------|-------|-------------------|
+| 迭代效率 | 改模板/静态资源需重新编译 | 改 EJS / CSS / JS 保存即生效，零构建步骤 |
+| 会话与安全插件 | 需自行拼装 | Fastify 官方插件开箱即用（secure-session / csrf-protection / multipart / rate-limit / static / view） |
+| 模板与前端生态 | html/template 手写布局 | EJS + HTMX（含 OOB 局部更新）+ Tabler 本地化，服务端渲染心智统一 |
+| 日志方案 | 自行封装 | pino 三流（app / audit / access）+ pino-roll 按天轮转 |
+| 部署形态 | 单二进制 | 目录分发：Run.cmd 自动装依赖、复制资源；可用 NSSM 注册系统服务 |
+| 性能 | 高 | 本工具为"单管理员、低并发"场景，Node 性能绰绰有余 |
+
+一句话总结：**放弃"单二进制"，换来"改完即生效 + 零构建"的迭代体验**——对功能仍在快速演进的内网管理工具，这是更划算的交换。
+
 ## 快速开始
 
 1. 安装 [Node.js](https://nodejs.org/) 18 或更高版本（本机 20+ 最佳）
@@ -12,6 +27,20 @@
 
 > 也可以用命令行：`npm install` → `npm start`。
 > `Build.cmd` 用于构建校验：安装/同步依赖、复制静态资源、全量语法检查。
+> `Pack.cmd`（或 `npm run pack:code`）用于生成分发压缩包，见下方"分发打包"。
+
+## 分发打包（code & web only）
+
+面向"源码 + 页面"的轻量分发场景，产物不携带依赖与运行数据：
+
+```bash
+npm run pack:code    # 或双击 Pack.cmd
+```
+
+- 产物：`dist/windows-remote-admin-code-web-v<版本>.zip`（约 100 KB）
+- **包含**：`server.js`、`package.json` / `package-lock.json`、`config.default.json`、`.env.example`、`README.md`、`Run.cmd` / `Build.cmd` / `Pack.cmd`、`src/`、`views/`、`scripts/`、`public/` 本地文件（app.css / app.js）
+- **不包含**：`node_modules`、vendor 静态资源（Tabler / HTMX / 图标字体，由 postinstall 自动复制）、`logs/`、`data/`、`screencap/`、`dist/`、本机 `config.json`
+- 接收方解压后双击 `Run.cmd` 即可：首次运行自动 `npm install`（postinstall 同步静态资源）并启动服务
 
 **默认账号：** `admin` / `admin123`（首次登录后请立即修改，见下方"账号管理"）
 
@@ -143,7 +172,7 @@
 
 ```
 windows-remote-admin/
-├─ Run.cmd / Build.cmd     启动 / 构建脚本
+├─ Run.cmd / Build.cmd / Pack.cmd  启动 / 构建 / 打包脚本
 ├─ server.js               入口
 ├─ config.default.json     默认配置
 ├─ config.json             本机覆盖配置（可选，自动生成）
@@ -156,8 +185,9 @@ windows-remote-admin/
 │  └─ hooks/               认证、审计
 ├─ views/                  EJS 模板（layouts/pages/partials）
 ├─ public/                 本地 CSS/JS（静态资源由 copy-assets.js 从 node_modules 复制）
-├─ scripts/copy-assets.js  静态资源复制脚本
+├─ scripts/                copy-assets.js 静态资源复制、pack.js 分发打包
 ├─ screencap/              功能截图（README"界面预览"引用）
+├─ dist/                   npm run pack:code 产物输出（不入版本库）
 ├─ data/                   entitlement.csv、.session-key（勿入版本库）
 └─ logs/                   app.log / audit.log / access.log（按天轮转，保留 30 天）
 ```
@@ -169,6 +199,47 @@ windows-remote-admin/
 - 登录接口按 IP 限流（5 次/分钟）；全站启用 CSRF 校验；会话 Cookie 为 HttpOnly + SameSite=Lax
 - 建议配置 `pathWhitelist` 限制文件操作范围；保持 `enableServerOpen` 关闭除非确有需要
 - 密码使用 bcrypt 哈希存储，不保留明文
+
+## 以 Windows 服务运行（NSSM，可选）
+
+用 [NSSM](https://nssm.cc/)（Non-Sucking Service Manager）把服务注册为系统服务，实现开机自启、崩溃自动拉起。首次部署先运行一次 `Build.cmd`（安装依赖并复制静态资源），然后**以管理员身份**执行：
+
+```bat
+rem 安装服务：nssm install <服务名> <node.exe 路径> <server.js 路径>
+nssm install WRA "C:\Program Files\nodejs\node.exe" "D:\app\windows-remote-admin\server.js"
+
+nssm set WRA AppDirectory "D:\app\windows-remote-admin"
+nssm set WRA Description "Windows Remote Admin (Node.js)"
+nssm set WRA Start SERVICE_AUTO_START
+
+rem 进程意外退出时自动重启（可选：设置重启延迟毫秒数）
+nssm set WRA AppExit Default Restart
+nssm set WRA AppRestartDelay 5000
+
+rem 兜底日志：仅捕获启动崩溃等进程级输出
+rem 应用自身日志已由 pino-roll 写入 logs\ 并按天轮转，两者互不影响
+nssm set WRA AppStdout "D:\app\windows-remote-admin\logs\service-out.log"
+nssm set WRA AppStderr "D:\app\windows-remote-admin\logs\service-err.log"
+nssm set WRA AppRotateFiles 1
+nssm set WRA AppRotateOnline 1
+nssm set WRA AppRotateBytes 10485760
+
+rem 可选：用环境变量覆盖配置（变量名见"配置说明"）
+nssm set WRA AppEnvironmentExtra WRA_PORT=12306 WRA_PS_TIMEOUT=60000
+
+nssm start WRA
+```
+
+常用管理命令（同样以管理员身份）：
+
+```bat
+nssm status WRA
+nssm restart WRA
+nssm stop WRA
+nssm remove WRA confirm
+```
+
+> 提示：`node.exe` 与程序目录路径含空格时务必带引号；服务默认以 LocalSystem 运行，文件操作权限继承该账户，如需限定可 `nssm set WRA ObjectName <域\用户> <密码>`。
 
 ## 反向代理（HTTPS / SSE）
 
