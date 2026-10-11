@@ -24,27 +24,52 @@ function lineHtml(raw, keyword) {
   return `<div class="log-line">${out}</div>`;
 }
 
-// 读取文件尾部（最多 512KB / 500 行）并返回高亮 HTML
-async function tailHtml(file, keyword, maxLines = 500) {
+// 读取 [end - 512KB, end) 窗口并返回最后 maxLines 行的高亮 HTML。
+// 返回 before = 窗口内第一个完整行的起始字节偏移（0 表示已到文件头），
+// 作为 /logs/history 向上翻页的游标 —— 大日志（百 MB/GB 级）按需回溯，绝不整读文件。
+async function readWindow(file, end, keyword, maxLines = 500) {
   const st = await fsp.stat(file);
-  const len = Math.min(st.size, 512 * 1024);
+  if (!Number.isFinite(end) || end <= 0) return { html: '', before: 0, hasMore: false };
+  end = Math.min(end, st.size);
+  const start = Math.max(0, end - 512 * 1024);
+  const readStart = start > 0 ? start - 1 : 0; // 多读 1 字节判断窗口起点是否在行边界
   const fh = await fsp.open(file, 'r');
   let text;
   try {
-    const buf = Buffer.alloc(len);
-    await fh.read(buf, 0, len, st.size - len);
+    const buf = Buffer.alloc(end - readStart);
+    await fh.read(buf, 0, buf.length, readStart);
     text = buf.toString('utf8');
   } finally {
     await fh.close().catch(() => {});
   }
-  if (len < st.size) {
-    const nl = text.indexOf('\n');
-    if (nl >= 0) text = text.slice(nl + 1); // 去掉截断的半行
+
+  // 对齐到第一个完整行：窗口起点前一字节不是换行 → 起点在半行中间，跳过该半行
+  let aligned = readStart;
+  if (readStart > 0) {
+    if (text[0] === '\n' || text[0] === '\r') {
+      aligned = start;
+    } else {
+      const m = /(\r\n|\r|\n)/.exec(text);
+      if (!m) return { html: '', before: readStart, hasMore: true }; // 整窗一条巨行：跳过本轮继续向前
+      aligned = readStart + m.index + m[1].length;
+    }
   }
-  let lines = text.split(/\r\n|\r|\n/);
-  if (lines[lines.length - 1] === '') lines.pop();
-  lines = lines.slice(-maxLines);
-  return lines.map((l) => lineHtml(l, keyword)).join('');
+  if (aligned > readStart) text = text.slice(aligned - readStart);
+
+  const lines = text.split(/\r\n|\r|\n/);
+  if (lines.length && lines[lines.length - 1] === '') lines.pop();
+  const page = lines.slice(-maxLines);
+  return {
+    html: page.map((l) => lineHtml(l, keyword)).join(''),
+    before: aligned,
+    hasMore: aligned > 0,
+  };
+}
+
+// 兼容旧名：读取文件尾部窗口
+async function tailHtml(file, keyword, maxLines = 500) {
+  const st = await fsp.stat(file);
+  return readWindow(file, st.size, keyword, maxLines);
 }
 
 // 通配符 → 正则（* / ? ）
@@ -121,7 +146,7 @@ module.exports = async function logsRoutes(app) {
       file = st && !st.isDirectory() ? full : null;
     }
     if (!file && files.length > 0) file = files[0].path;
-    const linesHtml = file ? await tailHtml(file, keyword) : '';
+    const tail = file ? await tailHtml(file, keyword) : { html: '', before: 0, hasMore: false };
 
     return reply.renderPage('pages/logs', {
       title: '日志监控',
@@ -132,7 +157,8 @@ module.exports = async function logsRoutes(app) {
       keyword,
       files,
       file,
-      linesHtml,
+      linesHtml: tail.html,
+      before: tail.before,
       autoPick: false,
     });
   });
@@ -155,8 +181,25 @@ module.exports = async function logsRoutes(app) {
     const st = await fsp.stat(full).catch(() => null);
     if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
     const keyword = String(request.query.keyword || '');
-    const linesHtml = await tailHtml(full, keyword);
-    return reply.view('partials/log-content', { file: full, keyword, linesHtml });
+    const tail = await tailHtml(full, keyword);
+    return reply.view('partials/log-content', { file: full, keyword, linesHtml: tail.html, before: tail.before, hasMore: tail.hasMore });
+  });
+
+  // 向上翻页：按字节游标 before 读取更早的 500 行（大日志按需回溯，O(1) 内存）
+  app.get('/logs/history', async (request, reply) => {
+    const full = resolveUserPath(request.query.file);
+    const st = await fsp.stat(full).catch(() => null);
+    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    const keyword = String(request.query.keyword || '');
+    const before = parseInt(request.query.before, 10) || 0;
+    const r = await readWindow(full, before, keyword);
+    return reply.view('partials/log-history', {
+      file: full,
+      keyword,
+      linesHtml: r.html,
+      before: r.before,
+      hasMore: r.hasMore,
+    });
   });
 
   // SSE 实时跟踪：fs.watch 父目录 + offset 追加读，500ms 节流
@@ -193,14 +236,16 @@ module.exports = async function logsRoutes(app) {
       timer = null;
       if (closed) return;
       try {
-        const s = await fsp.stat(full);
+        let s = await fsp.stat(full);
         if (s.size < offset) {
           offset = 0;
           buf = '';
           send(lineHtml('--- 检测到文件被截断，已从头开始读取 ---', ''));
         }
-        if (s.size > offset) {
-          const len = Math.min(s.size - offset, 512 * 1024);
+        // 自适应追赶：单次最多 4 轮 × 2MB，高频写入（百 MB 级日志）也不会持续滞后
+        let loops = 0;
+        while (!closed && s.size > offset && loops < 4) {
+          const len = Math.min(s.size - offset, 2 * 1024 * 1024);
           const chunk = Buffer.alloc(len);
           const fh = await fsp.open(full, 'r');
           try {
@@ -216,6 +261,8 @@ module.exports = async function logsRoutes(app) {
             buf = '';
           }
           if (parts.length > 0) send(parts.map((l) => lineHtml(l, keyword)).join(''));
+          loops++;
+          if (s.size > offset) s = await fsp.stat(full); // 追赶期间刷新最新大小
         }
       } catch {
         // 文件被删除等：保持连接等待恢复

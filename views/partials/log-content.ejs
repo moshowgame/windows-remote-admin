@@ -1,4 +1,4 @@
-<%# 日志内容卡片（locals: file, keyword, linesHtml） %>
+<%# 日志内容卡片（locals: file, keyword, linesHtml, before） %>
 <div class="card" id="log-card" data-file="<%= file || '' %>" data-keyword="<%= keyword || '' %>">
   <div class="card-header d-flex align-items-center">
     <h3 class="card-title text-truncate flex-grow-1" title="<%= file || '' %>">
@@ -14,7 +14,20 @@
       <div class="log-view" id="log-tail-box"
            hx-ext="sse"
            sse-connect="/logs/stream?file=<%= encodeURIComponent(file) %>&keyword=<%= encodeURIComponent(keyword || '') %>"
-           sse-swap="log-tail" hx-swap="beforeend scroll:#log-tail-box:bottom"><%- linesHtml %></div>
+           sse-swap="log-tail" hx-swap="beforeend scroll:#log-tail-box:bottom">
+        <%# 大日志按需回溯：按钮吸顶，历史页插入 #log-history-anchor 内部（afterbegin 保证更早的页在上） %>
+        <% if (typeof before === 'number' && before > 0) { %>
+        <div class="text-center py-1 px-2">
+          <button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary"
+                  hx-get="/logs/history?file=<%= encodeURIComponent(file) %>&keyword=<%= encodeURIComponent(keyword || '') %>&before=<%= before %>"
+                  hx-target="#log-history-anchor" hx-swap="afterbegin">
+            <i class="ti ti-chevron-up me-1"></i>加载更早 500 行
+          </button>
+        </div>
+        <% } %>
+        <div id="log-history-anchor"></div>
+        <%- linesHtml %>
+      </div>
     </div>
   <% } %>
 </div>

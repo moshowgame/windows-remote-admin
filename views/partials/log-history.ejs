@@ -1,0 +1,13 @@
+<%# 加载更早历史：主片段 prepends 进 #log-history-anchor，按钮经 OOB 自更新（locals: file, keyword, linesHtml, before, hasMore） %>
+<%- linesHtml %>
+<% if (hasMore) { %>
+<button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary my-1"
+        hx-get="/logs/history?file=<%= encodeURIComponent(file) %>&keyword=<%= encodeURIComponent(keyword || '') %>&before=<%= before %>"
+        hx-target="#log-history-anchor" hx-swap="afterbegin" hx-swap-oob="true">
+  <i class="ti ti-chevron-up me-1"></i>加载更早 500 行
+</button>
+<% } else { %>
+<button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary my-1" disabled hx-swap-oob="true">
+  <i class="ti ti-chevron-up me-1"></i>已到文件开头
+</button>
+<% } %>
