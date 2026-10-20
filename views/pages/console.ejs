@@ -13,6 +13,16 @@
 
 <div class="row g-3">
   <!-- 左侧：快捷命令分组 -->
+  <% if (role === 'readonly') { %>
+  <div class="col-lg-3 order-lg-2">
+    <div class="card">
+      <div class="card-body p-3 text-center text-secondary">
+        <i class="ti ti-lock fs-2 d-block mb-2"></i>
+        只读账号不可执行 PowerShell 命令
+      </div>
+    </div>
+  </div>
+  <% } else { %>
   <div class="col-lg-3 order-lg-2">
     <div class="card">
       <div class="card-header">
@@ -38,6 +48,7 @@
       </div>
     </div>
   </div>
+  <% } %>
 
   <!-- 右侧：终端输出 + 输入行 -->
   <div class="col-lg-9 order-lg-1">
@@ -56,6 +67,11 @@
         </div>
       </div>
       <div class="card-footer p-2">
+        <% if (role === 'readonly') { %>
+        <div class="alert alert-warning mb-0 py-2 text-center">
+          <i class="ti ti-lock me-1"></i>当前为<strong>只读账号</strong>，PowerShell 执行已禁用
+        </div>
+        <% } else { %>
         <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
               hx-swap="beforeend scroll:#terminal-box:bottom"
               hx-disabled-elt="find button[type=submit]"
@@ -68,6 +84,7 @@
             <i class="ti ti-player-play me-1"></i>执行
           </button>
         </form>
+        <% } %>
       </div>
     </div>
   </div>

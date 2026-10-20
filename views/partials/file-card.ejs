@@ -34,6 +34,7 @@
       <button id="btn-fav" type="button" class="btn btn-sm" title="收藏当前目录">
         <i class="ti ti-star me-1"></i>收藏
       </button>
+      <% if (role !== 'readonly') { %>
       <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-mkdir">
         <i class="ti ti-folder-plus me-1"></i>新建文件夹
       </button>
@@ -49,6 +50,7 @@
       <button id="btn-compress-selected" type="button" class="btn btn-sm" disabled title="压缩勾选的条目">
         <i class="ti ti-file-zip me-1"></i>压缩选中
       </button>
+      <% } %>
       <button id="btn-download-zip" type="button" class="btn btn-sm" disabled title="勾选项打包为 zip 下载">
         <i class="ti ti-download me-1"></i>打包下载
       </button>

@@ -21,7 +21,9 @@ module.exports = async function editorRoutes(app) {
     if (kind === 'dir') throw new PathError('不能编辑目录，请选择文件');
     if (kind !== 'text') throw new PathError('仅支持编辑文本文件');
     const f = await filesystem.readTextFile(full);
-    const readonly = request.query.readonly === '1' || request.query.readonly === 'true';
+    // 只读账号强制只读模式（保存接口另有服务端兜底）
+    const readonly = request.query.readonly === '1' || request.query.readonly === 'true'
+      || request.session.get('role') === 'readonly';
     return reply.renderPage('pages/editor', {
       title: '文本编辑器',
       active: 'editor',
@@ -38,6 +40,7 @@ module.exports = async function editorRoutes(app) {
 
   // 保存：先复制 .bak 时间戳备份，再覆盖写入
   app.post('/editor/save', async (request, reply) => {
+    app.assertWritable(request);
     const b = request.body || {};
     if (b.readonly === '1' || b.readonly === 'true') throw new PathError('只读模式不允许保存');
     const full = filesystem.resolveUserPath(b.path);

@@ -52,6 +52,7 @@ const quickCommands = [
 module.exports = async function consoleRoutes(app) {
   // 执行命令：返回终端输出片段（beforeend 追加）
   app.post('/console/execute', async (request, reply) => {
+    app.assertWritable(request);
     const command = String((request.body && request.body.command) || '').trim();
     if (!command) {
       return reply.view('partials/console-output', {

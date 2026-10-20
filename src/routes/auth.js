@@ -39,8 +39,9 @@ module.exports = async function authRoutes(app) {
       return loginFail(request, reply, '用户名或密码错误');
     }
 
-    // 写入会话
+    // 写入会话（role：admin / readonly，只读账号禁用全部写操作）
     request.session.set('username', username);
+    request.session.set('role', entitlement.roleOf(dataDir, username) || 'admin');
     request.session.set('purpose', purpose);
     request.session.set('loginAt', Date.now());
     request.session.set('ip', request.ip);

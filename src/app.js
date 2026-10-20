@@ -48,11 +48,19 @@ async function buildApp() {
   app.decorate('auditLog', loggers.audit);
   app.decorate('audit', auditFn);
 
-  // 整页渲染辅助：自动注入 csrf 与 username
+  // 整页渲染辅助：自动注入 csrf / username / role
   app.decorateReply('renderPage', function renderPage(view, data = {}) {
     const csrf = this.generateCsrf();
     const username = this.request.session ? this.request.session.get('username') || '' : '';
-    return this.view(view, { ...data, csrf, username });
+    const role = this.request.session ? this.request.session.get('role') || 'admin' : 'admin';
+    return this.view(view, { ...data, csrf, username, role });
+  });
+
+  // 写操作守卫：只读账号访问写路由直接 403（错误处理器统一转为 HTMX toast / 错误页）
+  app.decorate('assertWritable', function assertWritable(request) {
+    if (request.session && request.session.get('role') === 'readonly') {
+      throw Object.assign(new Error('只读账号无权执行此操作'), { statusCode: 403 });
+    }
   });
 
   // ---- 插件 ----

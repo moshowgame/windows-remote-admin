@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
   <link rel="stylesheet" href="/static/css/app.css?v=20261011">
 </head>
-<body hx-headers='{"X-CSRF-Token":"<%= csrf %>", "X-Requested-With":"htmx"}'>
+<body data-role="<%= role || 'admin' %>" hx-headers='{"X-CSRF-Token":"<%= csrf %>", "X-Requested-With":"htmx"}'>
 <div class="page">
   <!-- 侧边栏 -->
   <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
@@ -54,12 +54,14 @@
               <span class="nav-link-title">系统概览</span>
             </a>
           </li>
+          <% if (role !== 'readonly') { %>
           <li class="nav-item <%= active === 'console' ? 'active' : '' %>">
             <a class="nav-link" href="/console">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-terminal-2"></i></span>
               <span class="nav-link-title">PowerShell</span>
             </a>
           </li>
+          <% } %>
           <li class="nav-item <%= active === 'files' ? 'active' : '' %>">
             <a class="nav-link" href="/files">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-folder"></i></span>

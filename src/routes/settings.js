@@ -42,6 +42,7 @@ module.exports = async function settingsRoutes(app) {
 
   // 保存快速访问：label[] 与 path[] 按下标配对，空行跳过
   app.post('/settings/quick-access', async (request, reply) => {
+    app.assertWritable(request);
     const b = request.body || {};
     const labels = [].concat(b.label || []);
     const paths = [].concat(b.path || []);

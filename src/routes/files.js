@@ -58,6 +58,7 @@ async function browseCtx(app, request, q = {}) {
     parent: filesystem.parentOf(dir),
     crumbs: filesystem.crumbsOf(dir),
     recent,
+    role: request.session.get('role') || 'admin',
   };
 }
 
@@ -170,6 +171,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 上传（multipart 流式落盘）----
   app.post('/files/upload', async (request, reply) => {
+    app.assertWritable(request);
     if (!request.isMultipart()) throw new PathError('请使用文件上传表单');
     let dir = null;
     const results = [];
@@ -227,6 +229,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 服务器直接打开（默认关闭，需 enableServerOpen）----
   app.post('/files/open', async (request, reply) => {
+    app.assertWritable(request);
     if (!app.config.enableServerOpen) throw new PathError('管理员未启用「服务器直接打开」功能');
     const full = resolveUserPath(request.body && request.body.path);
     const st = await fsp.stat(full).catch(() => null);
@@ -241,6 +244,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 解压（异步任务）----
   app.post('/files/extract', async (request, reply) => {
+    app.assertWritable(request);
     const full = resolveUserPath(request.body && request.body.path);
     const st = await fsp.stat(full).catch(() => null);
     if (!st || st.isDirectory() || path.extname(full).toLowerCase() !== '.zip') {
@@ -258,6 +262,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 压缩（异步任务，支持多选）----
   app.post('/files/compress', async (request, reply) => {
+    app.assertWritable(request);
     let paths = (request.body && request.body.paths) || [];
     if (!Array.isArray(paths)) paths = paths ? [paths] : [];
     if (paths.length === 0) throw new PathError('请先勾选要压缩的条目');
@@ -293,6 +298,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 新建文件夹 ----
   app.post('/files/mkdir', async (request, reply) => {
+    app.assertWritable(request);
     const b = request.body || {};
     const dir = resolveUserPath(b.path);
     const full = path.join(dir, sanitizeName(b.name));
@@ -305,6 +311,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 重命名 ----
   app.post('/files/rename', async (request, reply) => {
+    app.assertWritable(request);
     const b = request.body || {};
     const full = resolveUserPath(b.path);
     const st = await fsp.stat(full).catch(() => null);
@@ -320,6 +327,7 @@ module.exports = async function filesRoutes(app) {
 
   // ---- 删除（目录需输名确认）----
   app.post('/files/delete', async (request, reply) => {
+    app.assertWritable(request);
     const b = request.body || {};
     const full = resolveUserPath(b.path);
     const st = await fsp.stat(full).catch(() => null);

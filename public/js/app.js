@@ -55,6 +55,18 @@
     showToast(decodeURIComponent(xhr.getResponseHeader('X-WRA-Error') || '') || ('请求失败（HTTP ' + xhr.status + '）'), 'error');
   });
 
+  // 只读账号兜底拦截：即使 UI 未隐藏（缓存页面/新入口），写路由请求在前端直接取消并提示
+  var WRITE_ROUTES = /^\/(files\/(upload|open|extract|compress|mkdir|rename|delete)|console\/execute|services\/action|editor\/save|settings\/quick-access)$/;
+  var WRA_ROLE = document.body.dataset.role || 'admin';
+  document.body.addEventListener('htmx:beforeRequest', function (e) {
+    if (WRA_ROLE !== 'readonly') return;
+    var path = (e.detail && e.detail.pathInfo && e.detail.pathInfo.requestPath) || '';
+    if (WRITE_ROUTES.test(path)) {
+      e.preventDefault();
+      showToast('只读账号无权执行此操作', 'warning');
+    }
+  });
+
   // 请求进行中禁用相关提交按钮（防重复提交；仅覆盖当前元素/所属表单）
   // 注意：必须先于进度条监听注册，防止重复请求被取消时进度计数泄漏
   document.body.addEventListener('htmx:beforeRequest', function (e) {

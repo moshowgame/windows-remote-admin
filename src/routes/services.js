@@ -41,9 +41,9 @@ function computeStats(services) {
 }
 
 // 渲染列表片段（tbody + 统计条），页面与操作后刷新共用
-function renderList(reply, services, kw, msg) {
+function renderList(reply, services, kw, msg, role) {
   const filtered = services.filter((s) => matchKw(s, kw));
-  return reply.view('partials/services-list', { services: filtered, kw, stats: computeStats(services), msg });
+  return reply.view('partials/services-list', { services: filtered, kw, stats: computeStats(services), msg, role });
 }
 
 module.exports = async function servicesRoutes(app) {
@@ -64,11 +64,12 @@ module.exports = async function servicesRoutes(app) {
   // 列表片段（搜索 / 操作后刷新）
   app.get('/services/list', async (request, reply) => {
     const services = await listServices(app.config.psTimeoutMs);
-    return renderList(reply, services, String(request.query.kw || '').trim(), null);
+    return renderList(reply, services, String(request.query.kw || '').trim(), null, request.session.get('role') || 'admin');
   });
 
   // 服务操作：start / stop / restart / mode（mode 需 mode=auto|manual|disabled）
   app.post('/services/action', async (request, reply) => {
+    app.assertWritable(request);
     const body = request.body || {};
     const name = String(body.name || '').trim();
     const action = String(body.action || '');
@@ -95,6 +96,7 @@ module.exports = async function servicesRoutes(app) {
     // 操作后重拉列表返回（保持当前搜索关键字）
     const services = await listServices(app.config.psTimeoutMs);
     const kw = String(body.kw || '').trim();
-    return renderList(reply, services, kw, ok ? null : `操作失败：${String(r.output || '').slice(0, 120)}`);
+    const role = request.session.get('role') || 'admin';
+    return renderList(reply, services, kw, ok ? null : `操作失败：${String(r.output || '').slice(0, 120)}`, role);
   });
 };
