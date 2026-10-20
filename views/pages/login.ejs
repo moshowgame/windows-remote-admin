@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="<%= lang %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,13 +16,13 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <title>登录 · Windows Remote Admin</title>
+  <title><%= t('login.title') %> · Windows Remote Admin</title>
   <link rel="stylesheet" href="/static/css/tabler.min.css">
   <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
   <link rel="stylesheet" href="/static/css/app.css?v=20261011">
 </head>
 <body class="d-flex flex-column wra-login-body" hx-headers='{"X-CSRF-Token":"<%= csrf %>"}'>
-<a href="#" class="nav-link wra-login-theme" id="theme-toggle" aria-label="切换主题" title="切换亮/暗主题">
+<a href="#" class="nav-link wra-login-theme" id="theme-toggle" aria-label="<%= t('nav.theme') %>" title="<%= t('login.themeHint') %>">
   <i class="ti ti-moon"></i>
 </a>
 <div class="page page-center">
@@ -30,11 +30,11 @@
     <div class="text-center mb-4">
       <div class="wra-logo-tile mx-auto mb-3"><i class="ti ti-server-2"></i></div>
       <h1 class="fs-2 mb-1 fw-bold">Windows Remote Admin</h1>
-      <div class="text-secondary">服务器远程运维工具</div>
+      <div class="text-secondary"><%= t('login.subtitle') %></div>
     </div>
     <div class="card card-md shadow-lg wra-login-card">
       <div class="card-body">
-        <h2 class="h2 text-center mb-4">登录</h2>
+        <h2 class="h2 text-center mb-4"><%= t('login.title') %></h2>
         <div id="login-alert">
           <% if (locals.error) { %>
             <%- include('../partials/login-alert', { message: locals.error }) %>
@@ -43,23 +43,27 @@
         <form hx-post="/login" hx-target="#login-alert" hx-swap="innerHTML" autocomplete="off" novalidate>
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <div class="mb-3">
-            <label class="form-label" for="login-username">用户名</label>
-            <input type="text" id="login-username" name="username" class="form-control" placeholder="用户名" required>
+            <label class="form-label" for="login-username"><%= t('login.username') %></label>
+            <input type="text" id="login-username" name="username" class="form-control" placeholder="<%= t('login.username') %>" required>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="login-password">密码</label>
-            <input type="password" id="login-password" name="password" class="form-control" placeholder="密码" autocomplete="current-password" required>
+            <label class="form-label" for="login-password"><%= t('login.password') %></label>
+            <input type="password" id="login-password" name="password" class="form-control" placeholder="<%= t('login.password') %>" autocomplete="current-password" required>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="login-purpose">使用目的</label>
-            <input type="text" id="login-purpose" name="purpose" class="form-control" placeholder="如：运维检查" required>
+            <label class="form-label" for="login-purpose"><%= t('login.purpose') %></label>
+            <input type="text" id="login-purpose" name="purpose" class="form-control" placeholder="<%= t('login.purposePlaceholder') %>" required>
           </div>
           <div class="form-footer">
             <button type="submit" class="btn btn-primary w-100">
-              <i class="ti ti-login me-1"></i>登录
+              <i class="ti ti-login me-1"></i><%= t('login.submit') %>
             </button>
           </div>
         </form>
+        <div class="text-center small text-secondary mt-3">
+          <a href="/lang/en" class="text-decoration-none me-3">English</a>
+          <a href="/lang/zh-CN" class="text-decoration-none">简体中文</a>
+        </div>
       </div>
     </div>
   </div>

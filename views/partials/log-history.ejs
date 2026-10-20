@@ -4,10 +4,10 @@
 <button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary my-1"
         hx-get="/logs/history?file=<%= encodeURIComponent(file) %>&keyword=<%= encodeURIComponent(keyword || '') %>&before=<%= before %>"
         hx-target="#log-history-anchor" hx-swap="afterbegin" hx-swap-oob="true">
-  <i class="ti ti-chevron-up me-1"></i>加载更早 500 行
+  <i class="ti ti-chevron-up me-1"></i><%= t('logs.loadEarlier') %>
 </button>
 <% } else { %>
 <button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary my-1" disabled hx-swap-oob="true">
-  <i class="ti ti-chevron-up me-1"></i>已到文件开头
+  <i class="ti ti-chevron-up me-1"></i><%= t('logs.atBeginning') %>
 </button>
 <% } %>

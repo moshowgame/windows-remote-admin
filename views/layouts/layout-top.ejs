@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="<%= lang || 'en' %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -38,12 +38,12 @@
           </a>
           <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
             <form hx-post="/logout" hx-swap="none">
-              <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i>登出</button>
+              <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i><%= t('nav.logout') %></button>
             </form>
           </div>
         </div>
       </div>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="菜单">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Menu">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="sidebar-menu">
@@ -51,46 +51,56 @@
           <li class="nav-item <%= active === 'dashboard' ? 'active' : '' %>">
             <a class="nav-link" href="/dashboard">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-dashboard"></i></span>
-              <span class="nav-link-title">系统概览</span>
+              <span class="nav-link-title"><%= t('nav.dashboard') %></span>
             </a>
           </li>
           <% if (role !== 'readonly') { %>
           <li class="nav-item <%= active === 'console' ? 'active' : '' %>">
             <a class="nav-link" href="/console">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-terminal-2"></i></span>
-              <span class="nav-link-title">PowerShell</span>
+              <span class="nav-link-title"><%= t('nav.console') %></span>
             </a>
           </li>
           <% } %>
           <li class="nav-item <%= active === 'files' ? 'active' : '' %>">
             <a class="nav-link" href="/files">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-folder"></i></span>
-              <span class="nav-link-title">文件管理</span>
+              <span class="nav-link-title"><%= t('nav.files') %></span>
             </a>
           </li>
           <li class="nav-item <%= active === 'editor' ? 'active' : '' %>">
             <a class="nav-link" href="/editor">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-pencil"></i></span>
-              <span class="nav-link-title">文本编辑器</span>
+              <span class="nav-link-title"><%= t('nav.editor') %></span>
             </a>
           </li>
           <li class="nav-item <%= active === 'logs' ? 'active' : '' %>">
             <a class="nav-link" href="/logs">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-file-text"></i></span>
-              <span class="nav-link-title">日志监控</span>
+              <span class="nav-link-title"><%= t('nav.logs') %></span>
             </a>
           </li>
           <li class="nav-item <%= active === 'services' ? 'active' : '' %>">
             <a class="nav-link" href="/services">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-settings"></i></span>
-              <span class="nav-link-title">服务管理</span>
+              <span class="nav-link-title"><%= t('nav.services') %></span>
             </a>
           </li>
           <li class="nav-item <%= active === 'settings' ? 'active' : '' %>">
             <a class="nav-link" href="/settings">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-tool"></i></span>
-              <span class="nav-link-title">设置</span>
+              <span class="nav-link-title"><%= t('nav.settings') %></span>
             </a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-world"></i></span>
+              <span class="nav-link-title"><%= (lang || 'en') === 'zh-CN' ? '中文' : 'English' %></span>
+            </a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item <%= (lang || 'en') === 'en' ? 'active' : '' %>" href="/lang/en">English</a>
+              <a class="dropdown-item <%= (lang || 'en') === 'zh-CN' ? 'active' : '' %>" href="/lang/zh-CN">简体中文</a>
+            </div>
           </li>
         </ul>
       </div>
@@ -102,20 +112,24 @@
     <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
       <div class="container-xl">
         <div class="navbar-nav flex-row order-md-last align-items-center ms-auto">
-          <a href="#" class="nav-link px-2" id="theme-toggle" aria-label="切换主题" title="切换亮/暗主题">
+          <a href="#" class="nav-link px-2" id="theme-toggle" aria-label="<%= t('nav.theme') %>" title="<%= t('nav.theme') %>">
             <i class="ti ti-moon"></i>
+          </a>
+          <a href="/lang/<%= (lang || 'en') === 'zh-CN' ? 'en' : 'zh-CN' %>" class="nav-link px-2 d-flex align-items-center" aria-label="<%= t('nav.lang') %>" title="<%= t('nav.lang') %>">
+            <i class="ti ti-world"></i>
+            <span class="d-none d-xl-inline ms-1"><%= (lang || 'en') === 'zh-CN' ? '中文' : 'English' %></span>
           </a>
           <div class="nav-item dropdown">
             <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
               <span class="avatar avatar-sm bg-blue-lt"><%= (username || 'A').charAt(0).toUpperCase() %></span>
               <div class="d-none d-xl-block ps-2">
                 <div><%= username %></div>
-                <div class="mt-1 small text-secondary">管理员</div>
+                <div class="mt-1 small text-secondary"><%= role === 'readonly' ? t('common.roleReadonly') : t('common.roleAdmin') %></div>
               </div>
             </a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
               <form hx-post="/logout" hx-swap="none">
-                <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i>登出</button>
+                <button class="dropdown-item" type="submit"><i class="ti ti-logout me-1"></i><%= t('nav.logout') %></button>
               </form>
             </div>
           </div>

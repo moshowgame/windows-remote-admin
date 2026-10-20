@@ -272,7 +272,7 @@ module.exports = async function logsRoutes(app) {
     const tail = file ? await tailHtml(file, keyword) : { html: '', before: 0, hasMore: false };
 
     return reply.renderPage('pages/logs', {
-      title: '日志监控',
+      title: request.t('logs.title'),
       active: 'logs',
       dir,
       pattern,
@@ -302,7 +302,7 @@ module.exports = async function logsRoutes(app) {
   app.get('/logs/content', async (request, reply) => {
     const full = resolveUserPath(request.query.file);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    if (!st || st.isDirectory()) throw new PathError(request.t('logs.fileNotFound'));
     const keyword = String(request.query.keyword || '');
     const tail = await tailHtml(full, keyword);
     return reply.view('partials/log-content', { file: full, keyword, linesHtml: tail.html, before: tail.before, hasMore: tail.hasMore });
@@ -312,7 +312,7 @@ module.exports = async function logsRoutes(app) {
   app.get('/logs/history', async (request, reply) => {
     const full = resolveUserPath(request.query.file);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    if (!st || st.isDirectory()) throw new PathError(request.t('logs.fileNotFound'));
     const keyword = String(request.query.keyword || '');
     const before = parseInt(request.query.before, 10) || 0;
     const r = await readWindow(full, before, keyword);
@@ -330,9 +330,9 @@ module.exports = async function logsRoutes(app) {
   app.get('/logs/grep', async (request, reply) => {
     const full = resolveUserPath(request.query.file);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    if (!st || st.isDirectory()) throw new PathError(request.t('logs.fileNotFound'));
     const keyword = String(request.query.keyword || '').trim();
-    if (!keyword) throw new PathError('关键字不能为空');
+    if (!keyword) throw new PathError(request.t('logs.keywordRequired'));
     let context = parseInt(request.query.context, 10);
     if (!Number.isFinite(context) || context < 0) context = 5;
     if (context > 20) context = 20;
@@ -346,7 +346,7 @@ module.exports = async function logsRoutes(app) {
   app.get('/logs/stream', async (request, reply) => {
     const full = resolveUserPath(request.query.file);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st || st.isDirectory()) throw new PathError('日志文件不存在');
+    if (!st || st.isDirectory()) throw new PathError(request.t('logs.fileNotFound'));
     const keyword = String(request.query.keyword || '');
     const watchDir = path.dirname(full);
     const base = path.basename(full);
@@ -380,7 +380,7 @@ module.exports = async function logsRoutes(app) {
         if (s.size < offset) {
           offset = 0;
           buf = '';
-          send(lineHtml('--- 检测到文件被截断，已从头开始读取 ---', ''));
+          send(lineHtml(request.t('logs.truncated'), ''));
         }
         // 自适应追赶：单次最多 4 轮 × 2MB，高频写入（百 MB 级日志）也不会持续滞后
         let loops = 0;

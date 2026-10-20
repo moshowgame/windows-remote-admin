@@ -3,9 +3,9 @@
 <div class="page-header d-print-none mb-3">
   <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title"><i class="ti ti-settings me-2"></i>设置</h2>
+      <h2 class="page-title"><i class="ti ti-settings me-2"></i><%= t('settings.title') %></h2>
     </div>
-    <div class="col-auto text-secondary small">快速访问即时生效 · 系统参数修改需重启</div>
+    <div class="col-auto text-secondary small"><%= t('settings.headerHint') %></div>
   </div>
 </div>
 
@@ -25,9 +25,9 @@
       var div = document.createElement('div');
       div.className = 'row g-2 mb-2 qa-row';
       div.innerHTML =
-        '<div class="col-4"><input name="label" class="form-control" placeholder="名称" maxlength="50"></div>' +
-        '<div class="col-7"><input name="path" class="form-control font-monospace" placeholder="例如 C:\\data" spellcheck="false"></div>' +
-        '<div class="col-1"><button type="button" class="btn btn-ghost-danger w-100 qa-del" title="删除此行"><i class="ti ti-x"></i></button></div>';
+        '<div class="col-4"><input name="label" class="form-control" placeholder="<%= t("settings.qaNamePlaceholder") %>" maxlength="50"></div>' +
+        '<div class="col-7"><input name="path" class="form-control font-monospace" placeholder="<%= t("settings.qaPathPlaceholder").replace("\\", "\\\\") %>" spellcheck="false"></div>' +
+        '<div class="col-1"><button type="button" class="btn btn-ghost-danger w-100 qa-del" title="<%= t("settings.qaDeleteRow") %>"><i class="ti ti-x"></i></button></div>';
       return div;
     }
 

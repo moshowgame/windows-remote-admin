@@ -3,10 +3,10 @@
 <div class="page-header d-print-none mb-3">
   <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title"><i class="ti ti-folder me-2"></i>文件资源管理器</h2>
+      <h2 class="page-title"><i class="ti ti-folder me-2"></i><%= t('files.title') %></h2>
     </div>
     <div class="col-auto text-secondary small">
-      上传上限 <%= uploadMaxMb %>MB · 解压上限 <%= extractMaxMb %>MB / <%= extractMaxFiles %> 项<%= whitelistOn ? ' · 白名单模式' : '' %>
+      <%= t('files.uploadLimit') %> <%= uploadMaxMb %>MB · <%= t('files.extractLimit') %> <%= extractMaxMb %>MB / <%= extractMaxFiles %> <%= t('files.itemsUnit') %><%= whitelistOn ? ' · ' + t('files.whitelistMode') : '' %>
     </div>
   </div>
 </div>
@@ -20,14 +20,14 @@
     </div>
     <div class="mt-3" id="task-panel"
          hx-ext="sse" sse-connect="/files/tasks/stream" sse-swap="task-progress" hx-swap="innerHTML">
-      <div class="text-secondary small px-1">暂无进行中的任务</div>
+      <div class="text-secondary small px-1"><%= t('files.noTasks') %></div>
     </div>
   </div>
 
   <div class="col-lg-3">
     <div class="card mb-3">
       <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-bookmarks me-1"></i>快速访问</h3>
+        <h3 class="card-title"><i class="ti ti-bookmarks me-1"></i><%= t('files.quickAccess') %></h3>
       </div>
       <ul class="list-group list-group-flush">
         <% for (const qa of quickAccess) { %>
@@ -42,7 +42,7 @@
     </div>
     <div class="card mb-3">
       <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-star me-1"></i>收藏</h3>
+        <h3 class="card-title"><i class="ti ti-star me-1"></i><%= t('files.favorites') %></h3>
       </div>
       <ul class="list-group list-group-flush" id="fav-list"></ul>
     </div>
@@ -60,16 +60,16 @@
       <input type="hidden" name="sort">
       <input type="hidden" name="order">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="ti ti-folder-plus me-1"></i>新建文件夹</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+        <h5 class="modal-title"><i class="ti ti-folder-plus me-1"></i><%= t('files.newFolder') %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= t('common.close') %>"></button>
       </div>
       <div class="modal-body">
-        <label class="form-label">文件夹名称</label>
-        <input name="name" class="form-control" required maxlength="200" placeholder="例如：backup">
+        <label class="form-label"><%= t('files.folderName') %></label>
+        <input name="name" class="form-control" required maxlength="200" placeholder="<%= t('files.folderNamePh') %>">
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-        <button type="submit" class="btn btn-primary">创建</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common.cancel') %></button>
+        <button type="submit" class="btn btn-primary"><%= t('files.create') %></button>
       </div>
     </form>
   </div>
@@ -83,17 +83,17 @@
       <input type="hidden" name="sort">
       <input type="hidden" name="order">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="ti ti-edit me-1"></i>重命名</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+        <h5 class="modal-title"><i class="ti ti-edit me-1"></i><%= t('files.rename') %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= t('common.close') %>"></button>
       </div>
       <div class="modal-body">
-        <label class="form-label">新名称</label>
+        <label class="form-label"><%= t('files.newName') %></label>
         <input name="name" class="form-control" required maxlength="200">
         <div class="small text-secondary mt-1 text-truncate" id="rename-old"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-        <button type="submit" class="btn btn-primary">确定</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common.cancel') %></button>
+        <button type="submit" class="btn btn-primary"><%= t('files.ok') %></button>
       </div>
     </form>
   </div>
@@ -107,20 +107,20 @@
       <input type="hidden" name="sort">
       <input type="hidden" name="order">
       <div class="modal-header">
-        <h5 class="modal-title text-danger"><i class="ti ti-trash me-1"></i>删除确认</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+        <h5 class="modal-title text-danger"><i class="ti ti-trash me-1"></i><%= t('files.deleteTitle') %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= t('common.close') %>"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-2">确定要删除 <strong class="text-break" id="del-name"></strong> 吗？此操作不可恢复。</p>
+        <p class="mb-2"><%= t('files.deleteAsk') %><strong class="text-break" id="del-name"></strong><%= t('files.deleteIrreversible') %></p>
         <div id="del-confirm-block" class="d-none">
-          <label class="form-label small text-danger">删除的是文件夹，请输入其名称以确认：</label>
+          <label class="form-label small text-danger"><%= t('files.deleteDirHint') %></label>
           <input id="del-confirm-input" name="confirmName" class="form-control" autocomplete="off" spellcheck="false">
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common.cancel') %></button>
         <button type="submit" id="del-confirm-btn" class="btn btn-danger" disabled>
-          <i class="ti ti-trash me-1"></i>删除
+          <i class="ti ti-trash me-1"></i><%= t('common.delete') %>
         </button>
       </div>
     </form>
@@ -133,8 +133,8 @@
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title text-truncate"><i class="ti ti-eye me-1"></i><span id="preview-title">预览</span></h5>
-        <button type="button" class="btn-close" data-preview-close aria-label="关闭"></button>
+        <h5 class="modal-title text-truncate"><i class="ti ti-eye me-1"></i><span id="preview-title"><%= t('files.preview') %></span></h5>
+        <button type="button" class="btn-close" data-preview-close aria-label="<%= t('common.close') %>"></button>
       </div>
       <div class="modal-body" id="preview-body"></div>
     </div>
@@ -150,6 +150,21 @@
     'use strict';
     var FAV_KEY = 'wra_fav_paths';
     var checked = new Set();
+    // 文案（i18n，经 EJS 注入；en 文案不含单引号，可安全内嵌）
+    var T = {
+      selectedCount: '<%= t("files.selectedCount") %>',
+      uploading: '<%= t("files.uploading") %>',
+      uploadingPct: '<%= t("files.uploadingPct") %>',
+      noFavs: '<%= t("files.noFavs") %>',
+      removeFav: '<%= t("files.removeFav") %>',
+      favorited: '<%= t("files.favorited") %>',
+      fav: '<%= t("files.fav") %>',
+      unfavorited: '<%= t("files.unfavorited") %>',
+      favoritedDir: '<%= t("files.favoritedDir") %>',
+      originalName: '<%= t("files.originalName") %>',
+      previewFailed: '<%= t("files.previewFailed") %>',
+      previewNetError: '<%= t("files.previewNetError") %>',
+    };
 
     function $(id) { return document.getElementById(id); }
     // WRA 由底部 app.js 定义；本脚本可能先于其执行，需兜底
@@ -178,7 +193,7 @@
     function updateSelectionUI() {
       var n = checked.size;
       var el = $('selection-count');
-      if (el) el.textContent = n ? '已选 ' + n + ' 项' : '';
+      if (el) el.textContent = n ? T.selectedCount.replace('{n}', n) : '';
       var c = $('btn-compress-selected'), d = $('btn-download-zip');
       if (c) c.disabled = !n;
       if (d) d.disabled = !n;
@@ -243,14 +258,14 @@
         upForm.addEventListener('htmx:beforeRequest', function () {
           upBox.classList.remove('d-none');
           upBar.style.width = '0%';
-          upText.textContent = '上传中…';
+          upText.textContent = T.uploading;
         });
         upForm.addEventListener('htmx:xhr:progress', function (e) {
           var d = e.detail || {};
           if (!d.total) return;
           var pct = Math.round((d.loaded / d.total) * 100);
           upBar.style.width = pct + '%';
-          upText.textContent = '上传中 ' + pct + '%（' + fmtSize(d.loaded) + ' / ' + fmtSize(d.total) + '）';
+          upText.textContent = T.uploadingPct.replace('{pct}', pct).replace('{loaded}', fmtSize(d.loaded)).replace('{total}', fmtSize(d.total));
         });
         upForm.addEventListener('htmx:afterRequest', function () {
           setTimeout(function () { upBox.classList.add('d-none'); }, 600);
@@ -284,14 +299,14 @@
       if (!ul) return;
       var favs = loadFavs();
       if (!favs.length) {
-        ul.innerHTML = '<li class="list-group-item text-secondary small">暂无收藏，点击工具栏「收藏」保存当前目录</li>';
+        ul.innerHTML = '<li class="list-group-item text-secondary small">' + T.noFavs + '</li>';
         return;
       }
       ul.innerHTML = favs.map(function (p) {
         return '<li class="list-group-item d-flex align-items-center px-2 py-1">' +
           '<a href="#" class="flex-grow-1 text-truncate text-decoration-none fav-go" data-path="' + esc(p.path) + '" title="' + esc(p.path) + '">' +
           '<i class="ti ti-star-filled text-warning me-1"></i>' + esc(p.name) + '</a>' +
-          '<a href="#" class="fav-del ms-2 text-secondary" data-path="' + esc(p.path) + '" title="移除收藏"><i class="ti ti-x"></i></a>' +
+          '<a href="#" class="fav-del ms-2 text-secondary" data-path="' + esc(p.path) + '" title="' + T.removeFav + '"><i class="ti ti-x"></i></a>' +
           '</li>';
       }).join('');
     }
@@ -301,7 +316,7 @@
       if (!b) return;
       var cur = currentDir().toLowerCase();
       var on = loadFavs().some(function (p) { return p.path.toLowerCase() === cur; });
-      b.innerHTML = '<i class="ti ' + (on ? 'ti-star-filled text-warning' : 'ti-star') + ' me-1"></i>' + (on ? '已收藏' : '收藏');
+      b.innerHTML = '<i class="ti ' + (on ? 'ti-star-filled text-warning' : 'ti-star') + ' me-1"></i>' + (on ? T.favorited : T.fav);
     }
     function toggleFav() {
       var cur = currentDir();
@@ -312,11 +327,11 @@
       var idx = favs.findIndex(function (p) { return p.path.toLowerCase() === cur.toLowerCase(); });
       if (idx >= 0) {
         favs.splice(idx, 1);
-        toast('已取消收藏');
+        toast(T.unfavorited);
       } else {
         favs.unshift({ path: cur, name: name });
         if (favs.length > 20) favs.length = 20;
-        toast('已收藏当前目录');
+        toast(T.favoritedDir);
       }
       saveFavs(favs);
       renderFavs();
@@ -377,7 +392,7 @@
         renameForm.querySelector('[name=path]').value = btn.dataset.path;
         renameForm.querySelector('[name=name]').value = btn.dataset.name || '';
         fillSortOrder(renameForm);
-        $('rename-old').textContent = '原名称：' + (btn.dataset.name || '');
+        $('rename-old').textContent = T.originalName + (btn.dataset.name || '');
       });
     }
 
@@ -484,7 +499,7 @@
         var xhr = e.detail && e.detail.xhr;
         var msg = decodeURIComponent(xhr && xhr.getResponseHeader('X-WRA-Error') || '') ||
           'HTTP ' + (xhr && xhr.status || '?');
-        toast('文件浏览失败：' + msg, 'error');
+        toast(T.previewFailed + msg, 'error');
         e.detail.wraHandled = true;
       }
     });
@@ -492,7 +507,7 @@
     document.body.addEventListener('htmx:sendError', function (e) {
       var p = e.detail && e.detail.requestConfig && e.detail.requestConfig.path;
       if (typeof p === 'string' && p.indexOf('/files/preview') === 0) {
-        toast('文件浏览失败：网络异常', 'error');
+        toast(T.previewNetError, 'error');
         e.detail.wraHandled = true;
       }
     });

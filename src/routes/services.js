@@ -10,14 +10,14 @@ const NAME_RE = /^[A-Za-z0-9_.\- $]{1,80}$/;
 // 启动类型映射（前端只传短名，命令参数取白名单值）
 const MODES = { auto: 'Automatic', manual: 'Manual', disabled: 'Disabled' };
 
-// CIM 一次取全量：状态 / 启动类型 / PID / 运行账户 / 可执行路径
-async function listServices(timeoutMs) {
+// CIM 一次取全量：状态 / 启动类型 / PID / 运行账户 / 可执行路径（t 用于错误消息国际化）
+async function listServices(timeoutMs, t) {
   const cmd = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; '
     + 'Get-CimInstance Win32_Service | Sort-Object DisplayName '
     + '| Select-Object Name, DisplayName, State, StartMode, ProcessId, StartName, PathName '
     + '| ConvertTo-Json -Compress -Depth 2';
   const r = await ps.execute(cmd, { timeoutMs, sessionKey: 'svc-mgmt' });
-  if (!r.ok) throw new Error('获取服务列表失败：' + String(r.output || '').slice(0, 200));
+  if (!r.ok) throw new Error(t('services.listFailed').replace('{n}', String(r.output || '').slice(0, 200)));
   const raw = String(r.output || '').trim();
   if (!raw) return [];
   const data = JSON.parse(raw);
@@ -49,10 +49,10 @@ function renderList(reply, services, kw, msg, role) {
 module.exports = async function servicesRoutes(app) {
   // 整页
   app.get('/services', async (request, reply) => {
-    const services = await listServices(app.config.psTimeoutMs);
+    const services = await listServices(app.config.psTimeoutMs, request.t);
     const kw = String(request.query.kw || '').trim();
     return reply.renderPage('pages/services', {
-      title: '服务管理',
+      title: request.t('services.title'),
       active: 'services',
       services: services.filter((s) => matchKw(s, kw)),
       kw,
@@ -63,7 +63,7 @@ module.exports = async function servicesRoutes(app) {
 
   // 列表片段（搜索 / 操作后刷新）
   app.get('/services/list', async (request, reply) => {
-    const services = await listServices(app.config.psTimeoutMs);
+    const services = await listServices(app.config.psTimeoutMs, request.t);
     return renderList(reply, services, String(request.query.kw || '').trim(), null, request.session.get('role') || 'admin');
   });
 
@@ -73,7 +73,7 @@ module.exports = async function servicesRoutes(app) {
     const body = request.body || {};
     const name = String(body.name || '').trim();
     const action = String(body.action || '');
-    if (!NAME_RE.test(name)) throw Object.assign(new Error('服务名不合法'), { statusCode: 400 });
+    if (!NAME_RE.test(name)) throw Object.assign(new Error(request.t('services.invalidName')), { statusCode: 400 });
 
     let cmd;
     if (action === 'start') cmd = 'Start-Service -Name $env:WRA_SVC_NAME -ErrorAction Stop';
@@ -81,9 +81,9 @@ module.exports = async function servicesRoutes(app) {
     else if (action === 'restart') cmd = 'Restart-Service -Name $env:WRA_SVC_NAME -Force -ErrorAction Stop';
     else if (action === 'mode') {
       const mode = MODES[String(body.mode || '')];
-      if (!mode) throw Object.assign(new Error('启动类型不合法'), { statusCode: 400 });
+      if (!mode) throw Object.assign(new Error(request.t('services.invalidMode')), { statusCode: 400 });
       cmd = 'Set-Service -Name $env:WRA_SVC_NAME -StartupType $env:WRA_SVC_MODE -ErrorAction Stop';
-    } else throw Object.assign(new Error('未知操作'), { statusCode: 400 });
+    } else throw Object.assign(new Error(request.t('services.unknownAction')), { statusCode: 400 });
 
     const env = { WRA_SVC_NAME: name };
     if (action === 'mode') env.WRA_SVC_MODE = MODES[String(body.mode)];
@@ -94,9 +94,9 @@ module.exports = async function servicesRoutes(app) {
     audit(request, '服务管理操作', { name, action, mode: body.mode || null, ok });
 
     // 操作后重拉列表返回（保持当前搜索关键字）
-    const services = await listServices(app.config.psTimeoutMs);
+    const services = await listServices(app.config.psTimeoutMs, request.t);
     const kw = String(body.kw || '').trim();
     const role = request.session.get('role') || 'admin';
-    return renderList(reply, services, kw, ok ? null : `操作失败：${String(r.output || '').slice(0, 120)}`, role);
+    return renderList(reply, services, kw, ok ? null : request.t('services.actionFailed').replace('{n}', String(r.output || '').slice(0, 120)), role);
   });
 };

@@ -3,11 +3,11 @@
 <div class="page-header d-print-none mb-3">
   <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title"><i class="ti ti-dashboard me-2"></i>系统概览</h2>
+      <h2 class="page-title"><i class="ti ti-dashboard me-2"></i><%= t('dashboard.title') %></h2>
     </div>
     <div class="col-auto">
       <button class="btn btn-outline-primary" hx-get="/dashboard/stats?part=processes" hx-target="#process-table-body" hx-swap="innerHTML">
-        <i class="ti ti-refresh me-1"></i>刷新进程
+        <i class="ti ti-refresh me-1"></i><%= t('dashboard.refreshProcesses') %>
       </button>
     </div>
   </div>
@@ -20,20 +20,20 @@
 
 <div class="card mt-3">
   <div class="card-header">
-    <h3 class="card-title"><i class="ti ti-list-numbers me-1"></i>内存占用 Top 10 进程</h3>
+    <h3 class="card-title"><i class="ti ti-list-numbers me-1"></i><%= t('dashboard.topProcesses') %></h3>
   </div>
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead>
         <tr>
-          <th>进程名</th>
+          <th><%= t('dashboard.processName') %></th>
           <th class="w-1">PID</th>
-          <th class="w-1 text-end">内存</th>
-          <th class="w-1 text-end">CPU 时间</th>
+          <th class="w-1 text-end"><%= t('dashboard.memory') %></th>
+          <th class="w-1 text-end"><%= t('dashboard.cpuTime') %></th>
         </tr>
       </thead>
       <tbody id="process-table-body" hx-get="/dashboard/stats?part=processes" hx-trigger="load" hx-swap="innerHTML">
-        <tr><td colspan="4" class="text-center text-secondary">加载中…</td></tr>
+        <tr><td colspan="4" class="text-center text-secondary"><%= t('common.loading') %></td></tr>
       </tbody>
     </table>
   </div>

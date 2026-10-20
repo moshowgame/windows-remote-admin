@@ -2,12 +2,12 @@
 <div class="alert alert-icon alert-info d-flex align-items-start mb-3" role="alert">
   <i class="ti ti-upload fs-2 me-2"></i>
   <div class="flex-grow-1">
-    <strong>上传完成：</strong>成功 <%= okCount %> 个<%= failCount > 0 ? `，失败 ${failCount} 个` : '' %>
+    <strong><%= t('files.uploadDone') %></strong><%= t('files.uploadOkCount').replace('{n}', okCount) %><%= failCount > 0 ? t('files.uploadFailCount').replace('{n}', failCount) : '' %>
     <ul class="small mb-0 mt-1 ps-3">
       <% for (const r of uploaded) { %>
         <li class="<%= r.ok ? '' : 'text-danger' %>">
           <i class="ti <%= r.ok ? 'ti-circle-check text-success' : 'ti-circle-x text-danger' %> me-1"></i>
-          <%= r.name %><%= r.ok ? `（${r.sizeText}）` : `：${r.note}` %>
+          <%= r.name %><%= r.ok ? t('files.uploadSizeWrap').replace('{s}', r.sizeText) : t('files.uploadNoteSep') + r.note %>
         </li>
       <% } %>
     </ul>

@@ -3,10 +3,10 @@
 <div class="page-header d-print-none mb-3">
   <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title"><i class="ti ti-terminal-2 me-2"></i>PowerShell 控制台</h2>
+      <h2 class="page-title"><i class="ti ti-terminal-2 me-2"></i><%= t('console.title') %></h2>
     </div>
     <div class="col-auto text-secondary small">
-      超时 <%= Math.round(timeoutMs / 1000) %>s · 输出上限 2MB
+      <%= t('console.timeoutLabel') %> <%= Math.round(timeoutMs / 1000) %>s · <%= t('console.outputLimit') %> 2MB
     </div>
   </div>
 </div>
@@ -18,7 +18,7 @@
     <div class="card">
       <div class="card-body p-3 text-center text-secondary">
         <i class="ti ti-lock fs-2 d-block mb-2"></i>
-        只读账号不可执行 PowerShell 命令
+        <%= t('console.readonlyBlocked') %>
       </div>
     </div>
   </div>
@@ -26,7 +26,7 @@
   <div class="col-lg-3 order-lg-2">
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-bolt me-1"></i>快捷命令</h3>
+        <h3 class="card-title"><i class="ti ti-bolt me-1"></i><%= t('console.quickCommands') %></h3>
       </div>
       <div class="card-body p-2" style="max-height: 65vh; overflow-y: auto;">
         <% for (const group of quickCommands) { %>
@@ -54,22 +54,22 @@
   <div class="col-lg-9 order-lg-1">
     <div class="card">
       <div class="card-header d-flex align-items-center">
-        <h3 class="card-title"><i class="ti ti-square-rounded-letter-p me-1"></i>终端输出</h3>
+        <h3 class="card-title"><i class="ti ti-square-rounded-letter-p me-1"></i><%= t('console.output') %></h3>
         <button id="console-clear" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
-          <i class="ti ti-eraser me-1"></i>清屏
+          <i class="ti ti-eraser me-1"></i><%= t('console.clear') %>
         </button>
       </div>
       <div class="card-body p-0">
         <div id="terminal-box" class="wra-terminal">
           <div id="console-output">
-            <div class="wra-term-block text-secondary">PowerShell 就绪。输入命令（Enter 执行 / ↑↓ 翻历史）或点击右侧快捷命令。</div>
+            <div class="wra-term-block text-secondary"><%= t('console.ready') %></div>
           </div>
         </div>
       </div>
       <div class="card-footer p-2">
         <% if (role === 'readonly') { %>
         <div class="alert alert-warning mb-0 py-2 text-center">
-          <i class="ti ti-lock me-1"></i>当前为<strong>只读账号</strong>，PowerShell 执行已禁用
+          <i class="ti ti-lock me-1"></i><%= t('console.readonlyPrefix') %><strong><%= t('common.roleReadonly') %></strong><%= t('console.readonlySuffix') %>
         </div>
         <% } else { %>
         <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
@@ -79,9 +79,9 @@
           <span class="wra-term-prompt ps-2 font-monospace">PS&gt;</span>
           <input name="command" id="console-input" class="form-control font-monospace"
                  autocomplete="off" spellcheck="false"
-                 placeholder="输入 PowerShell 命令，Enter 执行" autofocus>
+                 placeholder="<%= t('console.placeholder') %>" autofocus>
           <button type="submit" class="btn btn-primary px-3">
-            <i class="ti ti-player-play me-1"></i>执行
+            <i class="ti ti-player-play me-1"></i><%= t('console.run') %>
           </button>
         </form>
         <% } %>
@@ -146,7 +146,7 @@
 
     // 清屏
     document.getElementById('console-clear').addEventListener('click', function () {
-      output.innerHTML = '<div class="wra-term-block text-secondary">已清屏。</div>';
+      output.innerHTML = '<div class="wra-term-block text-secondary"><%= t("console.cleared") %></div>';
       input.focus();
     });
   })();

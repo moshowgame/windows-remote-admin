@@ -4,50 +4,53 @@
 const ps = require('../services/powershell');
 const audit = require('../hooks/audit');
 
-const quickCommands = [
-  {
-    name: '系统',
-    icon: 'ti-device-desktop',
-    items: [
-      'Get-ComputerInfo | Select-Object WindowsProductName, OsBuildNumber, OsArchitecture',
-      'systeminfo',
-      'Get-Date -Format "yyyy-MM-dd HH:mm:ss"',
-    ],
-  },
-  {
-    name: '进程',
-    icon: 'ti-list-details',
-    items: [
-      'Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Name, Id, WS',
-      'Get-Process | Where-Object { $_.CPU -gt 60 } | Select-Object Name, Id, CPU',
-    ],
-  },
-  {
-    name: '服务',
-    icon: 'ti-settings',
-    items: [
-      'Get-Service | Where-Object Status -eq "Running" | Select-Object -First 20 Name, DisplayName',
-      'Get-Service | Where-Object StartType -eq "Automatic" | Where-Object Status -ne "Running"',
-    ],
-  },
-  {
-    name: '网络',
-    icon: 'ti-network',
-    items: [
-      'ipconfig /all',
-      'Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort',
-      'Test-Connection -ComputerName localhost -Count 2',
-    ],
-  },
-  {
-    name: '磁盘',
-    icon: 'ti-database',
-    items: [
-      'Get-Volume | Format-Table DriveLetter, FileSystemLabel, Size, SizeRemaining',
-      'Get-PSDrive -PSProvider FileSystem',
-    ],
-  },
-];
+// 快捷命令分组：组名按请求语言渲染（PowerShell 命令本身不翻译）
+function getQuickCommands(t) {
+  return [
+    {
+      name: t('console.groupSystem'),
+      icon: 'ti-device-desktop',
+      items: [
+        'Get-ComputerInfo | Select-Object WindowsProductName, OsBuildNumber, OsArchitecture',
+        'systeminfo',
+        'Get-Date -Format "yyyy-MM-dd HH:mm:ss"',
+      ],
+    },
+    {
+      name: t('console.groupProcesses'),
+      icon: 'ti-list-details',
+      items: [
+        'Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Name, Id, WS',
+        'Get-Process | Where-Object { $_.CPU -gt 60 } | Select-Object Name, Id, CPU',
+      ],
+    },
+    {
+      name: t('console.groupServices'),
+      icon: 'ti-settings',
+      items: [
+        'Get-Service | Where-Object Status -eq "Running" | Select-Object -First 20 Name, DisplayName',
+        'Get-Service | Where-Object StartType -eq "Automatic" | Where-Object Status -ne "Running"',
+      ],
+    },
+    {
+      name: t('console.groupNetwork'),
+      icon: 'ti-network',
+      items: [
+        'ipconfig /all',
+        'Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort',
+        'Test-Connection -ComputerName localhost -Count 2',
+      ],
+    },
+    {
+      name: t('console.groupDisk'),
+      icon: 'ti-database',
+      items: [
+        'Get-Volume | Format-Table DriveLetter, FileSystemLabel, Size, SizeRemaining',
+        'Get-PSDrive -PSProvider FileSystem',
+      ],
+    },
+  ];
+}
 
 module.exports = async function consoleRoutes(app) {
   // 执行命令：返回终端输出片段（beforeend 追加）
@@ -57,7 +60,7 @@ module.exports = async function consoleRoutes(app) {
     if (!command) {
       return reply.view('partials/console-output', {
         command: '',
-        result: { ok: false, output: '命令不能为空', durationMs: 0, exitCode: -1, timedOut: false },
+        result: { ok: false, output: request.t('console.emptyCommand'), durationMs: 0, exitCode: -1, timedOut: false },
       });
     }
 
@@ -70,4 +73,4 @@ module.exports = async function consoleRoutes(app) {
   });
 };
 
-module.exports.quickCommands = quickCommands;
+module.exports.getQuickCommands = getQuickCommands;

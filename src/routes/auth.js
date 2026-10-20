@@ -14,14 +14,14 @@ function loginFail(request, reply, message) {
   if (request.headers['hx-request']) {
     return reply.view('partials/login-alert', { message });
   }
-  return reply.renderPage('pages/login', { title: '登录', error: message });
+  return reply.renderPage('pages/login', { title: request.t('login.title'), error: message });
 }
 
 module.exports = async function authRoutes(app) {
   // 登录页
   app.get('/login', { config: { public: true } }, async (request, reply) => {
     if (request.session.get('username')) return reply.redirect('/dashboard', 303);
-    return reply.renderPage('pages/login', { title: '登录' });
+    return reply.renderPage('pages/login', { title: request.t('login.title') });
   });
 
   // 登录提交：每 IP 每分钟 5 次

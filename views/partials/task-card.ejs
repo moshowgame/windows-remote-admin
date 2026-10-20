@@ -21,14 +21,14 @@
           <% if (task.status === 'error' && task.error) { %>
             <span class="text-danger"><%= task.error %></span>
           <% } else if (task.status === 'done' && task.resultPath) { %>
-            已生成：<span class="font-monospace"><%= task.resultPath %></span>
+            <%= t('files.generated') %><span class="font-monospace"><%= task.resultPath %></span>
           <% } else { %>
             <%= task.detail %>
           <% } %>
         </div>
       </div>
       <% if (task.status === 'done' || task.status === 'error') { %>
-        <button class="btn btn-sm btn-ghost-secondary" type="button" onclick="this.closest('.card').remove()" title="移除">
+        <button class="btn btn-sm btn-ghost-secondary" type="button" onclick="this.closest('.card').remove()" title="<%= t('files.dismiss') %>">
           <i class="ti ti-x"></i>
         </button>
       <% } %>

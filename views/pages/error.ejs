@@ -6,26 +6,26 @@
     <div class="display-1 fw-bold <%= code >= 500 ? 'text-danger' : 'text-secondary' %>"><%= code %></div>
     <div class="h2 mb-3 fw-normal">
       <% if (code === 404) { %>
-        <i class="ti ti-map-off me-1"></i>页面不存在
+        <i class="ti ti-map-off me-1"></i><%= t('error.notFound') %>
       <% } else if (code === 500) { %>
-        <i class="ti ti-alert-triangle me-1"></i>服务器开小差了
+        <i class="ti ti-alert-triangle me-1"></i><%= t('error.serverOops') %>
       <% } else if (code === 403) { %>
-        <i class="ti ti-shield-lock me-1"></i>访问被拒绝
+        <i class="ti ti-shield-lock me-1"></i><%= t('error.accessDenied') %>
       <% } else if (code === 429) { %>
-        <i class="ti ti-clock-pause me-1"></i>请求过于频繁
+        <i class="ti ti-clock-pause me-1"></i><%= t('error.tooManyRequests') %>
       <% } else if (code >= 500) { %>
-        <i class="ti ti-alert-triangle me-1"></i>服务异常
+        <i class="ti ti-alert-triangle me-1"></i><%= t('error.serviceError') %>
       <% } else { %>
-        <i class="ti ti-alert-circle me-1"></i>请求无法完成
+        <i class="ti ti-alert-circle me-1"></i><%= t('error.cannotComplete') %>
       <% } %>
     </div>
     <div class="text-secondary mb-4 <%= code === 500 || code === 403 ? 'd-none' : '' %>"><%= message %></div>
     <% if (code === 500 || code === 403) { %>
-      <div class="text-secondary mb-4">请联系管理员或稍后重试，详情可查看服务端日志。</div>
+      <div class="text-secondary mb-4"><%= t('error.contactAdmin') %></div>
     <% } %>
     <div class="d-flex gap-2 justify-content-center">
-      <a href="/dashboard" class="btn btn-primary"><i class="ti ti-home me-1"></i>返回首页</a>
-      <a href="/login" class="btn btn-outline-secondary"><i class="ti ti-refresh me-1"></i>重新登录</a>
+      <a href="/dashboard" class="btn btn-primary"><i class="ti ti-home me-1"></i><%= t('error.backHome') %></a>
+      <a href="/login" class="btn btn-outline-secondary"><i class="ti ti-refresh me-1"></i><%= t('error.relogin') %></a>
     </div>
     </div>
   </div>

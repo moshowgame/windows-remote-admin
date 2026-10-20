@@ -2,13 +2,13 @@
 <div class="card" id="log-card" data-file="<%= file || '' %>" data-keyword="<%= keyword || '' %>">
   <div class="card-header d-flex align-items-center">
     <h3 class="card-title text-truncate flex-grow-1" title="<%= file || '' %>">
-      <i class="ti ti-file-text me-1"></i><%= file || '未选择文件' %>
+      <i class="ti ti-file-text me-1"></i><%= file || t('logs.noFileSelected') %>
     </h3>
-    <% if (keyword) { %><span class="badge bg-yellow-lt ms-2 flex-shrink-0">高亮：<%= keyword %></span><% } %>
-    <span class="badge bg-secondary-lt ms-2 flex-shrink-0">尾部 500 行</span>
+    <% if (keyword) { %><span class="badge bg-yellow-lt ms-2 flex-shrink-0"><%= t('logs.highlightBadge') %><%= keyword %></span><% } %>
+    <span class="badge bg-secondary-lt ms-2 flex-shrink-0"><%= t('logs.tailLines') %></span>
   </div>
   <% if (!file) { %>
-    <div class="card-body text-secondary">从右侧选择日志文件查看内容。</div>
+    <div class="card-body text-secondary"><%= t('logs.pickFromRight') %></div>
   <% } else { %>
     <div class="card-body p-0">
       <div class="log-view" id="log-tail-box"
@@ -21,7 +21,7 @@
           <button id="log-history-btn" type="button" class="btn btn-sm btn-ghost-secondary"
                   hx-get="/logs/history?file=<%= encodeURIComponent(file) %>&keyword=<%= encodeURIComponent(keyword || '') %>&before=<%= before %>"
                   hx-target="#log-history-anchor" hx-swap="afterbegin">
-            <i class="ti ti-chevron-up me-1"></i>加载更早 500 行
+            <i class="ti ti-chevron-up me-1"></i><%= t('logs.loadEarlier') %>
           </button>
         </div>
         <% } %>

@@ -6,36 +6,36 @@
 <% } %>
 
 <div class="d-flex flex-wrap gap-2 align-items-center px-3 pt-3">
-  <span class="badge bg-secondary-lt">共 <%= stats.total %> 项</span>
-  <span class="badge bg-success-lt">运行中 <%= stats.running %></span>
-  <span class="badge bg-secondary-lt">已停止 <%= stats.stopped %></span>
-  <span class="badge bg-azure-lt">自动启动未运行 <%= stats.autoNotRunning %></span>
+  <span class="badge bg-secondary-lt"><%= t('services.statTotal').replace('{n}', stats.total) %></span>
+  <span class="badge bg-success-lt"><%= t('services.statRunning').replace('{n}', stats.running) %></span>
+  <span class="badge bg-secondary-lt"><%= t('services.statStopped').replace('{n}', stats.stopped) %></span>
+  <span class="badge bg-azure-lt"><%= t('services.statAutoNotRunning').replace('{n}', stats.autoNotRunning) %></span>
 </div>
 
 <div class="table-responsive">
   <table class="table table-hover table-vcenter card-table">
     <thead>
       <tr>
-        <th>服务</th>
-        <th style="width:9%">状态</th>
-        <th style="width:10%">启动类型</th>
-        <th style="width:8%">PID</th>
-        <th style="width:20%">登录账户</th>
+        <th><%= t('services.colService') %></th>
+        <th style="width:9%"><%= t('services.colState') %></th>
+        <th style="width:10%"><%= t('services.colStartMode') %></th>
+        <th style="width:8%"><%= t('services.colPid') %></th>
+        <th style="width:20%"><%= t('services.colAccount') %></th>
         <% if (role !== 'readonly') { %>
-        <th style="width:17%" class="text-end">操作</th>
+        <th style="width:17%" class="text-end"><%= t('services.colActions') %></th>
         <% } %>
       </tr>
     </thead>
     <tbody>
       <% if (!services.length) { %>
-      <tr><td colspan="6" class="text-center text-secondary py-4">没有匹配的服务</td></tr>
+      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('services.empty') %></td></tr>
       <% } %>
       <% services.forEach(function (s) { %>
       <%
         const running = s.State === 'Running';
         const stateCls = running ? 'bg-success-lt' : (s.State === 'Stopped' ? 'bg-secondary-lt' : 'bg-warning-lt');
         const modeShort = s.StartMode === 'Auto' ? 'auto' : (s.StartMode === 'Manual' ? 'manual' : 'disabled');
-        const modeInfo = { auto: ['自动', 'bg-azure-lt'], manual: ['手动', 'bg-secondary-lt'], disabled: ['已禁用', 'bg-red-lt'] }[modeShort];
+        const modeInfo = { auto: [t('services.modeAuto'), 'bg-azure-lt'], manual: [t('services.modeManual'), 'bg-secondary-lt'], disabled: [t('services.modeDisabled'), 'bg-red-lt'] }[modeShort];
       %>
       <tr>
         <td>
@@ -47,7 +47,7 @@
             </div>
           </div>
         </td>
-        <td><span class="badge <%= stateCls %>"><%= running ? '运行中' : s.State %></span></td>
+        <td><span class="badge <%= stateCls %>"><%= running ? t('services.stateRunning') : s.State %></span></td>
         <td><span class="badge <%= modeInfo[1] %>"><%= modeInfo[0] %></span></td>
         <td class="font-monospace"><%= s.ProcessId || '-' %></td>
         <td class="small text-secondary text-truncate font-monospace"><%= s.StartName || '-' %></td>
@@ -55,25 +55,25 @@
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group">
             <% if (!running) { %>
-            <button class="btn btn-outline-success" title="启动"
+            <button class="btn btn-outline-success" title="<%= t('services.actStart') %>"
                     hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
                     hx-vals='{"name":"<%= s.Name %>","action":"start","kw":"<%= kw %>"}'>
               <i class="ti ti-player-play"></i>
             </button>
             <% } else { %>
-            <button class="btn btn-outline-secondary" title="停止"
+            <button class="btn btn-outline-secondary" title="<%= t('services.actStop') %>"
                     hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
                     hx-vals='{"name":"<%= s.Name %>","action":"stop","kw":"<%= kw %>"}'>
               <i class="ti ti-player-stop"></i>
             </button>
-            <button class="btn btn-outline-azure" title="重启"
+            <button class="btn btn-outline-azure" title="<%= t('services.actRestart') %>"
                     hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
                     hx-vals='{"name":"<%= s.Name %>","action":"restart","kw":"<%= kw %>"}'>
               <i class="ti ti-refresh"></i>
             </button>
             <% } %>
             <div class="btn-group" role="group">
-              <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="启动类型">
+              <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="<%= t('services.actMode') %>">
                 <i class="ti ti-toggle-left-right"></i>
               </button>
               <div class="dropdown-menu dropdown-menu-end">
@@ -82,7 +82,7 @@
                         hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
                         hx-vals='{"name":"<%= s.Name %>","action":"mode","mode":"<%= m %>","kw":"<%= kw %>"}'>
                   <i class="ti <%= m === 'auto' ? 'ti-clock-bolt' : (m === 'manual' ? 'ti-hand-click' : 'ti-ban') %> me-1"></i>
-                  <%= m === 'auto' ? '自动' : (m === 'manual' ? '手动' : '已禁用') %>
+                  <%= m === 'auto' ? t('services.modeAuto') : (m === 'manual' ? t('services.modeManual') : t('services.modeDisabled')) %>
                   <% if (m === modeShort) { %><i class="ti ti-check ms-1"></i><% } %>
                 </button>
                 <% }); %>

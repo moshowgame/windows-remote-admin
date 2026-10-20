@@ -2,11 +2,11 @@
 <div class="card">
   <div class="card-header">
     <div class="d-flex flex-wrap align-items-center gap-2 w-100">
-      <button type="button" class="btn btn-sm" title="上级目录"
+      <button type="button" class="btn btn-sm" title="<%= t('files.parentTitle') %>"
         <% if (parent) { %>hx-post="/files/browse" hx-vals="<%= JSON.stringify({ path: parent, sort: sort, order: order }) %>" hx-swap="none"<% } else { %>disabled<% } %>>
-        <i class="ti ti-arrow-back-up me-1"></i>上级
+        <i class="ti ti-arrow-back-up me-1"></i><%= t('files.up') %>
       </button>
-      <nav class="flex-grow-1" style="min-width: 160px" aria-label="当前目录">
+      <nav class="flex-grow-1" style="min-width: 160px" aria-label="<%= t('files.currentDir') %>">
         <ol class="breadcrumb mb-0 flex-nowrap overflow-auto">
           <% for (let i = 0; i < crumbs.length; i++) { const c = crumbs[i]; const last = i === crumbs.length - 1; %>
             <li class="breadcrumb-item text-nowrap <%= last ? 'active' : '' %>">
@@ -22,8 +22,8 @@
       <div class="input-group input-group-sm w-auto" style="min-width: 260px">
         <span class="input-group-text"><i class="ti ti-folder"></i></span>
         <input id="current-path" name="path" class="form-control font-monospace" value="<%= dir %>"
-               maxlength="260" autocomplete="off" spellcheck="false" title="输入路径后回车跳转">
-        <button class="btn" type="button" title="刷新"
+               maxlength="260" autocomplete="off" spellcheck="false" title="<%= t('files.pathHint') %>">
+        <button class="btn" type="button" title="<%= t('files.refresh') %>"
                 hx-post="/files/browse" hx-include="#current-path"
                 hx-vals="<%= JSON.stringify({ sort: sort, order: order }) %>" hx-swap="none">
           <i class="ti ti-refresh"></i>
@@ -31,28 +31,28 @@
       </div>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2 w-100 mt-2">
-      <button id="btn-fav" type="button" class="btn btn-sm" title="收藏当前目录">
-        <i class="ti ti-star me-1"></i>收藏
+      <button id="btn-fav" type="button" class="btn btn-sm" title="<%= t('files.favCurTitle') %>">
+        <i class="ti ti-star me-1"></i><%= t('files.fav') %>
       </button>
       <% if (role !== 'readonly') { %>
       <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modal-mkdir">
-        <i class="ti ti-folder-plus me-1"></i>新建文件夹
+        <i class="ti ti-folder-plus me-1"></i><%= t('files.newFolder') %>
       </button>
       <form id="upload-form" hx-post="/files/upload" hx-encoding="multipart/form-data"
             hx-target="#upload-result-region" hx-swap="innerHTML">
         <input type="hidden" name="path" value="<%= dir %>">
         <input type="file" name="file" id="upload-input" multiple class="d-none">
-        <button type="button" class="btn btn-sm btn-primary" title="上传到当前目录"
+        <button type="button" class="btn btn-sm btn-primary" title="<%= t('files.uploadHere') %>"
                 onclick="document.getElementById('upload-input').click()">
-          <i class="ti ti-upload me-1"></i>上传
+          <i class="ti ti-upload me-1"></i><%= t('files.upload') %>
         </button>
       </form>
-      <button id="btn-compress-selected" type="button" class="btn btn-sm" disabled title="压缩勾选的条目">
-        <i class="ti ti-file-zip me-1"></i>压缩选中
+      <button id="btn-compress-selected" type="button" class="btn btn-sm" disabled title="<%= t('files.compressSelTitle') %>">
+        <i class="ti ti-file-zip me-1"></i><%= t('files.compressSelected') %>
       </button>
       <% } %>
-      <button id="btn-download-zip" type="button" class="btn btn-sm" disabled title="勾选项打包为 zip 下载">
-        <i class="ti ti-download me-1"></i>打包下载
+      <button id="btn-download-zip" type="button" class="btn btn-sm" disabled title="<%= t('files.zipDlTitle') %>">
+        <i class="ti ti-download me-1"></i><%= t('files.downloadZip') %>
       </button>
       <span id="selection-count" class="small text-secondary ms-auto"></span>
     </div>
@@ -68,25 +68,25 @@
           <th>
             <a href="#" class="text-reset text-decoration-none"
                hx-post="/files/browse" hx-include="#current-path"
-               hx-vals="<%= JSON.stringify({ sort: 'name', order: sort === 'name' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none">名称
+               hx-vals="<%= JSON.stringify({ sort: 'name', order: sort === 'name' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none"><%= t('files.colName') %>
               <% if (sort === 'name') { %><i class="ti ti-<%= order === 'asc' ? 'chevron-up' : 'chevron-down' %> ms-1"></i><% } %>
             </a>
           </th>
           <th>
             <a href="#" class="text-reset text-decoration-none"
                hx-post="/files/browse" hx-include="#current-path"
-               hx-vals="<%= JSON.stringify({ sort: 'size', order: sort === 'size' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none">大小
+               hx-vals="<%= JSON.stringify({ sort: 'size', order: sort === 'size' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none"><%= t('files.colSize') %>
               <% if (sort === 'size') { %><i class="ti ti-<%= order === 'asc' ? 'chevron-up' : 'chevron-down' %> ms-1"></i><% } %>
             </a>
           </th>
           <th>
             <a href="#" class="text-reset text-decoration-none"
                hx-post="/files/browse" hx-include="#current-path"
-               hx-vals="<%= JSON.stringify({ sort: 'mtime', order: sort === 'mtime' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none">修改时间
+               hx-vals="<%= JSON.stringify({ sort: 'mtime', order: sort === 'mtime' && order === 'asc' ? 'desc' : 'asc' }) %>" hx-swap="none"><%= t('files.colMtime') %>
               <% if (sort === 'mtime') { %><i class="ti ti-<%= order === 'asc' ? 'chevron-up' : 'chevron-down' %> ms-1"></i><% } %>
             </a>
           </th>
-          <th class="w-1">操作</th>
+          <th class="w-1"><%= t('files.colActions') %></th>
         </tr>
       </thead>
       <tbody id="file-body">
@@ -98,6 +98,6 @@
     <div class="progress">
       <div id="upload-progress" class="progress-bar" style="width: 0%"></div>
     </div>
-    <div class="small text-secondary mt-1" id="upload-progress-text">上传中…</div>
+    <div class="small text-secondary mt-1" id="upload-progress-text"><%= t('files.uploading') %></div>
   </div>
 </div>

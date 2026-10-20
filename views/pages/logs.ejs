@@ -3,9 +3,9 @@
 <div class="page-header d-print-none mb-3">
   <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title"><i class="ti ti-file-text me-2"></i>日志监控</h2>
+      <h2 class="page-title"><i class="ti ti-file-text me-2"></i><%= t('logs.title') %></h2>
     </div>
-    <div class="col-auto text-secondary small">SSE 实时跟踪 · 关键词高亮 · 关闭页面即断开</div>
+    <div class="col-auto text-secondary small"><%= t('logs.headerHint') %></div>
   </div>
 </div>
 
@@ -13,32 +13,32 @@
   <div class="col-lg-4 order-lg-2">
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-filter me-1"></i>日志文件</h3>
+        <h3 class="card-title"><i class="ti ti-filter me-1"></i><%= t('logs.filesCard') %></h3>
       </div>
       <div class="card-body pb-2">
         <form hx-get="/logs/files" hx-target="#log-file-list" hx-swap="innerHTML" class="mb-2">
           <input type="hidden" name="keyword" value="<%= keyword %>">
           <div class="mb-2">
-            <label class="form-label small mb-1">扫描目录</label>
+            <label class="form-label small mb-1"><%= t('logs.scanDir') %></label>
             <input name="dir" class="form-control form-control-sm font-monospace" value="<%= dir %>" spellcheck="false" autocomplete="off">
           </div>
           <div class="row g-2 mb-2">
             <div class="col-7">
-              <label class="form-label small mb-1">文件名匹配</label>
+              <label class="form-label small mb-1"><%= t('logs.fileNamePattern') %></label>
               <input name="pattern" class="form-control form-control-sm font-monospace" value="<%= pattern %>" placeholder="*.log*" spellcheck="false">
             </div>
             <div class="col-5">
-              <label class="form-label small mb-1">最近（天）</label>
+              <label class="form-label small mb-1"><%= t('logs.recentDays') %></label>
               <input name="days" type="number" min="1" max="365" class="form-control form-control-sm" value="<%= days %>">
             </div>
           </div>
           <button type="submit" class="btn btn-primary btn-sm w-100">
-            <i class="ti ti-search me-1"></i>扫描
+            <i class="ti ti-search me-1"></i><%= t('logs.scan') %>
           </button>
         </form>
         <div>
-          <label class="form-label small mb-1">关键词高亮</label>
-          <input id="log-keyword" class="form-control form-control-sm" value="<%= keyword %>" placeholder="输入关键词后回车刷新内容" autocomplete="off">
+          <label class="form-label small mb-1"><%= t('logs.keywordHighlight') %></label>
+          <input id="log-keyword" class="form-control form-control-sm" value="<%= keyword %>" placeholder="<%= t('logs.keywordPlaceholder') %>" autocomplete="off">
         </div>
       </div>
       <div id="log-file-list" class="card-body pt-0" style="max-height: 55vh; overflow-y: auto">
@@ -54,27 +54,27 @@
 
     <div class="card mt-3" id="grep-card">
       <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-text-search me-1"></i>Grep 搜索（全文件）</h3>
-        <span class="text-secondary small ms-2">不区分大小写 · 上下文组自动合并 · 结果可固定后继续查其他关键字</span>
+        <h3 class="card-title"><i class="ti ti-text-search me-1"></i><%= t('logs.grepTitle') %></h3>
+        <span class="text-secondary small ms-2"><%= t('logs.grepHint') %></span>
       </div>
       <div class="card-body">
         <form id="grep-form" autocomplete="off">
           <div class="row g-2 align-items-end">
             <div class="col-md-6 col-12">
-              <label class="form-label small mb-1">关键字</label>
-              <input id="grep-keyword" class="form-control form-control-sm font-monospace" placeholder="例如 error" spellcheck="false">
+              <label class="form-label small mb-1"><%= t('logs.keyword') %></label>
+              <input id="grep-keyword" class="form-control form-control-sm font-monospace" placeholder="<%= t('logs.keywordExample') %>" spellcheck="false">
             </div>
             <div class="col-md-2 col-4">
-              <label class="form-label small mb-1">前后各 N 行</label>
+              <label class="form-label small mb-1"><%= t('logs.contextLines') %></label>
               <input id="grep-context" type="number" min="0" max="20" value="5" class="form-control form-control-sm">
             </div>
             <div class="col-md-2 col-4">
-              <label class="form-label small mb-1">本批上限</label>
+              <label class="form-label small mb-1"><%= t('logs.batchLimit') %></label>
               <input id="grep-limit" type="number" min="1" max="200" value="50" class="form-control form-control-sm">
             </div>
             <div class="col-md-2 col-4">
               <button type="submit" class="btn btn-primary btn-sm w-100" id="grep-submit">
-                <i class="ti ti-search me-1"></i>搜索
+                <i class="ti ti-search me-1"></i><%= t('logs.search') %>
               </button>
             </div>
           </div>
@@ -110,7 +110,7 @@
         var d = document.createElement('div');
         if (seg.skip != null) {
           d.className = 'text-secondary text-center small my-1';
-          d.textContent = '··· 跳过 ' + seg.skip + ' 行 ···';
+          d.textContent = '<%= t("logs.skippedLines") %>'.replace('{n}', seg.skip);
           container.appendChild(d);
           return;
         }
@@ -130,9 +130,10 @@
     }
 
     function header(block) {
-      var st = block.done ? (block.endReached ? '已扫完全文件' : '可继续扫描') : '扫描中…';
-      return block.keyword + ' · 前后各 ' + block.context + ' 行 · 命中 ' + block.total +
-             ' · 已扫 ' + fmtMB(block.scanned) + ' · ' + st;
+      var st = block.done ? (block.endReached ? '<%= t("logs.grepDone") %>' : '<%= t("logs.grepCanContinue") %>') : '<%= t("logs.grepScanning") %>';
+      return block.keyword + ' · ' + '<%= t("logs.grepCtx") %>'.replace('{n}', block.context) +
+             ' · ' + '<%= t("logs.grepHits") %>'.replace('{n}', block.total) +
+             ' · ' + '<%= t("logs.grepScanned") %>'.replace('{n}', fmtMB(block.scanned)) + ' · ' + st;
     }
 
     function refreshHeader(block) {
@@ -149,8 +150,8 @@
         '<div class="card-header py-1 px-2 d-flex align-items-center">' +
         '  <i class="ti ti-text-search text-secondary me-1"></i>' +
         '  <span class="grep-meta small text-secondary text-truncate flex-grow-1"></span>' +
-        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-pin" title="固定该结果（新搜索不覆盖）"><i class="ti ti-pin"></i></button>' +
-        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-remove" title="移除"><i class="ti ti-x"></i></button>' +
+        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-pin" title="<%= t("logs.pinTitle") %>"><i class="ti ti-pin"></i></button>' +
+        '  <button type="button" class="btn btn-sm btn-ghost-secondary px-1 grep-remove" title="<%= t("logs.remove") %>"><i class="ti ti-x"></i></button>' +
         '</div>' +
         '<div class="card-body p-0"><div class="log-view grep-view"><div class="grep-body"></div></div></div>';
       el.dataset.id = id;
@@ -165,7 +166,7 @@
       var more = document.createElement('button');
       more.type = 'button';
       more.className = 'btn btn-sm btn-ghost-secondary d-none m-1 grep-more';
-      more.innerHTML = '<i class="ti ti-player-play me-1"></i>继续扫描';
+      more.innerHTML = '<i class="ti ti-player-play me-1"></i><%= t("logs.continueScan") %>';
       more.addEventListener('click', function () { scan(id); });
       el.querySelector('.card-header').appendChild(more);
       results.appendChild(el);
@@ -196,7 +197,7 @@
         .catch(function (err) {
           var d = document.createElement('div');
           d.className = 'text-danger small p-2';
-          d.textContent = 'Grep 搜索失败：' + err.message;
+          d.textContent = '<%= t("logs.grepFailed") %>'.replace('{n}', err.message);
           block.body.appendChild(d);
         })
         .finally(function () {
@@ -210,7 +211,7 @@
       e.preventDefault();
       var f = file();
       var keyword = document.getElementById('grep-keyword').value.trim();
-      if (!f) { results.innerHTML = '<div class="text-secondary small">请先在上方选择日志文件。</div>'; return; }
+      if (!f) { results.innerHTML = '<div class="text-secondary small"><%= t("logs.selectFileFirst") %></div>'; return; }
       if (!keyword) return;
       // 移除未固定的旧块（固定的保留，可对照多个关键字）
       Object.keys(blocks).forEach(function (id) {

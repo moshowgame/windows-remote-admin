@@ -34,7 +34,7 @@ module.exports = async function settingsRoutes(app) {
   // 设置页
   app.get('/settings', async (request, reply) => {
     return reply.renderPage('pages/settings', {
-      title: '设置',
+      title: request.t('settings.title'),
       active: 'settings',
       ...settingsCtx(app),
     });
@@ -46,28 +46,28 @@ module.exports = async function settingsRoutes(app) {
     const b = request.body || {};
     const labels = [].concat(b.label || []);
     const paths = [].concat(b.path || []);
-    if (labels.length !== paths.length) throw new PathError('表单数据不完整，请刷新页面后重试');
+    if (labels.length !== paths.length) throw new PathError(request.t('settings.formIncomplete'));
 
     const list = [];
     for (let i = 0; i < labels.length; i++) {
       const label = String(labels[i] || '').trim();
       const raw = String(paths[i] || '').trim();
       if (!label && !raw) continue; // 空行忽略
-      if (!label || !raw) throw new PathError(`第 ${i + 1} 行：名称与路径必须同时填写`);
+      if (!label || !raw) throw new PathError(request.t('settings.rowBothRequired').replace('{n}', i + 1));
       let resolved;
       try {
         resolved = path.resolve(raw);
       } catch {
-        throw new PathError(`第 ${i + 1} 行：路径格式不正确`);
+        throw new PathError(request.t('settings.rowBadPath').replace('{n}', i + 1));
       }
       list.push({ label, path: resolved });
     }
-    if (list.length > 20) throw new PathError('快速访问最多 20 条');
+    if (list.length > 20) throw new PathError(request.t('settings.qaMax20'));
 
     saveUserConfig({ quickAccess: list });
     audit(request, '修改设置', { type: 'quickAccess', count: list.length });
 
     // OOB 刷新设置主区（表单回到已保存状态）+ Toast
-    return reply.headers(toastHeader('设置已保存')).view('partials/settings-oob', settingsCtx(app));
+    return reply.headers(toastHeader(request.t('settings.savedToast'))).view('partials/settings-oob', settingsCtx(app));
   });
 };

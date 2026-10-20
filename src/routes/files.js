@@ -26,12 +26,12 @@ function defaultRoot(app) {
   return list.length > 0 ? path.resolve(list[0]) : DEFAULT_ROOT();
 }
 
-function sanitizeName(name) {
+function sanitizeName(name, t) {
   const n = String(name || '').trim();
-  if (!n) throw new PathError('名称不能为空');
-  if (n === '.' || n === '..') throw new PathError('名称不合法');
-  if (/[\\/:*?"<>|]/.test(n)) throw new PathError('名称不能包含 \\ / : * ? " < > | 字符');
-  if (n.length > 200) throw new PathError('名称过长（最多 200 字符）');
+  if (!n) throw new PathError(t('files.errNameEmpty'));
+  if (n === '.' || n === '..') throw new PathError(t('files.errNameInvalid'));
+  if (/[\\/:*?"<>|]/.test(n)) throw new PathError(t('files.errNameChars'));
+  if (n.length > 200) throw new PathError(t('files.errNameTooLong'));
   return n;
 }
 
@@ -41,7 +41,7 @@ async function browseCtx(app, request, q = {}) {
   const order = q.order === 'desc' ? 'desc' : 'asc';
   const dir = resolveUserPath(q.path, defaultRoot(app));
   const st = await fsp.stat(dir).catch(() => null);
-  if (!st || !st.isDirectory()) throw new PathError(`目录不存在：${dir}`);
+  if (!st || !st.isDirectory()) throw new PathError(request.t('files.errDirNotExist') + dir);
   const items = await filesystem.listDir(dir, sort, order);
 
   // 会话最近访问（去重截 20 条）
@@ -67,7 +67,7 @@ module.exports = async function filesRoutes(app) {
   app.get('/files', async (request, reply) => {
     const b = await browseCtx(app, request, request.query);
     return reply.renderPage('pages/files', {
-      title: '文件资源管理器',
+      title: request.t('files.title'),
       active: 'files',
       ...b,
       quickAccess: app.config.quickAccess || [],
@@ -88,13 +88,13 @@ module.exports = async function filesRoutes(app) {
   app.get('/files/preview', async (request, reply) => {
     const full = resolveUserPath(request.query.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st) throw new PathError('文件不存在或已被移动');
-    if (st.isDirectory()) throw new PathError('目录不支持预览');
+    if (!st) throw new PathError(request.t('files.errFileMissing'));
+    if (st.isDirectory()) throw new PathError(request.t('files.errDirPreview'));
     // 预览大小前置校验：文本 readMaxMb，其他类型 50MB 上限
     const readMax = (app.config.readMaxMb || 10) * 1024 * 1024;
     const otherMax = 50 * 1024 * 1024;
-    if (st.size > readMax) throw new PathError(`文件超过 ${app.config.readMaxMb || 10} MB，不支持在线预览`);
-    if (st.size > otherMax) throw new PathError(`文件过大（${sizeText(st.size)}），不支持在线预览`);
+    if (st.size > readMax) throw new PathError(request.t('files.errTooLargePreview').replace('{n}', app.config.readMaxMb || 10));
+    if (st.size > otherMax) throw new PathError(request.t('files.errTooBigPreview').replace('{s}', sizeText(st.size)));
     const kind = await filesystem.kindOf(full, st);
     const data = { name: path.basename(full), path: full, kind };
     if (kind === 'text') {
@@ -113,10 +113,10 @@ module.exports = async function filesRoutes(app) {
   app.get('/files/raw', async (request, reply) => {
     const full = resolveUserPath(request.query.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st || st.isDirectory()) throw new PathError('文件不存在');
+    if (!st || st.isDirectory()) throw new PathError(request.t('files.errNotExist'));
     const mime = filesystem.IMAGE_MIME[path.extname(full).toLowerCase()];
-    if (!mime) throw new PathError('仅支持图片直接输出');
-    if (st.size > 20 * 1024 * 1024) throw new PathError('图片过大，不支持在线预览');
+    if (!mime) throw new PathError(request.t('files.errNotImage'));
+    if (st.size > 20 * 1024 * 1024) throw new PathError(request.t('files.errImageTooLarge'));
     const name = encodeURIComponent(path.basename(full));
     reply.type(mime);
     reply.header('Content-Security-Policy', 'sandbox'); // 防 SVG 内嵌脚本
@@ -131,8 +131,8 @@ module.exports = async function filesRoutes(app) {
   app.get('/files/download', async (request, reply) => {
     const full = resolveUserPath(request.query.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st) throw new PathError('文件不存在');
-    if (st.isDirectory()) throw new PathError('目录请使用「打包下载」');
+    if (!st) throw new PathError(request.t('files.errNotExist'));
+    if (st.isDirectory()) throw new PathError(request.t('files.errDirDownload'));
     reply.type('application/octet-stream');
     reply.header(
       'Content-Disposition',
@@ -146,11 +146,11 @@ module.exports = async function filesRoutes(app) {
   app.get('/files/download-zip', async (request, reply) => {
     const raw = String(request.query.paths || '');
     const paths = raw.split('|').filter(Boolean).map((p) => resolveUserPath(p));
-    if (paths.length === 0) throw new PathError('请先勾选要打包的条目');
+    if (paths.length === 0) throw new PathError(request.t('files.errNoZipSelection'));
     const stats = [];
     for (const p of paths) {
       const st = await fsp.stat(p).catch(() => null);
-      if (!st) throw new PathError(`条目不存在或已变更：${path.basename(p)}`);
+      if (!st) throw new PathError(request.t('files.errEntryMissing') + path.basename(p));
       stats.push({ p, st });
     }
     const zipName = `download_${filesystem.stampNow()}.zip`;
@@ -172,7 +172,7 @@ module.exports = async function filesRoutes(app) {
   // ---- 上传（multipart 流式落盘）----
   app.post('/files/upload', async (request, reply) => {
     app.assertWritable(request);
-    if (!request.isMultipart()) throw new PathError('请使用文件上传表单');
+    if (!request.isMultipart()) throw new PathError(request.t('files.errNotMultipart'));
     let dir = null;
     const results = [];
     const stamp = filesystem.stampNow();
@@ -183,11 +183,11 @@ module.exports = async function filesRoutes(app) {
         if (part.fieldname === 'path' && !dir) {
           dir = resolveUserPath(part.value);
           const st = await fsp.stat(dir).catch(() => null);
-          if (!st || !st.isDirectory()) throw new PathError('上传目标不是有效目录');
+          if (!st || !st.isDirectory()) throw new PathError(request.t('files.errInvalidUploadDir'));
         }
         continue;
       }
-      if (!dir) throw new PathError('缺少上传目标目录');
+      if (!dir) throw new PathError(request.t('files.errMissingUploadDir'));
       const safeName = path.basename(String(part.filename || '')).replace(/[\\/:*?"<>|]/g, '_');
       if (!safeName) {
         part.file.resume();
@@ -202,19 +202,19 @@ module.exports = async function filesRoutes(app) {
         await pipeline(part.file, fs.createWriteStream(dest));
         if (part.file.truncated) {
           await fsp.rm(dest, { force: true }).catch(() => {});
-          results.push({ name: safeName, ok: false, note: `超过单文件上限 ${app.config.uploadMaxMb} MB` });
+          results.push({ name: safeName, ok: false, note: request.t('files.errFileTooLarge').replace('{n}', app.config.uploadMaxMb) });
         } else {
           const st = await fsp.stat(dest);
           results.push({ name: safeName, ok: true, sizeText: sizeText(st.size) });
         }
       } catch (e) {
         await fsp.rm(dest, { force: true }).catch(() => {});
-        results.push({ name: safeName, ok: false, note: `写入失败（${e.code || e.message}）` });
+        results.push({ name: safeName, ok: false, note: request.t('files.errWriteFailed').replace('{s}', e.code || e.message) });
       }
     }
 
-    if (!dir) throw new PathError('缺少上传目标目录');
-    if (results.length === 0) throw new PathError('未收到文件');
+    if (!dir) throw new PathError(request.t('files.errMissingUploadDir'));
+    if (results.length === 0) throw new PathError(request.t('files.errNoFiles'));
     const okCount = results.filter((r) => r.ok).length;
     audit(request, '上传文件', { dir, count: results.length, ok: okCount });
 
@@ -230,16 +230,16 @@ module.exports = async function filesRoutes(app) {
   // ---- 服务器直接打开（默认关闭，需 enableServerOpen）----
   app.post('/files/open', async (request, reply) => {
     app.assertWritable(request);
-    if (!app.config.enableServerOpen) throw new PathError('管理员未启用「服务器直接打开」功能');
+    if (!app.config.enableServerOpen) throw new PathError(request.t('files.errServerOpenDisabled'));
     const full = resolveUserPath(request.body && request.body.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st) throw new PathError('文件不存在');
-    if (st.isDirectory()) throw new PathError('仅支持打开文件');
+    if (!st) throw new PathError(request.t('files.errNotExist'));
+    if (st.isDirectory()) throw new PathError(request.t('files.errOnlyFilesOpen'));
     // 路径经环境变量传入，脚本内用 $env: 引用：值不会被 PowerShell 解析器求值，杜绝命令注入
     // fresh: true → 一次性进程：临时环境变量按调用生效，不会残留在长驻会话中
     await ps.execute('Start-Process -LiteralPath $env:WRA_OPEN_TARGET', { timeoutMs: 15000, fresh: true, env: { WRA_OPEN_TARGET: full } });
     audit(request, '服务器打开文件', { path: full });
-    return reply.headers(toastHeader('已发送打开指令', 'info')).send('');
+    return reply.headers(toastHeader(request.t('files.openSent'), 'info')).send('');
   });
 
   // ---- 解压（异步任务）----
@@ -248,12 +248,12 @@ module.exports = async function filesRoutes(app) {
     const full = resolveUserPath(request.body && request.body.path);
     const st = await fsp.stat(full).catch(() => null);
     if (!st || st.isDirectory() || path.extname(full).toLowerCase() !== '.zip') {
-      throw new PathError('请选择 .zip 压缩包进行解压');
+      throw new PathError(request.t('files.errNotZip'));
     }
     const t = archive.enqueue(
       request.session.get('username'),
       'extract',
-      `解压 ${path.basename(full)}`,
+      request.t('files.taskExtract').replace('{name}', path.basename(full)),
       (task) => archive.extractZip(full, task.id)
     );
     audit(request, '解压压缩包', { path: full });
@@ -265,14 +265,14 @@ module.exports = async function filesRoutes(app) {
     app.assertWritable(request);
     let paths = (request.body && request.body.paths) || [];
     if (!Array.isArray(paths)) paths = paths ? [paths] : [];
-    if (paths.length === 0) throw new PathError('请先勾选要压缩的条目');
-    if (paths.length > 100) throw new PathError('一次最多压缩 100 个条目');
+    if (paths.length === 0) throw new PathError(request.t('files.errNoCompressSelection'));
+    if (paths.length > 100) throw new PathError(request.t('files.errTooManyCompress'));
 
     const resolved = [];
     for (const p of paths) {
       const full = resolveUserPath(p);
       const st = await fsp.stat(full).catch(() => null);
-      if (!st) throw new PathError(`条目不存在：${path.basename(String(p))}`);
+      if (!st) throw new PathError(request.t('files.errItemMissing') + path.basename(String(p)));
       resolved.push({ full, st });
     }
     const first = resolved[0].full;
@@ -283,13 +283,13 @@ module.exports = async function filesRoutes(app) {
     // 目标不能位于任何待压缩目录内部（边读边写会出错）
     for (const { full, st } of resolved) {
       if (st.isDirectory() && destZip.toLowerCase().startsWith(full.toLowerCase() + path.sep)) {
-        throw new PathError('压缩目标不能位于待压缩目录内部');
+        throw new PathError(request.t('files.errCompressNested'));
       }
     }
     const t = archive.enqueue(
       request.session.get('username'),
       'compress',
-      `压缩 ${resolved.length} 项 → ${path.basename(destZip)}`,
+      request.t('files.taskCompress').replace('{n}', resolved.length).replace('{name}', path.basename(destZip)),
       (task) => archive.compressZip(resolved.map((r) => r.full), destZip, task.id)
     );
     audit(request, '压缩文件', { count: resolved.length, dest: destZip });
@@ -301,12 +301,12 @@ module.exports = async function filesRoutes(app) {
     app.assertWritable(request);
     const b = request.body || {};
     const dir = resolveUserPath(b.path);
-    const full = path.join(dir, sanitizeName(b.name));
-    if (fs.existsSync(full)) throw new PathError('同名文件或目录已存在');
+    const full = path.join(dir, sanitizeName(b.name, request.t));
+    if (fs.existsSync(full)) throw new PathError(request.t('files.errExists'));
     await fsp.mkdir(full);
     audit(request, '创建目录', { path: full });
     const ctx = await browseCtx(app, request, { path: dir, sort: b.sort, order: b.order });
-    return reply.headers(toastHeader('目录已创建')).view('partials/file-browse', ctx);
+    return reply.headers(toastHeader(request.t('files.dirCreated'))).view('partials/file-browse', ctx);
   });
 
   // ---- 重命名 ----
@@ -315,14 +315,14 @@ module.exports = async function filesRoutes(app) {
     const b = request.body || {};
     const full = resolveUserPath(b.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st) throw new PathError('原文件或目录不存在');
+    if (!st) throw new PathError(request.t('files.errSourceMissing'));
     const parent = path.dirname(full);
-    const target = path.join(parent, sanitizeName(b.name));
-    if (fs.existsSync(target)) throw new PathError('目标名称已存在');
+    const target = path.join(parent, sanitizeName(b.name, request.t));
+    if (fs.existsSync(target)) throw new PathError(request.t('files.errTargetExists'));
     await fsp.rename(full, target);
     audit(request, '重命名', { from: full, to: target });
     const ctx = await browseCtx(app, request, { path: parent, sort: b.sort, order: b.order });
-    return reply.headers(toastHeader('重命名成功')).view('partials/file-browse', ctx);
+    return reply.headers(toastHeader(request.t('files.renameDone'))).view('partials/file-browse', ctx);
   });
 
   // ---- 删除（目录需输名确认）----
@@ -331,17 +331,17 @@ module.exports = async function filesRoutes(app) {
     const b = request.body || {};
     const full = resolveUserPath(b.path);
     const st = await fsp.stat(full).catch(() => null);
-    if (!st) throw new PathError('文件或目录不存在');
+    if (!st) throw new PathError(request.t('files.errPathMissing'));
     if (st.isDirectory()) {
       const confirm = String(b.confirmName || '').trim();
-      if (confirm !== path.basename(full)) throw new PathError('确认名称与目录名不一致');
+      if (confirm !== path.basename(full)) throw new PathError(request.t('files.errConfirmMismatch'));
       await fsp.rm(full, { recursive: true, force: true });
     } else {
       await fsp.rm(full, { force: true });
     }
     audit(request, '删除', { path: full, isDir: st.isDirectory() });
     const ctx = await browseCtx(app, request, { path: path.dirname(full), sort: b.sort, order: b.order });
-    return reply.headers(toastHeader('已删除')).view('partials/file-browse', ctx);
+    return reply.headers(toastHeader(request.t('files.deleted'))).view('partials/file-browse', ctx);
   });
 
   // ---- 任务进度 SSE ----
@@ -359,7 +359,7 @@ module.exports = async function filesRoutes(app) {
     // SSE data 必须单行：渲染后压掉换行
     const send = async (tasks) => {
       try {
-        let html = await app.view('partials/task-list', { tasks, oob: false });
+        let html = await app.view('partials/task-list', { tasks, oob: false, t: request.t });
         html = html.replace(/\r?\n\s*/g, '');
         reply.raw.write(`event: task-progress\ndata: ${html}\n\n`);
       } catch {

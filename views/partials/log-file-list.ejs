@@ -1,6 +1,6 @@
 <%# 日志文件列表（locals: files, file, keyword, autoPick） %>
 <% if (!files || files.length === 0) { %>
-  <div class="text-secondary small py-3 text-center">未找到匹配的日志文件</div>
+  <div class="text-secondary small py-3 text-center"><%= t('logs.noMatchingFiles') %></div>
 <% } else { %>
   <div class="list-group list-group-flush">
     <% for (const f of files) { %>
