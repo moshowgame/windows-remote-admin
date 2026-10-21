@@ -6,10 +6,10 @@ title Windows Remote Admin
 
 echo [WRA] 正在启动 Windows Remote Admin ...
 
-rem ---- 1. Node.js 检测（版本需 >= 18）----
+rem ---- 1. Node.js 检测（版本需 >= 20，Fastify v5 官方支持线）----
 where node >nul 2>&1
 if errorlevel 1 (
-  echo [错误] 未检测到 Node.js，请先安装 Node.js 18 或更高版本：https://nodejs.org/
+  echo [错误] 未检测到 Node.js，请先安装 Node.js 20 或更高版本：https://nodejs.org/
   goto :fail
 )
 set NODE_MAJOR=
@@ -19,8 +19,8 @@ if not defined NODE_MAJOR (
   echo [错误] 无法识别 Node.js 版本，请重新安装 Node.js。
   goto :fail
 )
-if %NODE_MAJOR% LSS 18 (
-  echo [错误] Node.js 版本过低（检测到 v%NODE_MAJOR%），需要 18 及以上版本。
+if %NODE_MAJOR% LSS 20 (
+  echo [错误] Node.js 版本过低（检测到 v%NODE_MAJOR%），需要 20 及以上版本（Fastify v5 要求）。
   goto :fail
 )
 

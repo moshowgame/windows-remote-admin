@@ -21,7 +21,7 @@
 
 ## 快速开始
 
-1. 安装 [Node.js](https://nodejs.org/) 18 或更高版本（本机 20+ 最佳）
+1. 安装 [Node.js](https://nodejs.org/) **20 或更高版本**（Fastify v5 官方支持线，建议 LTS 22；`npm run dev` 热重载需 22+）
 2. 双击 `Run.cmd`（首次运行会自动安装依赖并复制静态资源）
 3. 浏览器访问 <http://127.0.0.1:12306>
 
