@@ -56,7 +56,7 @@
   });
 
   // 只读账号兜底拦截：即使 UI 未隐藏（缓存页面/新入口），写路由请求在前端直接取消并提示
-  var WRITE_ROUTES = /^\/(files\/(upload|open|extract|compress|mkdir|rename|delete)|console\/execute|services\/(action|batch-action)|editor\/save|settings\/quick-access|net\/kill)$/;
+  var WRITE_ROUTES = /^\/(files\/(upload|open|extract|compress|mkdir|rename|delete)|console\/execute|services\/(action|batch-action)|editor\/save|settings\/quick-access|net\/kill|users\/(action|resetpwd))$/;
   var WRA_ROLE = document.body.dataset.role || 'admin';
   document.body.addEventListener('htmx:beforeRequest', function (e) {
     if (WRA_ROLE !== 'readonly') return;

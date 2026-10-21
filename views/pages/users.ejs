@@ -1,0 +1,225 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle"><%= t('users.listSource') %></div>
+        <h2 class="page-title"><i class="ti ti-users-group me-1"></i><%= t('users.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('users.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-md-5 col-lg-4">
+            <div class="position-relative">
+              <input type="search" id="users-kw" name="kw" class="form-control form-control-sm ps-4"
+                     placeholder="<%= t('users.searchPlaceholder') %>" value="<%= kw %>" autocomplete="off"
+                     hx-get="/users/list" hx-target="#users-table-region" hx-swap="innerHTML"
+                     hx-trigger="input changed delay:400ms, search">
+              <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="users-table-region">
+        <%- include('../partials/users-list', { rows, total, msg, kw, role }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 解锁/禁用/启用确认框：预览将执行的命令，确认后才发请求 %>
+<div class="modal" id="user-confirm-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-alert-triangle text-danger me-1"></i><%= t('users.confirmTitle') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-secondary small mb-2" id="user-confirm-scope"></div>
+        <div class="fw-bold small mb-1"><%= t('users.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="user-confirm-cmd" style="white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="user-confirm-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-danger" id="user-confirm-ok"><%= t('common.confirm') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 密码重置框：输入新密码（两次一致）+ 命令预览（密码打码） %>
+<div class="modal" id="user-pwd-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-key me-1"></i><span id="user-pwd-title"></span></h5>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small mb-1"><%= t('users.pwdNew') %></label>
+          <input type="password" id="user-pwd-1" class="form-control form-control-sm" maxlength="127" autocomplete="new-password">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small mb-1"><%= t('users.pwdConfirm') %></label>
+          <input type="password" id="user-pwd-2" class="form-control form-control-sm" maxlength="127" autocomplete="new-password">
+        </div>
+        <div class="text-danger small mb-2" id="user-pwd-err" style="display:none"><%= t('users.pwdMismatch') %></div>
+        <div class="fw-bold small mb-1"><%= t('users.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="user-pwd-cmd" style="white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="user-pwd-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-azure" id="user-pwd-ok"><%= t('users.resetPwd') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    confirmTitle: '<%= t("users.confirmTitle") %>',
+    confirmScope: '<%= t("users.confirmScope") %>',
+    pwdTitle: '<%= t("users.pwdTitle") %>',
+    pwdMismatch: '<%= t("users.pwdMismatch") %>',
+    unlock: '<%= t("users.unlock") %>',
+    enable: '<%= t("users.enable") %>',
+    disable: '<%= t("users.disable") %>',
+    resetPwd: '<%= t("users.resetPwd") %>'
+  };
+  var CSRF = '<%= csrf %>';
+
+  function makeModal(id) {
+    var m = document.getElementById(id);
+    document.body.appendChild(m); // hoist 到 body，避免嵌套层级问题
+    var backdrop = null;
+    return {
+      el: m,
+      open: function () {
+        m.style.display = 'block';
+        m.classList.add('show');
+        backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+      },
+      close: function () {
+        m.style.display = 'none';
+        m.classList.remove('show');
+        if (backdrop) { backdrop.remove(); backdrop = null; }
+      },
+      isOpen: function () { return m.classList.contains('show'); }
+    };
+  }
+
+  var confirmModal = makeModal('user-confirm-modal');
+  var pwdModal = makeModal('user-pwd-modal');
+  var scopeEl = document.getElementById('user-confirm-scope');
+  var cmdEl = document.getElementById('user-confirm-cmd');
+  var pending = null; // { values, cmd }
+
+  // 简单单引号转义（名字含 ' 时展示层双写）
+  function q(s) { return String(s).replace(/'/g, "''"); }
+
+  function currentKw() {
+    var i = document.getElementById('users-kw');
+    return i ? i.value.trim() : '';
+  }
+
+  // ---- 解锁确认框 ----
+  var CMD_LABEL = { unlock: 'Unlock-LocalUser', enable: 'Enable-LocalUser' };
+
+  function openConfirm(name, action) {
+    pending = { values: { name: name, action: action, kw: currentKw() } };
+    scopeEl.textContent = T.confirmScope.replace('{n}', name);
+    cmdEl.textContent = CMD_LABEL[action] + " -Name '" + q(name) + "'";
+    confirmModal.open();
+  }
+
+  document.getElementById('user-confirm-ok').addEventListener('click', function () {
+    if (!pending) return confirmModal.close();
+    var p = pending;
+    confirmModal.close();
+    htmx.ajax('POST', '/users/action', {
+      target: '#users-table-region',
+      swap: 'innerHTML',
+      values: p.values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+  document.getElementById('user-confirm-cancel').addEventListener('click', confirmModal.close);
+  confirmModal.el.addEventListener('click', function (e) { if (e.target === confirmModal.el) confirmModal.close(); });
+
+  // ---- 密码重置框 ----
+  var pwdTarget = '';
+  var pwd1 = document.getElementById('user-pwd-1');
+  var pwd2 = document.getElementById('user-pwd-2');
+  var pwdErr = document.getElementById('user-pwd-err');
+  var pwdCmd = document.getElementById('user-pwd-cmd');
+
+  function openPwd(name) {
+    pwdTarget = name;
+    pwd1.value = '';
+    pwd2.value = '';
+    pwdErr.style.display = 'none';
+    document.getElementById('user-pwd-title').textContent = T.pwdTitle.replace('{n}', name);
+    pwdCmd.textContent = "net user '" + q(name) + "' ******";
+    pwdModal.open();
+    pwd1.focus();
+  }
+
+  document.getElementById('user-pwd-ok').addEventListener('click', function () {
+    if (pwd1.value !== pwd2.value || !pwd1.value) {
+      pwdErr.style.display = 'block';
+      return;
+    }
+    pwdErr.style.display = 'none';
+    pwdModal.close();
+    htmx.ajax('POST', '/users/resetpwd', {
+      target: '#users-table-region',
+      swap: 'innerHTML',
+      values: { name: pwdTarget, password: pwd1.value, password2: pwd2.value, kw: currentKw() },
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+  document.getElementById('user-pwd-cancel').addEventListener('click', pwdModal.close);
+  pwdModal.el.addEventListener('click', function (e) { if (e.target === pwdModal.el) pwdModal.close(); });
+  [pwd1, pwd2].forEach(function (i) {
+    i.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('user-pwd-ok').click(); } });
+  });
+
+  // ESC 关闭
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (confirmModal.isOpen()) confirmModal.close();
+      if (pwdModal.isOpen()) pwdModal.close();
+    }
+  });
+
+  // 操作按钮（事件委托，partial 刷新后依然有效）
+  document.body.addEventListener('click', function (e) {
+    var act = e.target.closest ? e.target.closest('.user-act') : null;
+    if (act) {
+      e.preventDefault();
+      var name = act.dataset.name || '';
+      if (name && act.dataset.action) openConfirm(name, act.dataset.action);
+      return;
+    }
+    var pwdBtn = e.target.closest ? e.target.closest('.user-pwd') : null;
+    if (pwdBtn) {
+      e.preventDefault();
+      if (pwdBtn.dataset.name) openPwd(pwdBtn.dataset.name);
+    }
+  });
+})();
+</script>
+
+<%- include('../layouts/layout-bottom') %>
