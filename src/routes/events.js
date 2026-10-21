@@ -46,6 +46,22 @@ function matchKw(row, kw) {
   return hay.includes(kw);
 }
 
+// 屏蔽关键字：解析逗号分隔串（小写、去空、限量），任一命中即排除该行
+const EXCLUDE_MAX = 20;
+function parseExclude(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, EXCLUDE_MAX);
+}
+
+function matchExclude(row, exclude) {
+  if (!exclude || !exclude.length) return false;
+  const hay = `${row.p || ''} ${row.i} ${row.m || ''}`.toLowerCase();
+  return exclude.some((x) => hay.includes(x));
+}
+
 module.exports = async function eventsRoutes(app) {
   const defaultRange = () => {
     const pad = (n) => String(n).padStart(2, '0');
@@ -66,11 +82,14 @@ module.exports = async function eventsRoutes(app) {
       throw Object.assign(new Error(t('events.dateInvalid')), { statusCode: 400 });
     }
     const kw = String(query.kw || '').trim().slice(0, 100).toLowerCase();
-    return { log, level: lv, start, end, kw };
+    const exclude = parseExclude(query.exclude);
+    return { log, level: lv, start, end, kw, exclude };
   };
 
+  const filterRows = (result, params) => result.rows.filter((r) => matchKw(r, params.kw) && !matchExclude(r, params.exclude));
+
   const renderList = (reply, result, params, msg) => {
-    const rows = result.rows.filter((r) => matchKw(r, params.kw));
+    const rows = filterRows(result, params);
     return reply.view('partials/events-list', {
       rows, total: result.total, msg, maxEvents: MAX_EVENTS,
     });
@@ -84,7 +103,7 @@ module.exports = async function eventsRoutes(app) {
       title: request.t('events.title'),
       active: 'events',
       params,
-      rows: result.rows.filter((r) => matchKw(r, params.kw)),
+      rows: filterRows(result, params),
       total: result.total,
       msg: null,
       maxEvents: MAX_EVENTS,

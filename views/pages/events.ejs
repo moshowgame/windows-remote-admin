@@ -20,7 +20,7 @@
           <div class="col-auto">
             <select id="ev-log" name="log" class="form-select form-select-sm" autocomplete="off"
                     hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
-                    hx-include="#ev-level,#ev-start,#ev-end,#ev-kw" hx-trigger="change">
+                    hx-include="#ev-level,#ev-start,#ev-end,#ev-kw,#ev-exclude" hx-trigger="change">
               <option value="System" <%= params.log === 'System' ? 'selected' : '' %>><%= t('events.srcSystem') %></option>
               <option value="Application" <%= params.log === 'Application' ? 'selected' : '' %>><%= t('events.srcApplication') %></option>
               <option value="Security" <%= params.log === 'Security' ? 'selected' : '' %>><%= t('events.srcSecurity') %></option>
@@ -29,7 +29,7 @@
           <div class="col-auto">
             <select id="ev-level" name="level" class="form-select form-select-sm" autocomplete="off"
                     hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
-                    hx-include="#ev-log,#ev-start,#ev-end,#ev-kw" hx-trigger="change">
+                    hx-include="#ev-log,#ev-start,#ev-end,#ev-kw,#ev-exclude" hx-trigger="change">
               <% const lvSel = params.level.join(','); %>
               <option value="1,2,3,4,5" <%= lvSel === '1,2,3,4,5' ? 'selected' : '' %>><%= t('events.lvlAll') %></option>
               <option value="1,2" <%= lvSel === '1,2' ? 'selected' : '' %>><%= t('events.lvlCriticalError') %></option>
@@ -41,20 +41,28 @@
           <div class="col-auto">
             <input type="datetime-local" id="ev-start" name="start" class="form-control form-control-sm" value="<%= params.start %>"
                    hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
-                   hx-include="#ev-log,#ev-level,#ev-end,#ev-kw" hx-trigger="change">
+                   hx-include="#ev-log,#ev-level,#ev-end,#ev-kw,#ev-exclude" hx-trigger="change">
           </div>
           <div class="col-auto">
             <input type="datetime-local" id="ev-end" name="end" class="form-control form-control-sm" value="<%= params.end %>"
                    hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
-                   hx-include="#ev-log,#ev-level,#ev-start,#ev-kw" hx-trigger="change">
+                   hx-include="#ev-log,#ev-level,#ev-start,#ev-kw,#ev-exclude" hx-trigger="change">
           </div>
           <div class="col-md position-relative">
             <input type="search" id="ev-kw" name="kw" class="form-control form-control-sm ps-4"
                    placeholder="<%= t('events.kwPlaceholder') %>" value="<%= params.kw ? params.kw.replace(/"/g, '') : '' %>" autocomplete="off"
                    hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
-                   hx-include="#ev-log,#ev-level,#ev-start,#ev-end"
+                   hx-include="#ev-log,#ev-level,#ev-start,#ev-end,#ev-exclude"
                    hx-trigger="input changed delay:500ms, search">
             <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+          </div>
+          <div class="col-md position-relative">
+            <input type="text" id="ev-exclude" name="exclude" class="form-control form-control-sm ps-4"
+                   placeholder="<%= t('events.excludePlaceholder') %>" value="<%= params.exclude ? params.exclude.join(',') : '' %>" autocomplete="off"
+                   hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                   hx-include="#ev-log,#ev-level,#ev-start,#ev-end,#ev-kw"
+                   hx-trigger="input changed delay:500ms, search">
+            <i class="ti ti-eye-off position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
           </div>
         </div>
       </div>
