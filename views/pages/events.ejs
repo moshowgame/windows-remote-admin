@@ -1,0 +1,68 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Get-WinEvent (System / Application / Security)</div>
+        <h2 class="page-title"><i class="ti ti-list-details me-1"></i><%= t('events.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('events.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-auto">
+            <select id="ev-log" name="log" class="form-select form-select-sm" autocomplete="off"
+                    hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                    hx-include="#ev-level,#ev-start,#ev-end,#ev-kw" hx-trigger="change">
+              <option value="System" <%= params.log === 'System' ? 'selected' : '' %>><%= t('events.srcSystem') %></option>
+              <option value="Application" <%= params.log === 'Application' ? 'selected' : '' %>><%= t('events.srcApplication') %></option>
+              <option value="Security" <%= params.log === 'Security' ? 'selected' : '' %>><%= t('events.srcSecurity') %></option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <select id="ev-level" name="level" class="form-select form-select-sm" autocomplete="off"
+                    hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                    hx-include="#ev-log,#ev-start,#ev-end,#ev-kw" hx-trigger="change">
+              <% const lvSel = params.level.join(','); %>
+              <option value="1,2,3,4,5" <%= lvSel === '1,2,3,4,5' ? 'selected' : '' %>><%= t('events.lvlAll') %></option>
+              <option value="1,2" <%= lvSel === '1,2' ? 'selected' : '' %>><%= t('events.lvlCriticalError') %></option>
+              <option value="2" <%= lvSel === '2' ? 'selected' : '' %>><%= t('events.lvlError') %></option>
+              <option value="3" <%= lvSel === '3' ? 'selected' : '' %>><%= t('events.lvlWarning') %></option>
+              <option value="4" <%= lvSel === '4' ? 'selected' : '' %>><%= t('events.lvlInfo') %></option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <input type="datetime-local" id="ev-start" name="start" class="form-control form-control-sm" value="<%= params.start %>"
+                   hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                   hx-include="#ev-log,#ev-level,#ev-end,#ev-kw" hx-trigger="change">
+          </div>
+          <div class="col-auto">
+            <input type="datetime-local" id="ev-end" name="end" class="form-control form-control-sm" value="<%= params.end %>"
+                   hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                   hx-include="#ev-log,#ev-level,#ev-start,#ev-kw" hx-trigger="change">
+          </div>
+          <div class="col-md position-relative">
+            <input type="search" id="ev-kw" name="kw" class="form-control form-control-sm ps-4"
+                   placeholder="<%= t('events.kwPlaceholder') %>" value="<%= params.kw ? params.kw.replace(/"/g, '') : '' %>" autocomplete="off"
+                   hx-get="/events/list" hx-target="#events-table-region" hx-swap="innerHTML"
+                   hx-include="#ev-log,#ev-level,#ev-start,#ev-end"
+                   hx-trigger="input changed delay:500ms, search">
+            <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+          </div>
+        </div>
+      </div>
+      <div id="events-table-region">
+        <%- include('../partials/events-list', { rows, total, msg, maxEvents }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/layout-bottom') %>
