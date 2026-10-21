@@ -38,4 +38,160 @@
   </div>
 </div>
 
+<%# 服务操作确认框：显示将执行的具体命令（单操作/批量共用），确认后才发请求 %>
+<div class="modal" id="svc-confirm-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-alert-triangle text-warning me-1"></i><%= t('services.confirmTitle') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-secondary small mb-2" id="svc-confirm-scope"></div>
+        <div class="fw-bold small mb-1"><%= t('services.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="svc-confirm-cmd" style="max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="svc-confirm-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-primary" id="svc-confirm-ok"><%= t('common.confirm') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    scope: '<%= t("services.confirmScope") %>',
+    more: '<%= t("services.cmdMore") %>',
+    sel: '<%= t("services.selectHint") %>'
+  };
+  var CSRF = '<%= csrf %>';
+  var modal = document.getElementById('svc-confirm-modal');
+  var scopeEl = document.getElementById('svc-confirm-scope');
+  var cmdEl = document.getElementById('svc-confirm-cmd');
+  var okBtn = document.getElementById('svc-confirm-ok');
+  var cancelBtn = document.getElementById('svc-confirm-cancel');
+  var backdrop = null;
+  var pending = null; // { url, values, danger }
+
+  document.body.appendChild(modal); // hoist 到 body，避免嵌套层级问题
+
+  // 展示用命令（实际执行仍走 env 注入，绝不拼接）
+  function buildCmd(action, mode, name) {
+    var n = String(name).replace(/'/g, "''");
+    if (action === 'start') return "Start-Service -Name '" + n + "'";
+    if (action === 'stop') return "Stop-Service -Name '" + n + "' -Force";
+    if (action === 'restart') return "Restart-Service -Name '" + n + "' -Force";
+    if (action === 'disable') return "Set-Service -Name '" + n + "' -StartupType Disabled";
+    if (action === 'mode') return "Set-Service -Name '" + n + "' -StartupType " + ({ auto: 'Automatic', manual: 'Manual', disabled: 'Disabled' }[mode] || mode);
+    return '';
+  }
+
+  function currentKw() {
+    var i = document.getElementById('svc-kw');
+    return i ? i.value.trim() : '';
+  }
+
+  function openConfirm(url, values, names, action, mode) {
+    pending = { url: url, values: values };
+    scopeEl.textContent = T.scope.replace('{n}', String(names.length));
+    var lines = names.map(function (nm) { return buildCmd(action, mode, nm); }).filter(Boolean);
+    var shown = lines.slice(0, 6).join('\n');
+    if (lines.length > 6) shown += '\n' + T.more.replace('{n}', String(lines.length));
+    cmdEl.textContent = shown;
+    okBtn.className = 'btn ' + ((action === 'stop' || action === 'disable') ? 'btn-danger' : 'btn-primary');
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade show';
+    document.body.appendChild(backdrop);
+  }
+
+  function closeConfirm() {
+    pending = null;
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+  }
+
+  okBtn.addEventListener('click', function () {
+    if (!pending) return closeConfirm();
+    var p = pending;
+    closeConfirm();
+    htmx.ajax('POST', p.url, {
+      target: '#svc-table-region',
+      swap: 'innerHTML',
+      values: p.values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+  cancelBtn.addEventListener('click', closeConfirm);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeConfirm(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('show')) closeConfirm();
+  });
+
+  // ---- 批量选择状态 ----
+  function syncBatch() {
+    var bar = document.getElementById('svc-batch-bar');
+    if (!bar) return;
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.svc-sel'));
+    var checked = boxes.filter(function (b) { return b.checked; });
+    var badge = bar.querySelector('.badge');
+    if (badge) badge.textContent = T.sel.replace('{n}', String(checked.length));
+    var over = checked.length > 20;
+    bar.querySelectorAll('[data-batch]').forEach(function (btn) {
+      btn.disabled = !checked.length || over;
+    });
+    var all = document.getElementById('svc-sel-all');
+    if (all) all.checked = boxes.length > 0 && checked.length === boxes.length;
+  }
+
+  document.body.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && t.id === 'svc-sel-all') {
+      document.querySelectorAll('.svc-sel').forEach(function (b) { b.checked = t.checked; });
+      syncBatch();
+    } else if (t && t.classList && t.classList.contains('svc-sel')) {
+      syncBatch();
+    }
+  });
+
+  // 列表刷新后重置选择状态
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail && e.detail.target && e.detail.target.id === 'svc-table-region') syncBatch();
+  });
+
+  // ---- 单操作按钮（确认后执行）----
+  document.body.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.svc-act') : null;
+    if (btn) {
+      e.preventDefault();
+      var action = btn.dataset.action;
+      var mode = btn.dataset.mode || '';
+      var name = btn.dataset.name || '';
+      if (!name) return;
+      var values = { name: name, action: action, kw: currentKw() };
+      if (action === 'mode') values.mode = mode;
+      openConfirm('/services/action', values, [name], action, mode);
+      return;
+    }
+    var batch = e.target.closest ? e.target.closest('[data-batch]') : null;
+    if (batch && !batch.disabled) {
+      e.preventDefault();
+      var names = Array.prototype.map.call(
+        document.querySelectorAll('.svc-sel:checked'),
+        function (b) { return b.dataset.name; }
+      );
+      if (!names.length) return;
+      var act = batch.dataset.batch;
+      var url = '/services/batch-action';
+      var cmdAction = act === 'disable' ? 'disable' : act;
+      openConfirm(url, { names: names.join(','), action: cmdAction, kw: currentKw() }, names, cmdAction, '');
+    }
+  });
+})();
+</script>
+
 <%- include('../layouts/layout-bottom') %>

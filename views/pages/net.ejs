@@ -1,0 +1,145 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle"><%= t('net.listSource') %></div>
+        <h2 class="page-title"><i class="ti ti-network me-1"></i><%= t('net.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('net.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-md-5 col-lg-4">
+            <div class="position-relative">
+              <input type="search" id="net-kw" name="kw" class="form-control form-control-sm ps-4"
+                     placeholder="<%= t('net.searchPlaceholder') %>" value="<%= kw %>" autocomplete="off"
+                     hx-get="/net/list" hx-target="#net-table-region" hx-swap="innerHTML"
+                     hx-include="#net-state"
+                     hx-trigger="input changed delay:400ms, search">
+              <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+            </div>
+          </div>
+          <div class="col-auto">
+            <select id="net-state" name="state" class="form-select form-select-sm" autocomplete="off"
+                    hx-get="/net/list" hx-target="#net-table-region" hx-swap="innerHTML"
+                    hx-include="#net-kw" hx-trigger="change">
+              <option value="listen" <%= state === 'listen' ? 'selected' : '' %>><%= t('net.filterListen') %></option>
+              <option value="established" <%= state === 'established' ? 'selected' : '' %>><%= t('net.filterEstablished') %></option>
+              <option value="other" <%= state === 'other' ? 'selected' : '' %>><%= t('net.filterOther') %></option>
+              <option value="all" <%= state === 'all' ? 'selected' : '' %>><%= t('net.filterAll') %></option>
+            </select>
+          </div>
+          <div class="col text-md-end small text-secondary">
+            <%= t('net.listSource') %>
+          </div>
+        </div>
+      </div>
+      <div id="net-table-region">
+        <%- include('../partials/net-list', { rows, kw, state, stats, msg, truncated }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 结束进程确认框：预览将执行的命令，确认后才发请求 %>
+<div class="modal" id="net-confirm-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-alert-triangle text-danger me-1"></i><%= t('net.kill') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-secondary small mb-2" id="net-confirm-scope"></div>
+        <div class="fw-bold small mb-1"><%= t('net.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="net-confirm-cmd" style="white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="net-confirm-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-danger" id="net-confirm-ok"><%= t('common.confirm') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    scope: '<%= t("net.killConfirmScope") %>'
+  };
+  var CSRF = '<%= csrf %>';
+  var modal = document.getElementById('net-confirm-modal');
+  var scopeEl = document.getElementById('net-confirm-scope');
+  var cmdEl = document.getElementById('net-confirm-cmd');
+  var okBtn = document.getElementById('net-confirm-ok');
+  var cancelBtn = document.getElementById('net-confirm-cancel');
+  var backdrop = null;
+  var pending = null; // { values }
+
+  document.body.appendChild(modal); // hoist 到 body，避免嵌套层级问题
+
+  function currentKw() {
+    var i = document.getElementById('net-kw');
+    return i ? i.value.trim() : '';
+  }
+  function currentState() {
+    var s = document.getElementById('net-state');
+    return s ? s.value : 'listen';
+  }
+
+  function openConfirm(pid, pname) {
+    pending = { values: { pid: pid, pname: pname, kw: currentKw(), state: currentState() } };
+    scopeEl.textContent = T.scope.replace('{n}', pid).replace('{p}', pname || '-');
+    cmdEl.textContent = "Stop-Process -Id '" + pid + "' -Force";
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade show';
+    document.body.appendChild(backdrop);
+  }
+
+  function closeConfirm() {
+    pending = null;
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+  }
+
+  okBtn.addEventListener('click', function () {
+    if (!pending) return closeConfirm();
+    var p = pending;
+    closeConfirm();
+    htmx.ajax('POST', '/net/kill', {
+      target: '#net-table-region',
+      swap: 'innerHTML',
+      values: p.values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+  cancelBtn.addEventListener('click', closeConfirm);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeConfirm(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('show')) closeConfirm();
+  });
+
+  // 结束进程按钮（事件委托，partial 刷新后依然有效）
+  document.body.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.net-kill') : null;
+    if (!btn) return;
+    e.preventDefault();
+    var pid = btn.dataset.pid || '';
+    if (!pid) return;
+    openConfirm(pid, btn.dataset.pname || '');
+  });
+})();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

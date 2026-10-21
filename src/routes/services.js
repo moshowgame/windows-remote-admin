@@ -99,4 +99,65 @@ module.exports = async function servicesRoutes(app) {
     const role = request.session.get('role') || 'admin';
     return renderList(reply, services, kw, ok ? null : request.t('services.actionFailed').replace('{n}', String(r.output || '').slice(0, 120)), role);
   });
+
+  // 批量操作：start / stop / restart / disable（逐个执行，每个服务独立审计）
+  app.post('/services/batch-action', async (request, reply) => {
+    app.assertWritable(request);
+    const body = request.body || {};
+    const action = String(body.action || '');
+    const names = String(body.names || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!names.length || names.length > 20) {
+      throw Object.assign(new Error(request.t('services.batchInvalid')), { statusCode: 400 });
+    }
+    if (names.some((n) => !NAME_RE.test(n))) {
+      throw Object.assign(new Error(request.t('services.invalidName')), { statusCode: 400 });
+    }
+    // 批量「禁用」映射为 Set-Service StartupType Disabled；其余直接对应
+    const mode = action === 'disable' ? 'Disabled' : null;
+    const realAction = action === 'disable' ? 'mode' : action;
+    if (!['start', 'stop', 'restart', 'mode'].includes(realAction) || (realAction === 'mode' && mode !== 'Disabled')) {
+      throw Object.assign(new Error(request.t('services.unknownAction')), { statusCode: 400 });
+    }
+
+    const results = [];
+    for (const name of names) {
+      let cmd;
+      const env = { WRA_SVC_NAME: name };
+      if (realAction === 'start') cmd = 'Start-Service -Name $env:WRA_SVC_NAME -ErrorAction Stop';
+      else if (realAction === 'stop') cmd = 'Stop-Service -Name $env:WRA_SVC_NAME -Force -ErrorAction Stop';
+      else if (realAction === 'restart') cmd = 'Restart-Service -Name $env:WRA_SVC_NAME -Force -ErrorAction Stop';
+      else {
+        env.WRA_SVC_MODE = mode;
+        cmd = 'Set-Service -Name $env:WRA_SVC_NAME -StartupType $env:WRA_SVC_MODE -ErrorAction Stop';
+      }
+      let r;
+      try {
+        r = await ps.execute(cmd, { timeoutMs: 20000, fresh: true, env });
+      } catch (err) {
+        r = { ok: false, output: String(err && err.message || err) };
+      }
+      const ok = !!r.ok;
+      results.push({ name, ok, error: ok ? null : String(r.output || '').slice(0, 120) });
+      audit(request, '服务管理批量操作', { name, action: realAction, mode: realAction === 'mode' ? mode : null, ok, batch: true, total: names.length });
+    }
+
+    const okCount = results.filter((x) => x.ok).length;
+    const failed = results.filter((x) => !x.ok);
+    const msg = failed.length
+      ? request.t('services.batchDone').replace('{ok}', String(okCount)).replace('{fail}', String(failed.length))
+        + ' | ' + failed.slice(0, 5).map((f) => `${f.name}: ${f.error || ''}`).join(' | ')
+      : null;
+
+    const services = await listServices(app.config.psTimeoutMs, request.t);
+    const kw = String(body.kw || '').trim();
+    const role = request.session.get('role') || 'admin';
+    const toastMsg = 'enc:' + encodeURIComponent(
+      request.t('services.batchDone').replace('{ok}', String(okCount)).replace('{fail}', String(failed.length))
+    );
+    reply.header('HX-Trigger', JSON.stringify({ toast: { message: toastMsg, type: failed.length ? 'warning' : 'success' } }));
+    return renderList(reply, services, kw, msg, role);
+  });
 };

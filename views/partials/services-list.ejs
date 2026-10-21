@@ -12,10 +12,31 @@
   <span class="badge bg-azure-lt"><%= t('services.statAutoNotRunning').replace('{n}', stats.autoNotRunning) %></span>
 </div>
 
+<% if (role !== 'readonly') { %>
+<div class="d-flex flex-wrap gap-2 align-items-center px-3 pt-2" id="svc-batch-bar">
+  <span class="badge bg-blue-lt"><%= t('services.selectHint').replace('{n}', '0') %></span>
+  <button type="button" class="btn btn-sm btn-outline-success" data-batch="start" disabled>
+    <i class="ti ti-player-play me-1"></i><%= t('services.batchStart') %>
+  </button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" data-batch="stop" disabled>
+    <i class="ti ti-player-stop me-1"></i><%= t('services.batchStop') %>
+  </button>
+  <button type="button" class="btn btn-sm btn-outline-azure" data-batch="restart" disabled>
+    <i class="ti ti-refresh me-1"></i><%= t('services.batchRestart') %>
+  </button>
+  <button type="button" class="btn btn-sm btn-outline-danger" data-batch="disable" disabled>
+    <i class="ti ti-ban me-1"></i><%= t('services.batchDisable') %>
+  </button>
+</div>
+<% } %>
+
 <div class="table-responsive">
   <table class="table table-hover table-vcenter card-table">
     <thead>
       <tr>
+        <% if (role !== 'readonly') { %>
+        <th style="width:2%" class="text-center"><input type="checkbox" id="svc-sel-all" class="form-check-input m-0"></th>
+        <% } %>
         <th><%= t('services.colService') %></th>
         <th style="width:9%"><%= t('services.colState') %></th>
         <th style="width:10%"><%= t('services.colStartMode') %></th>
@@ -28,7 +49,7 @@
     </thead>
     <tbody>
       <% if (!services.length) { %>
-      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('services.empty') %></td></tr>
+      <tr><td colspan="<%= role !== 'readonly' ? 7 : 6 %>" class="text-center text-secondary py-4">没有匹配的服务</td></tr>
       <% } %>
       <% services.forEach(function (s) { %>
       <%
@@ -38,12 +59,20 @@
         const modeInfo = { auto: [t('services.modeAuto'), 'bg-azure-lt'], manual: [t('services.modeManual'), 'bg-secondary-lt'], disabled: [t('services.modeDisabled'), 'bg-red-lt'] }[modeShort];
       %>
       <tr>
+        <% if (role !== 'readonly') { %>
+        <td class="text-center"><input type="checkbox" class="form-check-input m-0 svc-sel" data-name="<%= s.Name %>"></td>
+        <% } %>
         <td>
-          <div class="d-flex align-items-center text-truncate" title="<%= s.PathName || '' %>">
+          <div class="d-flex align-items-center text-truncate">
             <i class="ti ti-settings <%= running ? 'text-success' : 'text-secondary' %> me-2"></i>
             <div class="text-truncate">
               <div class="text-truncate"><%= s.DisplayName || s.Name %></div>
               <div class="small text-secondary font-monospace text-truncate"><%= s.Name %></div>
+              <% if (s.PathName) { %>
+              <div class="small text-secondary font-monospace text-truncate lh-1" title="<%= s.PathName %>">
+                <i class="ti ti-terminal-2 me-1"></i><%= s.PathName %>
+              </div>
+              <% } %>
             </div>
           </div>
         </td>
@@ -55,20 +84,17 @@
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group">
             <% if (!running) { %>
-            <button class="btn btn-outline-success" title="<%= t('services.actStart') %>"
-                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
-                    hx-vals='{"name":"<%= s.Name %>","action":"start","kw":"<%= kw %>"}'>
+            <button type="button" class="btn btn-outline-success svc-act" title="<%= t('services.actStart') %>"
+                    data-action="start" data-name="<%= s.Name %>">
               <i class="ti ti-player-play"></i>
             </button>
             <% } else { %>
-            <button class="btn btn-outline-secondary" title="<%= t('services.actStop') %>"
-                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
-                    hx-vals='{"name":"<%= s.Name %>","action":"stop","kw":"<%= kw %>"}'>
+            <button type="button" class="btn btn-outline-secondary svc-act" title="<%= t('services.actStop') %>"
+                    data-action="stop" data-name="<%= s.Name %>">
               <i class="ti ti-player-stop"></i>
             </button>
-            <button class="btn btn-outline-azure" title="<%= t('services.actRestart') %>"
-                    hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
-                    hx-vals='{"name":"<%= s.Name %>","action":"restart","kw":"<%= kw %>"}'>
+            <button type="button" class="btn btn-outline-azure svc-act" title="<%= t('services.actRestart') %>"
+                    data-action="restart" data-name="<%= s.Name %>">
               <i class="ti ti-refresh"></i>
             </button>
             <% } %>
@@ -78,9 +104,8 @@
               </button>
               <div class="dropdown-menu dropdown-menu-end">
                 <% ['auto', 'manual', 'disabled'].forEach(function (m) { %>
-                <button class="dropdown-item <%= m === modeShort ? 'active' : '' %>"
-                        hx-post="/services/action" hx-target="#svc-table-region" hx-swap="innerHTML"
-                        hx-vals='{"name":"<%= s.Name %>","action":"mode","mode":"<%= m %>","kw":"<%= kw %>"}'>
+                <button type="button" class="dropdown-item svc-act <%= m === modeShort ? 'active' : '' %>"
+                        data-action="mode" data-mode="<%= m %>" data-name="<%= s.Name %>">
                   <i class="ti <%= m === 'auto' ? 'ti-clock-bolt' : (m === 'manual' ? 'ti-hand-click' : 'ti-ban') %> me-1"></i>
                   <%= m === 'auto' ? t('services.modeAuto') : (m === 'manual' ? t('services.modeManual') : t('services.modeDisabled')) %>
                   <% if (m === modeShort) { %><i class="ti ti-check ms-1"></i><% } %>
