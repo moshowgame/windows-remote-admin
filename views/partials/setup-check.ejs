@@ -1,0 +1,55 @@
+<%# 部署向导 - 环境检测结果（locals: labels, nodeVersion, nodePath, appDir, entryOk, scriptOk, envExists, envExample, nssm, svcStatus, svcStartType, svcName, t） %>
+<div class="list-group list-group-flush">
+  <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-2">
+    <span class="small"><%= labels.nodeVersion %></span>
+    <span class="badge bg-green-lt"><%= nodeVersion %></span>
+  </div>
+  <div class="list-group-item px-2 py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="small"><%= labels.nodePath %></span>
+    </div>
+    <div class="small text-secondary font-monospace text-break"><%= nodePath %></div>
+  </div>
+  <div class="list-group-item px-2 py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="small"><%= labels.appDir %></span>
+    </div>
+    <div class="small text-secondary font-monospace text-break"><%= appDir %></div>
+  </div>
+  <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-2">
+    <span class="small"><%= labels.entryFile %></span>
+    <% if (entryOk) { %><span class="badge bg-green-lt"><%= labels.present %></span>
+    <% } else { %><span class="badge bg-red-lt"><%= labels.missing %></span><% } %>
+  </div>
+  <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-2">
+    <span class="small"><%= labels.scriptFile %></span>
+    <% if (scriptOk) { %><span class="badge bg-green-lt"><%= labels.present %></span>
+    <% } else { %><span class="badge bg-red-lt"><%= labels.missing %></span><% } %>
+  </div>
+  <div class="list-group-item px-2 py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="small"><%= labels.envFile %></span>
+      <% if (envExists) { %><span class="badge bg-green-lt"><%= labels.envFound %></span>
+      <% } else { %><span class="badge bg-azure-lt"><%= labels.envMissing %></span><% } %>
+    </div>
+  </div>
+  <div class="list-group-item px-2 py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="small"><%= labels.nssm %></span>
+      <% if (nssm) { %><span class="badge bg-green-lt"><%= labels.present %></span>
+      <% } else { %><span class="badge bg-warning-lt"><%= labels.nssmMissing %></span><% } %>
+    </div>
+    <% if (nssm) { %><div class="small text-secondary font-monospace text-break"><%= nssm %></div><% } %>
+  </div>
+  <div class="list-group-item px-2 py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="small"><%= labels.service %></span>
+      <% if (svcStatus === 'Running') { %><span class="badge bg-green-lt"><%= labels.svcRunning %></span>
+      <% } else if (svcStatus) { %><span class="badge bg-warning-lt"><%= labels.svcStopped %></span>
+      <% } else { %><span class="badge bg-secondary-lt"><%= labels.svcMissing %></span><% } %>
+    </div>
+    <% if (svcStatus && svcStartType) { %>
+      <div class="small text-secondary"><%= labels.startMode %>: <%= svcStartType %></div>
+    <% } %>
+  </div>
+</div>

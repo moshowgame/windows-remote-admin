@@ -1,0 +1,140 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-server-2 me-2"></i><%= t('setup.title') %></h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      <%= t('setup.subtitle') %>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title"><i class="ti ti-clipboard-check me-1"></i><%= t('setup.checkTitle') %></h3>
+        <button type="button" class="btn btn-sm ms-auto" title="<%= t('setup.recheck') %>"
+                hx-post="/setup/check" hx-target="#setup-check-region" hx-swap="innerHTML">
+          <i class="ti ti-refresh me-1"></i><%= t('setup.recheck') %>
+        </button>
+      </div>
+      <div class="card-body p-0" id="setup-check-region"
+           hx-post="/setup/check" hx-trigger="load" hx-swap="innerHTML">
+        <div class="text-secondary small px-3 py-3"><%= t('common.loading') %></div>
+      </div>
+      <div class="card-footer small text-secondary">
+        <i class="ti ti-info-circle me-1"></i><%= t('setup.checkHint') %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-rocket me-1"></i><%= t('setup.quickTitle') %></h3>
+      </div>
+      <div class="card-body pb-1">
+        <p class="small text-secondary mb-2"><%= t('setup.quickDesc') %></p>
+        <div class="position-relative">
+          <pre class="wra-preview-pre setup-code" id="setup-code-quick">powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\service.ps1" install -Port <%= port %></pre>
+          <button type="button" class="btn btn-sm btn-icon setup-copy position-absolute top-0 end-0 m-2" data-target="setup-code-quick" title="<%= t('setup.copy') %>" aria-label="<%= t('setup.copy') %>">
+            <i class="ti ti-copy"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-terminal-2 me-1"></i><%= t('setup.manualTitle') %></h3>
+      </div>
+      <div class="card-body pb-1">
+        <p class="small text-secondary mb-2"><%= t('setup.manualDesc') %></p>
+        <div class="position-relative">
+          <pre class="wra-preview-pre setup-code" id="setup-code-manual">nssm install WRA "<%= nodePath %>" "<%= appDir %>\server.js"
+nssm set WRA AppDirectory "<%= appDir %>"
+nssm set WRA Description "Windows Remote Admin (Node.js)"
+nssm set WRA Start SERVICE_AUTO_START
+nssm set WRA AppExit Default Restart
+nssm set WRA AppRestartDelay 5000
+nssm set WRA AppStdout "<%= appDir %>\logs\service-out.log"
+nssm set WRA AppStderr "<%= appDir %>\logs\service-err.log"
+nssm set WRA AppRotateFiles 1
+nssm set WRA AppRotateOnline 1
+nssm set WRA AppRotateBytes 10485760
+nssm start WRA</pre>
+          <button type="button" class="btn btn-sm btn-icon setup-copy position-absolute top-0 end-0 m-2" data-target="setup-code-manual" title="<%= t('setup.copy') %>" aria-label="<%= t('setup.copy') %>">
+            <i class="ti ti-copy"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-settings me-1"></i><%= t('setup.mgmtTitle') %></h3>
+      </div>
+      <div class="card-body pb-1">
+        <div class="position-relative">
+          <pre class="wra-preview-pre setup-code" id="setup-code-mgmt">nssm status WRA
+nssm restart WRA
+nssm stop WRA
+nssm remove WRA confirm</pre>
+          <button type="button" class="btn btn-sm btn-icon setup-copy position-absolute top-0 end-0 m-2" data-target="setup-code-mgmt" title="<%= t('setup.copy') %>" aria-label="<%= t('setup.copy') %>">
+            <i class="ti ti-copy"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-alert-triangle me-1"></i><%= t('setup.notesTitle') %></h3>
+      </div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item small px-3 py-2"><i class="ti ti-shield-lock me-1 text-warning"></i><%= t('setup.noteAdmin') %></li>
+        <li class="list-group-item small px-3 py-2"><i class="ti ti-quotes me-1 text-warning"></i><%= t('setup.noteQuote') %></li>
+        <li class="list-group-item small px-3 py-2"><i class="ti ti-user me-1 text-azure"></i><%= t('setup.noteUser') %></li>
+        <li class="list-group-item small px-3 py-2"><i class="ti ti-file-description me-1 text-azure"></i><%= t('setup.noteLogs') %></li>
+        <li class="list-group-item small px-3 py-2"><i class="ti ti-env-variable me-1 text-azure"></i><%= t('setup.noteEnv') %></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* 部署向导：命令复制（clipboard API + execCommand 兜底） */
+  (function () {
+    'use strict';
+    var copiedMsg = '<%= t("setup.copied") %>';
+    function toast(msg) { if (window.WRA) WRA.showToast(msg, 'success'); }
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.setup-copy');
+      if (!btn) return;
+      var pre = document.getElementById(btn.dataset.target);
+      if (!pre) return;
+      var text = pre.innerText;
+      var done = function () { toast(copiedMsg); };
+      var fallback = function () {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (err) { /* 忽略 */ }
+        ta.remove();
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+    });
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>
