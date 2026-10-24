@@ -53,3 +53,29 @@
     <% } %>
   </div>
 </div>
+<%# Windows 防火墙检测结果：OOB swap 到防火墙卡片的 #fw-check-region %>
+<div hx-swap-oob="innerHTML:#fw-check-region">
+  <div class="list-group list-group-flush">
+    <%
+      const fwNameMap = { Domain: labels.fwDomain, Private: labels.fwPrivate, Public: labels.fwPublic };
+    %>
+    <% for (const p of fwProfiles) { %>
+      <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-2">
+        <span class="small"><%= fwNameMap[p.name] || p.name %></span>
+        <% if (p.enabled) { %><span class="badge bg-green-lt"><%= labels.fwEnabled %></span>
+        <% } else { %><span class="badge bg-secondary-lt"><%= labels.fwDisabled %></span><% } %>
+      </div>
+    <% } %>
+    <div class="list-group-item px-2 py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="small"><%= labels.fwPortRule %></span>
+        <% if (fwUnknown) { %><span class="badge bg-secondary-lt"><%= labels.fwUnknown %></span>
+        <% } else if (fwPortRule) { %><span class="badge bg-green-lt"><%= labels.fwPortRuleFound %></span>
+        <% } else { %><span class="badge bg-warning-lt"><%= labels.fwPortRuleMissing %></span><% } %>
+      </div>
+      <% if (fwPortRule && fwPortRule.name) { %>
+        <div class="small text-secondary font-monospace text-break"><%= fwPortRule.name %></div>
+      <% } %>
+    </div>
+  </div>
+</div>

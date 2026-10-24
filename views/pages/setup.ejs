@@ -90,6 +90,54 @@ nssm remove WRA confirm</pre>
       </div>
     </div>
 
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-shield me-1"></i><%= t('setup.fwTitle') %></h3>
+      </div>
+      <div class="card-body p-0 border-bottom" id="fw-check-region">
+        <div class="text-secondary small px-3 py-2"><%= t('common.loading') %></div>
+      </div>
+      <div class="card-body pb-1">
+        <p class="small text-secondary mb-2"><%= t('setup.fwCmdTitle') %></p>
+        <div class="position-relative">
+          <pre class="wra-preview-pre setup-code" id="setup-code-fw">New-NetFirewallRule -DisplayName "Windows Remote Admin" -Direction Inbound -Protocol TCP -LocalPort <%= port %> -Action Allow
+
+netsh advfirewall firewall add rule name="Windows Remote Admin" dir=in action=allow protocol=TCP localport=<%= port %></pre>
+          <button type="button" class="btn btn-sm btn-icon setup-copy position-absolute top-0 end-0 m-2" data-target="setup-code-fw" title="<%= t('setup.copy') %>" aria-label="<%= t('setup.copy') %>">
+            <i class="ti ti-copy"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-cloud me-1"></i><%= t('setup.gcpTitle') %></h3>
+      </div>
+      <div class="card-body pb-1">
+        <p class="small text-secondary mb-2"><%= t('setup.gcpIntro') %></p>
+        <ol class="small mb-3">
+          <li><%= t('setup.gcpStep1') %></li>
+          <li><%= t('setup.gcpStep2') %></li>
+          <li><%= t('setup.gcpStep3') %></li>
+        </ol>
+        <p class="small text-secondary mb-2"><%= t('setup.gcpCmdTitle') %></p>
+        <div class="position-relative">
+          <pre class="wra-preview-pre setup-code" id="setup-code-gcp">gcloud compute instance-groups managed update &lt;MIG&gt; --region &lt;REGION&gt; --update-network-tags wra-server
+
+gcloud compute firewall-rules create allow-wra-<%= port %> --direction=INGRESS --action=ALLOW --rules=tcp:<%= port %> --source-ranges=&lt;INTERNAL_RANGE&gt; --target-tags=wra-server</pre>
+          <button type="button" class="btn btn-sm btn-icon setup-copy position-absolute top-0 end-0 m-2" data-target="setup-code-gcp" title="<%= t('setup.copy') %>" aria-label="<%= t('setup.copy') %>">
+            <i class="ti ti-copy"></i>
+          </button>
+        </div>
+        <ul class="small text-secondary mt-2 mb-0">
+          <li><%= t('setup.gcpNoteHc') %></li>
+          <li><%= t('setup.gcpNoteRoll') %></li>
+          <li><%= t('setup.gcpNoteDoc') %></li>
+        </ul>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <h3 class="card-title"><i class="ti ti-alert-triangle me-1"></i><%= t('setup.notesTitle') %></h3>
