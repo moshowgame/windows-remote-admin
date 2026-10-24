@@ -58,6 +58,8 @@ async function buildApp() {
     const username = this.request.session ? this.request.session.get('username') || '' : '';
     const role = this.request.session ? this.request.session.get('role') || 'admin' : 'admin';
     const t = i18n.of(this.request);
+    // 动态页面禁缓存：防止浏览器启发式缓存把旧版本 HTML（含过期文案）当作当前页
+    this.header('Cache-Control', 'no-store, max-age=0');
     return this.view(view, { ...data, csrf, username, role, t, lang: i18n.detect(this.request) });
   });
 
