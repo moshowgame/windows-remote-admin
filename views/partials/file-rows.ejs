@@ -59,7 +59,7 @@
         <div class="dropdown-menu dropdown-menu-end">
           <% if (it.kind === 'dir') { %>
             <% if (role !== 'readonly') { %>
-            <button class="dropdown-item" type="button" hx-post="/files/compress" hx-vals="<%= JSON.stringify({ paths: [it.path] }) %>" hx-swap="none">
+            <button class="dropdown-item file-compress-one" type="button" data-path="<%= it.path %>">
               <i class="ti ti-file-zip me-1"></i><%= t('files.compress') %>
             </button>
             <div class="dropdown-divider"></div>
@@ -88,7 +88,7 @@
               <i class="ti ti-download me-1"></i><%= t('files.download') %>
             </a>
             <% if (role !== 'readonly') { %>
-            <button class="dropdown-item" type="button" hx-post="/files/compress" hx-vals="<%= JSON.stringify({ paths: [it.path] }) %>" hx-swap="none">
+            <button class="dropdown-item file-compress-one" type="button" data-path="<%= it.path %>">
               <i class="ti ti-file-zip me-1"></i><%= t('files.compress') %>
             </button>
             <div class="dropdown-divider"></div>

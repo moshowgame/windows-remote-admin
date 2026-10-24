@@ -144,6 +144,27 @@
 <%# 压缩选中（隐藏表单，由 JS 动态填充 paths） %>
 <form id="compress-form" hx-post="/files/compress" hx-swap="none"></form>
 
+<%# 压缩/打包确认模态（自管理控制器：显示/遮罩/ESC 全由页面脚本管理，同 preview-modal；
+    打开时提升为 body 直接子节点，避免 .page 层叠上下文埋住模态） %>
+<div class="modal modal-blur fade" id="confirm-zip-modal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-file-zip me-1"></i><span id="confirm-zip-title"></span></h5>
+        <button type="button" class="btn-close" data-confirm-zip-close aria-label="<%= t('common.close') %>"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1" id="confirm-zip-msg"></p>
+        <div class="small text-secondary text-break" id="confirm-zip-items"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-confirm-zip-close><%= t('common.cancel') %></button>
+        <button type="button" id="confirm-zip-btn" class="btn btn-primary"><%= t('files.ok') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   /* 文件资源管理器交互：多选 / 收藏 / 上传进度 / 模态填充 / 打包下载 */
   (function () {
@@ -167,6 +188,11 @@
       dropHere: '<%= t("files.dropHere") %>',
       dropTooMany: '<%= t("files.dropTooMany") %>',
       filterPh: '<%= t("files.filterPh") %>',
+      compressConfirmTitle: '<%= t("files.compressConfirmTitle") %>',
+      compressConfirmMsg: '<%= t("files.compressConfirmMsg") %>',
+      zipDlConfirmTitle: '<%= t("files.zipDlConfirmTitle") %>',
+      zipDlConfirmMsg: '<%= t("files.zipDlConfirmMsg") %>',
+      confirmMore: '<%= t("files.confirmMore") %>',
     };
     var READONLY = '<%= role === "readonly" %>' === 'true';
     var curFilter = '';
@@ -230,7 +256,13 @@
         dl.dataset.bound = '1';
         dl.addEventListener('click', function () {
           if (!checked.size) return;
-          window.location.href = '/files/download-zip?paths=' + encodeURIComponent(Array.from(checked).join('|'));
+          var paths = Array.from(checked);
+          openZipConfirm(T.zipDlConfirmTitle,
+            T.zipDlConfirmMsg.replace('{n}', paths.length),
+            summarizePaths(paths),
+            function () {
+              window.location.href = '/files/download-zip?paths=' + encodeURIComponent(paths.join('|'));
+            });
         });
       }
       var comp = $('btn-compress-selected');
@@ -238,15 +270,11 @@
         comp.dataset.bound = '1';
         comp.addEventListener('click', function () {
           if (!checked.size) return;
-          var form = $('compress-form');
-          var html = '<input type="hidden" name="sort" value="' + esc(val('cur-sort')) + '">' +
-                     '<input type="hidden" name="order" value="' + esc(val('cur-order')) + '">';
-          checked.forEach(function (p) {
-            html += '<input type="hidden" name="paths" value="' + esc(p) + '">';
-          });
-          form.innerHTML = html;
-          if (form.requestSubmit) form.requestSubmit();
-          else htmx.trigger(form, 'submit');
+          var paths = Array.from(checked);
+          openZipConfirm(T.compressConfirmTitle,
+            T.compressConfirmMsg.replace('{n}', paths.length),
+            summarizePaths(paths),
+            function () { submitCompress(paths); });
         });
       }
 
@@ -592,6 +620,108 @@
       if (e.target === previewModal || (e.target.closest && e.target.closest('[data-preview-close]'))) {
         closePreviewModal();
       }
+    });
+
+    // ---- 压缩/打包确认模态（自管理模式，同 preview-modal：提升 body、手动遮罩/ESC/关闭） ----
+    // 所有压缩/打包入口（工具栏压缩选中、打包下载、行菜单单文件压缩）先经此确认，禁止直接触发
+    var confirmModal = $('confirm-zip-modal');
+    var confirmBackdrop = null;
+    var confirmPrevFocus = null;
+    var confirmAction = null;
+
+    // 提升到 body 层级，摆脱祖先层叠上下文（幂等）
+    if (confirmModal && confirmModal.parentElement !== document.body) {
+      document.body.appendChild(confirmModal);
+    }
+
+    // 条目摘要：显示前 5 个文件名，超出部分折叠为"等 {n} 项"
+    function baseName(p) {
+      return String(p).replace(/[\\/]+$/, '').split(/[\\/]/).pop();
+    }
+    function summarizePaths(paths) {
+      var names = paths.slice(0, 5).map(baseName).join(', ');
+      if (paths.length > 5) names += T.confirmMore.replace('{n}', paths.length - 5);
+      return names;
+    }
+
+    function openZipConfirm(title, msg, itemsText, onOk) {
+      if (!confirmModal || confirmModal.classList.contains('show')) return;
+      $('confirm-zip-title').textContent = title;
+      $('confirm-zip-msg').textContent = msg;
+      $('confirm-zip-items').textContent = itemsText;
+      confirmAction = onOk;
+      confirmPrevFocus = document.activeElement;
+      confirmBackdrop = document.createElement('div');
+      confirmBackdrop.className = 'modal-backdrop fade show';
+      document.body.appendChild(confirmBackdrop);
+      confirmModal.style.display = 'block';
+      confirmModal.removeAttribute('aria-hidden');
+      confirmModal.setAttribute('aria-modal', 'true');
+      document.body.classList.add('modal-open');
+      document.body.style.overflow = 'hidden';
+      void confirmModal.offsetHeight; // 强制 reflow，让 .show 过渡生效
+      confirmModal.classList.add('show');
+      $('confirm-zip-btn').focus();
+    }
+
+    function closeZipConfirm() {
+      if (!confirmModal || !confirmModal.classList.contains('show')) return;
+      confirmModal.classList.remove('show');
+      confirmAction = null;
+      setTimeout(function () {
+        confirmModal.style.display = 'none';
+        confirmModal.setAttribute('aria-hidden', 'true');
+        confirmModal.removeAttribute('aria-modal');
+        if (confirmBackdrop) { confirmBackdrop.remove(); confirmBackdrop = null; }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        if (confirmPrevFocus && confirmPrevFocus.focus) confirmPrevFocus.focus();
+        confirmPrevFocus = null;
+      }, 200);
+    }
+
+    // 确认按钮：关闭模态后执行动作（模态不随 OOB 刷新重建，绑定一次即可）
+    $('confirm-zip-btn').addEventListener('click', function () {
+      var fn = confirmAction;
+      closeZipConfirm();
+      if (fn) fn();
+    });
+    // ESC / 关闭按钮 / 点击暗区取消
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
+        e.preventDefault();
+        closeZipConfirm();
+      }
+    });
+    confirmModal.addEventListener('click', function (e) {
+      if (e.target === confirmModal || (e.target.closest && e.target.closest('[data-confirm-zip-close]'))) {
+        closeZipConfirm();
+      }
+    });
+
+    // 提交压缩请求（工具栏选中与行菜单单文件共用）
+    function submitCompress(paths) {
+      var form = $('compress-form');
+      var html = '<input type="hidden" name="sort" value="' + esc(val('cur-sort')) + '">' +
+                 '<input type="hidden" name="order" value="' + esc(val('cur-order')) + '">';
+      paths.forEach(function (p) {
+        html += '<input type="hidden" name="paths" value="' + esc(p) + '">';
+      });
+      form.innerHTML = html;
+      if (form.requestSubmit) form.requestSubmit();
+      else htmx.trigger(form, 'submit');
+    }
+
+    // 行菜单单文件压缩（file-rows 按钮无 hx-post，经确认后提交；document 委托一次绑定）
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.file-compress-one');
+      if (!btn) return;
+      var p = btn.dataset.path;
+      if (!p) return;
+      openZipConfirm(T.compressConfirmTitle,
+        T.compressConfirmMsg.replace('{n}', 1),
+        baseName(p),
+        function () { submitCompress([p]); });
     });
 
     // 成功：htmx 把内容 swap 进 #preview-body 后，才打开模态（失败路径不会触发，模态根本不出现）
