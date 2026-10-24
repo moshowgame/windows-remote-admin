@@ -164,7 +164,12 @@
       originalName: '<%= t("files.originalName") %>',
       previewFailed: '<%= t("files.previewFailed") %>',
       previewNetError: '<%= t("files.previewNetError") %>',
+      dropHere: '<%= t("files.dropHere") %>',
+      dropTooMany: '<%= t("files.dropTooMany") %>',
+      filterPh: '<%= t("files.filterPh") %>',
     };
+    var READONLY = '<%= role === "readonly" %>' === 'true';
+    var curFilter = '';
 
     function $(id) { return document.getElementById(id); }
     // WRA 由底部 app.js 定义；本脚本可能先于其执行，需兜底
@@ -204,6 +209,13 @@
         cb.checked = checked.has(cb.dataset.path);
       });
       updateSelectionUI();
+    }
+
+    // ---- 即时过滤执行（按行文本包含匹配；隐藏不匹配行） ----
+    function applyFilter() {
+      document.querySelectorAll('#file-body tr').forEach(function (tr) {
+        tr.style.display = (!curFilter || tr.textContent.toLowerCase().indexOf(curFilter) > -1) ? '' : 'none';
+      });
     }
 
     // ---- 工具栏绑定（#file-main OOB 刷新后元素重建，需重绑） ----
@@ -271,6 +283,103 @@
           setTimeout(function () { upBox.classList.add('d-none'); }, 600);
         });
       }
+
+      // ---- 即时过滤（前端遍历行，零请求；OOB 刷新后恢复关键字） ----
+      var filter = $('file-filter');
+      if (filter && !filter.dataset.bound) {
+        filter.dataset.bound = '1';
+        filter.value = curFilter;
+        filter.placeholder = T.filterPh;
+        filter.addEventListener('input', function () {
+          curFilter = filter.value.trim().toLowerCase();
+          applyFilter();
+        });
+        applyFilter();
+      }
+
+      // ---- 拖拽上传（文件/文件夹递归展开；复用 #upload-form 管道与进度条） ----
+      var main = $('file-main');
+      if (main && !READONLY && !main.dataset.dropBound) {
+        main.dataset.dropBound = '1';
+        main.title = T.dropHere;
+        var dragDepth = 0;
+        main.addEventListener('dragenter', function (e) {
+          e.preventDefault();
+          dragDepth++;
+          main.classList.add('wra-dropzone');
+        });
+        main.addEventListener('dragover', function (e) { e.preventDefault(); });
+        main.addEventListener('dragleave', function () {
+          if (--dragDepth <= 0) { dragDepth = 0; main.classList.remove('wra-dropzone'); }
+        });
+        main.addEventListener('drop', function (e) {
+          e.preventDefault();
+          dragDepth = 0;
+          main.classList.remove('wra-dropzone');
+          handleDropFiles(e.dataTransfer);
+        });
+      }
+    }
+
+    // 递归读取拖拽条目（文件夹 → File 列表；仅 Chromium/Edge 支持 webkitGetAsEntry，其余回退 files）
+    function readEntriesDeep(entry, out) {
+      return new Promise(function (resolve) {
+        if (entry.isFile) {
+          entry.file(function (f) { out.push(f); resolve(); }, function () { resolve(); });
+        } else if (entry.isDirectory) {
+          var reader = entry.createReader();
+          var pending = [];
+          var readBatch = function () {
+            reader.readEntries(function (entries) {
+              if (!entries.length) { Promise.all(pending).then(resolve, resolve); return; }
+              entries.forEach(function (en) { pending.push(readEntriesDeep(en, out)); });
+              readBatch();
+            }, function () { resolve(); });
+          };
+          readBatch();
+        } else resolve();
+      });
+    }
+
+    // 把 File 列表注入现有上传表单（走原管道：进度 / 服务端校验 / 结果区）
+    function submitUploadFiles(files) {
+      if (!files.length) return;
+      if (files.length > 20) { toast(T.dropTooMany, 'warning'); return; }
+      var upForm = $('upload-form'), upInput = $('upload-input');
+      if (!upForm || !upInput) return;
+      var d = new DataTransfer();
+      files.forEach(function (f) { d.items.add(f); });
+      upInput.files = d.files;
+      if (upForm.requestSubmit) upForm.requestSubmit();
+      else htmx.trigger(upForm, 'submit');
+    }
+
+    function handleDropFiles(dt) {
+      if (!dt) return;
+      var plain = Array.from(dt.files || []);
+      var items = dt.items ? Array.from(dt.items) : [];
+      var entries = items.map(function (it) {
+        return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null;
+      }).filter(Boolean);
+      if (!entries.length) { submitUploadFiles(plain); return; }
+      Promise.all(entries.map(function (en) { return readEntriesDeep(en, []); })).then(function (lists) {
+        var merged = lists.reduce(function (a, b) { return a.concat(b); }, []);
+        submitUploadFiles(merged.length ? merged : plain);
+      }, function () { submitUploadFiles(plain); });
+    }
+
+    // ---- 粘贴上传（Ctrl+V；输入框内粘贴不抢） ----
+    if (!document.body.dataset.pasteBound) {
+      document.body.dataset.pasteBound = '1';
+      document.addEventListener('paste', function (e) {
+        if (READONLY) return;
+        var tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+        var files = Array.from((e.clipboardData || {}).files || []);
+        if (!files.length) return;
+        e.preventDefault();
+        submitUploadFiles(files);
+      });
     }
 
     // ---- 路径输入回车跳转 ----

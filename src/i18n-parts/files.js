@@ -9,6 +9,9 @@ module.exports = {
     // 页面 / 侧栏
     'files.title': 'File Explorer',
     'files.uploadLimit': 'Upload limit',
+    'files.dropHere': 'Drop files or folders here to upload',
+    'files.dropTooMany': 'At most 20 files per batch',
+    'files.filterPh': 'Filter current directory...',
     'files.extractLimit': 'Extract limit',
     'files.itemsUnit': 'items',
     'files.whitelistMode': 'Whitelist mode',
@@ -137,6 +140,9 @@ module.exports = {
     // 页面 / 侧栏
     'files.title': '文件资源管理器',
     'files.uploadLimit': '上传上限',
+    'files.dropHere': '拖拽文件或文件夹到此处上传',
+    'files.dropTooMany': '单批最多 20 个文件',
+    'files.filterPh': '过滤当前目录...',
     'files.extractLimit': '解压上限',
     'files.itemsUnit': '项',
     'files.whitelistMode': '白名单模式',

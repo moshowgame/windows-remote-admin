@@ -474,3 +474,117 @@ body {
   border-color: rgba(148, 163, 184, 0.15);
   background: color-mix(in srgb, var(--tblr-bg-surface-dark, #1a1d24) 90%, transparent);
 }
+
+/* ============================================================
+   流畅性优化：过渡动画 / 骨架指示 / sticky 表头 / 微交互
+   （只追加视觉层，不改任何功能逻辑）
+   ============================================================ */
+
+/* ---- 1. 页面内容进入淡入（不使用 fill-mode，动画结束即恢复原始态） ---- */
+.page-body .container-xl {
+  animation: wra-page-in 0.28s ease-out;
+}
+@keyframes wra-page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- 2. htmx 局部刷新加载指示：目标区压暗 + 顶部流光扫描 ---- */
+.wra-loading {
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+  position: relative;
+}
+.wra-loading::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 20;
+  background: var(--wra-grad-brand);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: wra-scan 0.8s linear infinite;
+}
+@keyframes wra-scan {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+
+/* ---- 3. 模态框打开动画（自管理 modal display:none→block 无过渡，统一补齐） ---- */
+.modal.show .modal-content {
+  animation: wra-modal-in 0.18s ease-out;
+}
+@keyframes wra-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.modal-backdrop {
+  transition: opacity 0.15s ease;
+}
+
+/* ---- 4. 大表格 sticky 表头 + 卡片内限高滚动（行少时不拉伸，无副作用） ---- */
+.card .table-responsive {
+  max-height: calc(100vh - 310px);
+  overflow-y: auto;
+}
+.card .table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bs-body-bg);
+  box-shadow: inset 0 -1px 0 var(--tblr-border-color, #dce1e8);
+}
+[data-bs-theme="dark"] .card .table-responsive thead th {
+  background: #1a1d24;
+}
+
+/* ---- 5. 全局滚动条美化（含暗色） ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(127, 140, 170, 0.35);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(127, 140, 170, 0.55); }
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.3); }
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.5); }
+
+/* ---- 6. 按钮微交互：按下轻微下沉，状态过渡平滑 ---- */
+.btn {
+  transition: transform 0.06s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn:not(.disabled):not([disabled]):active { transform: translateY(1px); }
+
+/* ---- 7. Toast 滑入动画 ---- */
+.toast-container .toast {
+  animation: wra-toast-in 0.22s ease-out;
+}
+@keyframes wra-toast-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- 8. 侧栏与下拉项 hover 过渡 ---- */
+.navbar-vertical .nav-link,
+.dropdown-item {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* ---- 9. 表格行 hover 背景过渡（table-hover 更顺滑） ---- */
+.table-hover tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+/* ---- 10. 文件管理拖拽上传高亮（拖入时虚线框 + 品牌色底） ---- */
+.wra-dropzone {
+  outline: 2px dashed var(--wra-brand, #4263eb);
+  outline-offset: -8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wra-brand, #4263eb) 5%, transparent);
+  transition: outline-color 0.15s ease, background-color 0.15s ease;
+}

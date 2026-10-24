@@ -113,6 +113,19 @@
   });
   document.body.addEventListener('htmx:afterRequest', function () { progressTick(-1); });
 
+  // 局部刷新加载指示：目标区域压暗 + 顶部流光（仅作用于表格/列表刷新区域）
+  // 被防重逻辑取消的请求（defaultPrevented）不会发出，afterRequest 不触发，必须跳过
+  var LOADING_REGION_RE = /-(table|list)-region$/;
+  document.body.addEventListener('htmx:beforeRequest', function (e) {
+    if (e.defaultPrevented) return;
+    var t = e.detail && e.detail.target;
+    if (t && t.id && LOADING_REGION_RE.test(t.id)) t.classList.add('wra-loading');
+  });
+  document.body.addEventListener('htmx:afterRequest', function (e) {
+    var t = e.detail && e.detail.target;
+    if (t && t.classList) t.classList.remove('wra-loading');
+  });
+
   // 亮/暗主题切换（顶栏按钮，持久化到 localStorage）
   function syncThemeIcon() {
     var btn = document.getElementById('theme-toggle');

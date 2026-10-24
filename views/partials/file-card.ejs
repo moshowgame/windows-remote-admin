@@ -54,6 +54,8 @@
       <button id="btn-download-zip" type="button" class="btn btn-sm" disabled title="<%= t('files.zipDlTitle') %>">
         <i class="ti ti-download me-1"></i><%= t('files.downloadZip') %>
       </button>
+      <input id="file-filter" type="search" class="form-control form-control-sm w-auto" style="min-width: 150px"
+             placeholder="<%= t('files.filterPh') %>" autocomplete="off" title="<%= t('files.filterPh') %>">
       <span id="selection-count" class="small text-secondary ms-auto"></span>
     </div>
     <input type="hidden" id="cur-sort" value="<%= sort %>">
