@@ -30,6 +30,7 @@ const ROOT_FILES = [
   'Run.cmd',
   'Build.cmd',
   'Pack.cmd',
+  'Service.cmd',
 ];
 
 const CODE_DIRS = ['src', 'views', 'scripts'];

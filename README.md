@@ -214,7 +214,7 @@ npm run pack:code    # 或双击 Pack.cmd
 | `quickAccess` | 内置 3 项 | 侧栏快速访问目录 |
 | `logRetentionDays` | `30` | 日志保留天数 |
 
-也支持环境变量覆盖：`WRA_PORT`、`WRA_PS_TIMEOUT`、`WRA_UPLOAD_MAX_MB`、`WRA_PATH_WHITELIST`（`;` 分隔）、`WRA_SESSION_SECRET` 等。
+环境变量同样支持写在程序根目录的 `.env` 文件中（参考 `.env.example`，复制为 `.env` 即生效）：`npm start`、`Run.cmd`、`npm run dev` 与 NSSM 服务启动时都会自动加载程序目录下的 `.env`，与启动时所在目录无关；`.env` 中已存在的同名系统环境变量不会被覆盖（外部注入优先）。也可用环境变量直接覆盖：`WRA_PORT`、`WRA_PS_TIMEOUT`、`WRA_UPLOAD_MAX_MB`、`WRA_PATH_WHITELIST`（`;` 分隔）、`WRA_SESSION_SECRET` 等。
 
 ### 账号管理
 
@@ -227,6 +227,7 @@ npm run pack:code    # 或双击 Pack.cmd
 ```
 windows-remote-admin/
 ├─ Run.cmd / Build.cmd / Pack.cmd  启动 / 构建 / 打包脚本
+├─ Service.cmd             NSSM 服务管理（双击菜单，安装/卸载/启停/状态）
 ├─ server.js               入口
 ├─ config.default.json     默认配置
 ├─ config.json             本机覆盖配置（可选，自动生成）
@@ -256,7 +257,20 @@ windows-remote-admin/
 
 ## 以 Windows 服务运行（NSSM，可选）
 
-用 [NSSM](https://nssm.cc/)（Non-Sucking Service Manager）把服务注册为系统服务，实现开机自启、崩溃自动拉起。首次部署先运行一次 `Build.cmd`（安装依赖并复制静态资源），然后**以管理员身份**执行：
+用 [NSSM](https://nssm.cc/)（Non-Sucking Service Manager）把服务注册为系统服务，实现开机自启、崩溃自动拉起。首次部署先运行一次 `Build.cmd`（安装依赖并复制静态资源），把 `nssm.exe` 放入 PATH 或程序目录，然后**以管理员身份**运行 `Service.cmd` 选菜单操作，或执行：
+
+```bat
+rem 安装（默认服务名 WRA；-Port 可选，写入服务环境变量覆盖端口）
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\service.ps1 install -Port 12306
+
+rem 卸载 / 启停 / 状态
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\service.ps1 uninstall
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\service.ps1 status
+```
+
+安装脚本自动完成：`SERVICE_AUTO_START` 开机自启、进程意外退出 5 秒后自动重启、stdout/stderr 重定向到 `logs\service-*.log`（10MB 轮转，仅兜底启动崩溃输出——应用日志已由 pino-roll 写入 `logs\`）。运行参数也可用 `-ExtraEnv "K=V"` 追加。
+
+手工命令方式（等价）：
 
 ```bat
 rem 安装服务：nssm install <服务名> <node.exe 路径> <server.js 路径>

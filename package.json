@@ -10,7 +10,7 @@
   "scripts": {
     "postinstall": "node scripts/copy-assets.js",
     "start": "node server.js",
-    "dev": "node --watch --env-file-if-exists=.env server.js",
+    "dev": "node --watch server.js",
     "pack:code": "node scripts/pack.js"
   },
   "dependencies": {
