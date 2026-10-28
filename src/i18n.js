@@ -27,6 +27,7 @@ const en = {
   'nav.logs': 'Logs',
   'nav.services': 'Services',
   'nav.net': 'Network',
+  'nav.process': 'Processes',
   'nav.events': 'Event Viewer',
   'nav.users': 'Users',
   'nav.setup': 'Setup',
@@ -62,6 +63,7 @@ const zhCN = {
   'nav.logs': '日志监控',
   'nav.services': '服务管理',
   'nav.net': '端口/网络',
+  'nav.process': '进程管理',
   'nav.events': '事件查看器',
   'nav.users': '本地用户',
   'nav.setup': '部署向导',
@@ -81,7 +83,7 @@ const zhCN = {
 };
 
 // ---- 各页面字典段（独立文件维护，启动时合并；新增页面新建 part 文件并在此注册）----
-for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup']) {
+for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup', './i18n-parts/process']) {
   const m = require(part);
   Object.assign(en, m.en || {});
   Object.assign(zhCN, m['zh-CN'] || {});

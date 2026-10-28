@@ -1,0 +1,80 @@
+<%# 进程列表片段：统计条 + 进程表（搜索/排序/操作后整块刷新） %>
+<% const fmtMem = (mb) => (mb == null || isNaN(mb)) ? '-'
+    : (mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : Math.round(mb) + ' MB'); %>
+<% const fmtCpu = (s) => (s == null || isNaN(s)) ? '-'
+    : s >= 86400 ? (s / 86400).toFixed(1) + ' d'
+    : s >= 3600 ? (s / 3600).toFixed(1) + ' h'
+    : s >= 60 ? Math.floor(s / 60) + 'm ' + Math.round(s % 60) + 's'
+    : Math.round(s) + ' s'; %>
+<% if (msg) { %>
+<div class="alert alert-danger alert-dismissible m-2 mb-0" role="alert">
+  <i class="ti ti-alert-triangle me-1"></i><%= msg %>
+</div>
+<% } %>
+<% if (truncated) { %>
+<div class="alert alert-warning m-2 mb-0 py-2" role="alert">
+  <i class="ti ti-alert-circle me-1"></i><%= t('process.truncated') %>
+</div>
+<% } %>
+
+<div class="d-flex flex-wrap gap-2 align-items-center px-3 pt-3">
+  <span class="badge bg-secondary-lt"><%= t('process.statTotal').replace('{n}', stats.total) %></span>
+  <span class="badge bg-azure-lt"><%= t('process.statMem').replace('{n}', fmtMem(stats.mem)) %></span>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover table-vcenter card-table">
+    <thead>
+      <tr>
+        <th style="width:8%"><%= t('process.colPid') %></th>
+        <th style="width:30%"><%= t('process.colProc') %></th>
+        <th style="width:12%"><%= t('process.colMem') %></th>
+        <th style="width:12%"><%= t('process.colCpu') %></th>
+        <th style="width:8%"><%= t('process.colThreads') %></th>
+        <th style="width:18%"><%= t('process.colStart') %></th>
+        <% if (role !== 'readonly') { %>
+        <th style="width:10%" class="text-end"><%= t('process.colActions') %></th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!rows.length) { %>
+      <tr><td colspan="<%= role !== 'readonly' ? 7 : 6 %>" class="text-center text-secondary py-4"><%= t('process.noRows') %></td></tr>
+      <% } %>
+      <% rows.forEach(function (row) {
+        const protectedPid = row.id === 0 || row.id === 4 || row.id === 8;
+      %>
+      <tr>
+        <td class="font-monospace"><%= row.id %></td>
+        <td class="small text-secondary text-truncate">
+          <div class="font-monospace text-truncate" title="<%= row.n || '' %>"><%= row.n || '-' %></div>
+          <% if (row.p) { %>
+          <div class="font-monospace text-truncate lh-1" style="font-size:.75rem" title="<%= row.p %>"><%= row.p %></div>
+          <% } %>
+        </td>
+        <td class="text-truncate" title="<%= fmtMem(row.pm) %>"><%= fmtMem(row.ws) %></td>
+        <td title="<%= t('process.colCpuHint') %>">
+          <div><%= row.u != null ? row.u + '%' : '-' %></div>
+          <% if (row.cpu != null) { %>
+          <div class="small text-secondary lh-1" style="font-size:.75rem"><%= fmtCpu(row.cpu) %></div>
+          <% } %>
+        </td>
+        <td><%= row.th != null ? row.th : '-' %></td>
+        <td class="small text-secondary"><%= row.st || '-' %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end">
+          <% if (!protectedPid) { %>
+          <button type="button" class="btn btn-sm btn-outline-danger process-kill" title="<%= t('process.kill') %>"
+                  data-pid="<%= row.id %>" data-pname="<%= row.n || '' %>">
+            <i class="ti ti-x"></i>
+          </button>
+          <% } else { %>
+          <span class="text-secondary">—</span>
+          <% } %>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,145 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle"><%= t('process.listSource') %></div>
+        <h2 class="page-title"><i class="ti ti-cpu me-1"></i><%= t('process.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('process.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-md-5 col-lg-4">
+            <div class="position-relative">
+              <input type="search" id="process-kw" name="kw" class="form-control form-control-sm ps-4"
+                     placeholder="<%= t('process.searchPlaceholder') %>" value="<%= kw %>" autocomplete="off"
+                     hx-get="/process/list" hx-target="#process-table-region" hx-swap="innerHTML"
+                     hx-include="#process-sort"
+                     hx-trigger="input changed delay:400ms, search">
+              <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+            </div>
+          </div>
+          <div class="col-auto">
+            <select id="process-sort" name="sort" class="form-select form-select-sm" autocomplete="off"
+                    hx-get="/process/list" hx-target="#process-table-region" hx-swap="innerHTML"
+                    hx-include="#process-kw" hx-trigger="change">
+              <option value="mem" <%= sort === 'mem' ? 'selected' : '' %>><%= t('process.sortMem') %></option>
+              <option value="cpu" <%= sort === 'cpu' ? 'selected' : '' %>><%= t('process.sortCpu') %></option>
+              <option value="pid" <%= sort === 'pid' ? 'selected' : '' %>><%= t('process.sortPid') %></option>
+              <option value="name" <%= sort === 'name' ? 'selected' : '' %>><%= t('process.sortName') %></option>
+            </select>
+          </div>
+          <div class="col text-md-end small text-secondary">
+            <%= t('process.listSource') %>
+          </div>
+        </div>
+      </div>
+      <div id="process-table-region">
+        <%- include('../partials/process-list', { rows, kw, sort, stats, msg, truncated }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 结束进程确认框：预览将执行的命令，确认后才发请求 %>
+<div class="modal" id="process-confirm-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-alert-triangle text-danger me-1"></i><%= t('process.kill') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-secondary small mb-2" id="process-confirm-scope"></div>
+        <div class="fw-bold small mb-1"><%= t('process.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="process-confirm-cmd" style="white-space:pre-wrap;word-break:break-all"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="process-confirm-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-danger" id="process-confirm-ok"><%= t('common.confirm') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    scope: '<%= t("process.killConfirmScope") %>'
+  };
+  var CSRF = '<%= csrf %>';
+  var modal = document.getElementById('process-confirm-modal');
+  var scopeEl = document.getElementById('process-confirm-scope');
+  var cmdEl = document.getElementById('process-confirm-cmd');
+  var okBtn = document.getElementById('process-confirm-ok');
+  var cancelBtn = document.getElementById('process-confirm-cancel');
+  var backdrop = null;
+  var pending = null; // { values }
+
+  document.body.appendChild(modal); // hoist 到 body，避免嵌套层级问题
+
+  function currentKw() {
+    var i = document.getElementById('process-kw');
+    return i ? i.value.trim() : '';
+  }
+  function currentSort() {
+    var s = document.getElementById('process-sort');
+    return s ? s.value : 'mem';
+  }
+
+  function openConfirm(pid, pname) {
+    pending = { values: { pid: pid, pname: pname, kw: currentKw(), sort: currentSort() } };
+    scopeEl.textContent = T.scope.replace('{n}', pid).replace('{p}', pname || '-');
+    cmdEl.textContent = "Stop-Process -Id '" + pid + "' -Force";
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade show';
+    document.body.appendChild(backdrop);
+  }
+
+  function closeConfirm() {
+    pending = null;
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+  }
+
+  okBtn.addEventListener('click', function () {
+    if (!pending) return closeConfirm();
+    var p = pending;
+    closeConfirm();
+    htmx.ajax('POST', '/process/kill', {
+      target: '#process-table-region',
+      swap: 'innerHTML',
+      values: p.values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+  cancelBtn.addEventListener('click', closeConfirm);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeConfirm(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('show')) closeConfirm();
+  });
+
+  // 结束进程按钮（事件委托，partial 刷新后依然有效）
+  document.body.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.process-kill') : null;
+    if (!btn) return;
+    e.preventDefault();
+    var pid = btn.dataset.pid || '';
+    if (!pid) return;
+    openConfirm(pid, btn.dataset.pname || '');
+  });
+})();
+</script>
+
+<%- include('../layouts/layout-bottom') %>
