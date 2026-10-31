@@ -593,3 +593,34 @@ body {
 #file-main .table-responsive {
   min-height: 320px;
 }
+
+/* ---- 12. 侧边栏品牌全称 + 底部作者/项目链接（含登录页页脚） ---- */
+.navbar-brand.wra-brand-full {
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+.wra-sidebar-footer {
+  margin-top: auto;
+  padding: 0.75rem 0.5rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.825rem;
+}
+.wra-ext-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.wra-ext-link:hover {
+  color: #fff;
+  opacity: 1;
+}
+.wra-login-footer a {
+  opacity: 0.9;
+}
+.wra-login-footer a:hover {
+  opacity: 1;
+}

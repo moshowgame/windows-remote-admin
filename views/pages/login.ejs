@@ -19,7 +19,7 @@
   <title><%= t('login.title') %> · Windows Remote Admin</title>
   <link rel="stylesheet" href="/static/css/tabler.min.css">
   <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
-  <link rel="stylesheet" href="/static/css/app.css?v=20261011">
+  <link rel="stylesheet" href="/static/css/app.css?v=20261031">
 </head>
 <body class="d-flex flex-column wra-login-body" hx-headers='{"X-CSRF-Token":"<%= csrf %>"}'>
 <a href="#" class="nav-link wra-login-theme" id="theme-toggle" aria-label="<%= t('nav.theme') %>" title="<%= t('login.themeHint') %>">
@@ -63,6 +63,19 @@
         <div class="text-center small text-secondary mt-3">
           <a href="/lang/en" class="text-decoration-none me-3">English</a>
           <a href="/lang/zh-CN" class="text-decoration-none">简体中文</a>
+        </div>
+        <div class="wra-login-footer text-center small text-secondary mt-2">
+          Power by
+          <a href="https://moshowgame.blog.csdn.net" target="_blank" rel="noopener" class="text-decoration-none fw-bold">Moshow</a>
+          <span class="mx-1">·</span>
+          <a href="https://moshowgame.blog.csdn.net" target="_blank" rel="noopener" class="text-decoration-none" title="CSDN - Moshow">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" class="align-middle" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#fc5531"/><path d="M16.4 8.4a5.1 5.1 0 1 0 0 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+            CSDN
+          </a>
+          <span class="mx-1">·</span>
+          <a href="https://github.com/moshowgame/windows-remote-admin" target="_blank" rel="noopener" class="text-decoration-none" title="GitHub - moshowgame/windows-remote-admin">
+            <i class="ti ti-brand-github align-middle"></i>GitHub
+          </a>
         </div>
       </div>
     </div>

@@ -19,16 +19,16 @@
   <title><%= title %> · Windows Remote Admin</title>
   <link rel="stylesheet" href="/static/css/tabler.min.css">
   <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
-  <link rel="stylesheet" href="/static/css/app.css?v=20261024">
+  <link rel="stylesheet" href="/static/css/app.css?v=20261031">
 </head>
 <body data-role="<%= role || 'admin' %>" hx-headers='{"X-CSRF-Token":"<%= csrf %>", "X-Requested-With":"htmx"}'>
 <div class="page">
   <!-- 侧边栏 -->
   <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
     <div class="container-fluid">
-      <h1 class="navbar-brand navbar-brand-autodark">
+      <h1 class="navbar-brand navbar-brand-autodark wra-brand-full">
         <a href="/dashboard" class="text-decoration-none">
-          <i class="ti ti-server-2 me-1"></i>WRA
+          <i class="ti ti-server-2 me-1"></i>windows-remote-admin
         </a>
       </h1>
       <div class="navbar-nav flex-row d-lg-none">
@@ -139,6 +139,21 @@
             </div>
           </li>
         </ul>
+      </div>
+      <!-- 侧边栏底部：作者与项目链接 -->
+      <div class="wra-sidebar-footer">
+        <div class="small text-secondary mb-1">
+          Power by <a href="https://moshowgame.blog.csdn.net" target="_blank" rel="noopener" class="text-reset text-decoration-none fw-bold">Moshow</a>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="https://moshowgame.blog.csdn.net" target="_blank" rel="noopener" class="wra-ext-link" title="CSDN - Moshow" aria-label="CSDN">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#fc5531"/><path d="M16.4 8.4a5.1 5.1 0 1 0 0 7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+            <span>CSDN</span>
+          </a>
+          <a href="https://github.com/moshowgame/windows-remote-admin" target="_blank" rel="noopener" class="wra-ext-link" title="GitHub - moshowgame/windows-remote-admin" aria-label="GitHub">
+            <i class="ti ti-brand-github"></i><span>GitHub</span>
+          </a>
+        </div>
       </div>
     </div>
   </aside>

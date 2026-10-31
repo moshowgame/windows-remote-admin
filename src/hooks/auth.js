@@ -4,8 +4,21 @@
 // - 已登录：放行
 // - 未登录整页请求：302 → /login
 // - 未登录 HTMX 片段请求：401 + HX-Redirect: /login（HTMX 自动整页跳转）
-// - 未授权访问记入审计
+// - 未授权访问：仅写类 / 下载类请求记入审计；纯查看（页面浏览 / 目录浏览 / 日志查看）不写
+//   审计日志，避免噪音（访问日志仍全量记录每次请求，可追溯性不受影响）
 const audit = require('./audit');
+
+// 安全方法（GET/HEAD/OPTIONS）默认视为纯查看，不写审计；下载路由除外（数据外带面，保留审计）
+const DOWNLOAD_RE = /^\/files\/download/;
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+// 本质为查看的 POST 路由（目录浏览），同样不写审计
+const VIEW_POSTS = new Set(['/files/browse']);
+
+function shouldAuditUnauthorized(request) {
+  const url = (request.raw.url || '').split('?')[0];
+  if (SAFE_METHODS.has(request.method)) return DOWNLOAD_RE.test(url);
+  return !VIEW_POSTS.has(url);
+}
 
 module.exports = async function authenticate(request, reply) {
   // 公开路由（登录页等）直接放行
@@ -16,7 +29,9 @@ module.exports = async function authenticate(request, reply) {
   const username = request.session && request.session.get('username');
   if (username) return;
 
-  audit(request, '未授权拦截', { url: request.raw.url });
+  if (shouldAuditUnauthorized(request)) {
+    audit(request, '未授权拦截', { url: request.raw.url });
+  }
 
   // SSE 连接（EventSource）无法处理 302/HX-Redirect：直接 401 结束，让前端静默断开
   if ((request.headers.accept || '').includes('text/event-stream')) {
