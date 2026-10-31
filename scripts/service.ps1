@@ -52,7 +52,7 @@ function Resolve-Node {
   }
   $cmd = Get-Command node.exe -ErrorAction SilentlyContinue
   if (-not $cmd) {
-    Write-Host '[错误] 未找到 node.exe，请安装 Node.js 20+ 或用 -NodePath 指定完整路径。' -ForegroundColor Red
+    Write-Host '[错误] 未找到 node.exe，请安装 Node.js 22+ 或用 -NodePath 指定完整路径。' -ForegroundColor Red
     exit 1
   }
   return $cmd.Source

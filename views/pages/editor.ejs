@@ -23,6 +23,10 @@
         <% if (readonly) { %><span class="badge bg-warning-lt"><%= t('editor.readonly') %></span><% } %>
         <span class="badge bg-secondary-lt"><%= sizeText %></span>
         <span class="badge bg-secondary-lt d-none d-md-inline"><%= mtimeText %></span>
+        <a class="btn btn-sm btn-outline-secondary d-none" id="ed-back-files" href="/files"
+           title="<%= t('editor.backToFilesTitle') %>">
+          <i class="ti ti-arrow-back-up me-1"></i><%= t('editor.backToFiles') %>
+        </a>
         <a class="btn btn-sm btn-outline-secondary" href="/files?path=<%= encodeURIComponent(parentDir) %>">
           <i class="ti ti-folder me-1"></i><%= t('editor.parentDir') %>
         </a>
@@ -66,6 +70,18 @@
       var status = document.getElementById('ed-status');
       var form = document.getElementById('ed-save-form');
       var dirty = false;
+
+      /* 快捷返回：文件页每次浏览都会记录最后目录，有记录才显示按钮 */
+      (function () {
+        var last = '';
+        try { last = localStorage.getItem('wra_files_last_dir') || ''; } catch (e) { /* 忽略 */ }
+        var back = document.getElementById('ed-back-files');
+        if (!back) return;
+        if (last) {
+          back.href = '/files?path=' + encodeURIComponent(last);
+          back.classList.remove('d-none');
+        }
+      })();
 
       function fmtSize(n) {
         if (n < 1024) return n + ' B';

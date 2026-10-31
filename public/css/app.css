@@ -588,3 +588,8 @@ body {
   background: color-mix(in srgb, var(--wra-brand, #4263eb) 5%, transparent);
   transition: outline-color 0.15s ease, background-color 0.15s ease;
 }
+
+/* ---- 11. 文件管理列表区最小高度（单文件目录时保持一致高度，行内下拉菜单不被裁剪） ---- */
+#file-main .table-responsive {
+  min-height: 320px;
+}

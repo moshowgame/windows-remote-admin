@@ -448,6 +448,12 @@
       }).join('');
     }
     function currentDir() { return val('current-path').trim(); }
+
+    // 记住最后一次浏览目录：编辑器页「返回文件管理」按钮跳回这里（localStorage 持久化，跨页面）
+    function rememberLastDir() {
+      var d = currentDir();
+      if (d) { try { localStorage.setItem('wra_files_last_dir', d); } catch (e) { /* 隐私模式忽略 */ } }
+    }
     function refreshFavIcon() {
       var b = $('btn-fav');
       if (!b) return;
@@ -501,6 +507,7 @@
       if (id === 'file-main') {
         restoreChecks();
         bindToolbar();
+        rememberLastDir();
       }
       if (id === 'recent-panel') refreshFavIcon();
     });
@@ -757,6 +764,7 @@
       renderFavs();
       refreshFavIcon();
       bindToolbar();
+      rememberLastDir();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
