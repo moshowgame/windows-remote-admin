@@ -1,0 +1,555 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle"><%= t('tasks.pretitle') %></div>
+        <h2 class="page-title"><i class="ti ti-calendar-time me-1"></i><%= t('tasks.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('tasks.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header py-3">
+        <div class="row g-2 align-items-center w-100">
+          <div class="col-md-4 col-lg-3">
+            <div class="position-relative">
+              <input type="search" id="task-kw" name="kw" class="form-control form-control-sm ps-4"
+                     placeholder="<%= t('tasks.searchPlaceholder') %>" value="<%= kw %>" autocomplete="off"
+                     hx-get="/tasks/list" hx-target="#task-table-region" hx-swap="innerHTML"
+                     hx-trigger="input changed delay:400ms, search" hx-include="#task-folder, #task-sub, #task-state">
+              <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
+            </div>
+          </div>
+          <div class="col-md-4 col-lg-3">
+            <select id="task-folder" name="folder" class="form-select form-select-sm"
+                    hx-get="/tasks/list" hx-target="#task-table-region" hx-swap="innerHTML"
+                    hx-trigger="change" hx-include="#task-kw, #task-sub, #task-state">
+              <option value=""><%= t('tasks.filterAll') %></option>
+              <% folders.forEach(function (f) { %>
+              <option value="<%= f %>" <%= f === folder ? 'selected' : '' %>><%= f === '\\' ? t('tasks.folderRoot') : f %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="col-md-3 col-lg-2">
+            <select id="task-state" name="state" class="form-select form-select-sm"
+                    hx-get="/tasks/list" hx-target="#task-table-region" hx-swap="innerHTML"
+                    hx-trigger="change" hx-include="#task-kw, #task-folder, #task-sub">
+              <option value=""><%= t('tasks.stateAll') %></option>
+              <option value="ready" <%= state === 'ready' ? 'selected' : '' %>><%= t('tasks.stateReady') %></option>
+              <option value="running" <%= state === 'running' ? 'selected' : '' %>><%= t('tasks.stateRunning') %></option>
+              <option value="queued" <%= state === 'queued' ? 'selected' : '' %>><%= t('tasks.stateQueued') %></option>
+              <option value="disabled" <%= state === 'disabled' ? 'selected' : '' %>><%= t('tasks.stateDisabled') %></option>
+            </select>
+          </div>
+          <div class="col-md-2 col-lg-2">
+            <label class="form-check form-check-inline mb-0 ms-1">
+              <input type="checkbox" id="task-sub" class="form-check-input" <%= sub ? 'checked' : '' %>
+                     hx-get="/tasks/list" hx-target="#task-table-region" hx-swap="innerHTML"
+                     hx-trigger="change" hx-include="#task-kw, #task-folder, #task-state">
+              <span class="form-check-label small"><%= t('tasks.filterSub') %></span>
+            </label>
+          </div>
+          <div class="col-md text-md-end">
+            <% if (role !== 'readonly') { %>
+            <button type="button" id="task-new-btn" class="btn btn-sm btn-primary">
+              <i class="ti ti-plus me-1"></i><%= t('tasks.btnNew') %>
+            </button>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <div id="task-table-region">
+        <%- include('../partials/tasks-list', { tasks, kw, folder, sub, stats, msg }) %>
+      </div>
+      <div class="card-footer py-2">
+        <div class="small text-secondary"><%= t('tasks.listSource') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 任务操作确认框：显示将执行的具体命令，\Microsoft\ 系统任务红色警示（实际执行走 env 注入） %>
+<div class="modal" id="task-confirm-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-alert-triangle text-warning me-1"></i><%= t('tasks.confirmTitle') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="text-secondary small mb-2" id="task-confirm-scope"></div>
+        <div class="fw-bold small mb-1"><%= t('tasks.willRun') %></div>
+        <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="task-confirm-cmd" style="max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
+        <div class="alert alert-danger mt-2 mb-0 py-2 small" id="task-confirm-syswarn" style="display:none">
+          <i class="ti ti-alert-triangle me-1"></i><%= t('tasks.sysWarn') %>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-close="1"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-primary" id="task-confirm-ok"><%= t('common.confirm') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# 新建任务模态：结构化表单（程序/参数/起始于 + 5 种常用触发器 + 运行身份） %>
+<div class="modal" id="task-create-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <form id="task-create-form">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="ti ti-calendar-plus me-1"></i><%= t('tasks.createTitle') %></h5>
+          <button type="button" class="btn-close" data-close="1" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-secondary small mb-3"><%= t('tasks.createHint') %></div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="tc-name"><%= t('tasks.fName') %> *</label>
+              <input class="form-control" name="name" id="tc-name" required maxlength="100" placeholder="<%= t('tasks.fNamePh') %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tc-folder"><%= t('tasks.fFolder') %></label>
+              <input class="form-control font-monospace" name="folder" id="tc-folder" list="tc-folder-list" placeholder="\WRA\">
+              <datalist id="tc-folder-list">
+                <% folders.forEach(function (f) { %><option value="<%= f %>"></option><% }); %>
+              </datalist>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tc-exec"><%= t('tasks.fExec') %> *</label>
+              <input class="form-control font-monospace" name="exec" id="tc-exec" required maxlength="260" placeholder="<%= t('tasks.fExecPh') %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tc-args"><%= t('tasks.fArgs') %></label>
+              <input class="form-control font-monospace" name="args" id="tc-args" maxlength="2048" placeholder="<%= t('tasks.fArgsPh') %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tc-dir"><%= t('tasks.fDir') %></label>
+              <input class="form-control font-monospace" name="dir" id="tc-dir" maxlength="260">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tc-trigger-sel"><%= t('tasks.fTrigger') %></label>
+              <select class="form-select" name="trigger" id="tc-trigger-sel">
+                <option value="once"><%= t('tasks.trOnce') %></option>
+                <option value="daily"><%= t('tasks.trDaily') %></option>
+                <option value="hourly"><%= t('tasks.trHourly') %></option>
+                <option value="boot"><%= t('tasks.trBoot') %></option>
+                <option value="logon"><%= t('tasks.trLogon') %></option>
+              </select>
+            </div>
+            <div class="col-md-6" id="tc-start-row">
+              <label class="form-label" for="tc-start"><%= t('tasks.fStartAt') %> *</label>
+              <input type="datetime-local" class="form-control" name="startAt" id="tc-start" step="60">
+            </div>
+            <div class="col-md-6" id="tc-interval-row" style="display:none">
+              <label class="form-label" for="tc-interval" id="tc-interval-label"><%= t('tasks.fDailyDays') %></label>
+              <input type="number" class="form-control" name="interval" id="tc-interval" min="1" max="365" value="1">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label d-block"><%= t('tasks.fAccount') %></label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="account" id="tc-acc-system" value="system" checked>
+                <label class="form-check-label" for="tc-acc-system"><%= t('tasks.accSystem') %></label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="account" id="tc-acc-current" value="current">
+                <label class="form-check-label" for="tc-acc-current"><%= t('tasks.accCurrent') %></label>
+              </div>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <label class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="highest" id="tc-highest" value="1" checked>
+                <span class="form-check-label"><%= t('tasks.fHighest') %></span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-close="1"><%= t('common.cancel') %></button>
+          <button type="submit" class="btn btn-primary"><i class="ti ti-plus me-1"></i><%= t('tasks.btnSave') %></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%# XML 编辑模态：Export 全保真加载 → 编辑 → Register -Xml -Force 覆盖保存 %>
+<div class="modal" id="task-xml-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <form id="task-xml-form">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="ti ti-code text-azure me-1"></i><%= t('tasks.editTitle') %></h5>
+          <button type="button" class="btn-close" data-close="1" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-secondary small mb-2" id="task-xml-scope"></div>
+          <div class="alert alert-warning py-2 small mb-2" id="task-xml-syswarn" style="display:none">
+            <i class="ti ti-alert-triangle me-1"></i><%= t('tasks.sysWarn') %>
+          </div>
+          <div class="text-secondary small mb-2"><%= t('tasks.editHint') %></div>
+          <div class="card card-sm bg-light mb-2" id="task-quick-edit">
+            <div class="card-body py-2">
+              <div class="d-flex align-items-center mb-2">
+                <i class="ti ti-bolt text-warning me-1"></i>
+                <span class="fw-bold small"><%= t('tasks.qxTitle') %></span>
+                <span class="text-secondary small ms-2"><%= t('tasks.qxHint') %></span>
+              </div>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label small mb-0" for="task-qx-desc"><%= t('tasks.qxDesc') %></label>
+                  <input class="form-control form-control-sm font-monospace" id="task-qx-desc" maxlength="500">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label small mb-0" for="task-qx-exec"><%= t('tasks.fExec') %></label>
+                  <input class="form-control form-control-sm font-monospace" id="task-qx-exec" maxlength="260">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small mb-0" for="task-qx-args"><%= t('tasks.fArgs') %></label>
+                  <input class="form-control form-control-sm font-monospace" id="task-qx-args" maxlength="2048">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small mb-0" for="task-qx-dir"><%= t('tasks.fDir') %></label>
+                  <input class="form-control form-control-sm font-monospace" id="task-qx-dir" maxlength="260">
+                </div>
+                <div class="col-12 d-flex align-items-center gap-4 flex-wrap">
+                  <label class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="task-qx-highest">
+                    <span class="form-check-label small"><%= t('tasks.fHighest') %></span>
+                  </label>
+                  <label class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="task-qx-enabled">
+                    <span class="form-check-label small"><%= t('tasks.qxEnabled') %></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <textarea class="form-control font-monospace" id="task-xml-area" rows="18" spellcheck="false"
+                    style="font-size:.8rem" disabled></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-close="1"><%= t('common.cancel') %></button>
+          <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i><%= t('tasks.btnSaveXml') %></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var CSRF = '<%= csrf %>';
+  var T = {
+    scope: '<%= t("tasks.confirmScope") %>',
+    xmlLoading: '<%= t("tasks.xmlLoading") %>',
+    xmlLoadFail: '<%= t("tasks.xmlLoadFailed") %>',
+    errStartAt: '<%= t("tasks.errStartAt") %>',
+    dailyLabel: '<%= t("tasks.fDailyDays") %>',
+    hourlyLabel: '<%= t("tasks.fHourlyHours") %>'
+  };
+
+  // ---- 通用自管理 modal（hoist body、手动 backdrop、ESC/暗区/关闭按钮）----
+  function makeModal(id) {
+    var el = document.getElementById(id);
+    document.body.appendChild(el);
+    var backdrop = null;
+    function open() {
+      el.style.display = 'block';
+      el.classList.add('show');
+      backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      document.body.appendChild(backdrop);
+    }
+    function close() {
+      el.style.display = 'none';
+      el.classList.remove('show');
+      if (backdrop) { backdrop.remove(); backdrop = null; }
+    }
+    el.addEventListener('click', function (e) { if (e.target === el) close(); });
+    el.querySelectorAll('[data-close]').forEach(function (b) {
+      b.addEventListener('click', close);
+    });
+    return { el: el, open: open, close: close };
+  }
+  var confirmM = makeModal('task-confirm-modal');
+  var createM = makeModal('task-create-modal');
+  var xmlM = makeModal('task-xml-modal');
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (xmlM.el.classList.contains('show')) xmlM.close();
+    else if (createM.el.classList.contains('show')) createM.close();
+    else if (confirmM.el.classList.contains('show')) confirmM.close();
+  });
+
+  // ---- 当前筛选值（操作后刷新列表保持筛选）----
+  function curKw() { var i = document.getElementById('task-kw'); return i ? i.value.trim() : ''; }
+  function curFolder() { var s = document.getElementById('task-folder'); return s ? s.value : ''; }
+  function curSub() { var c = document.getElementById('task-sub'); return c && c.checked ? '1' : '0'; }
+  function curState() { var s = document.getElementById('task-state'); return s ? s.value : ''; }
+
+  // ---- 操作确认框（显示用命令，实际执行仍走 env 注入）----
+  var pending = null; // { action, name, path }
+  var scopeEl = document.getElementById('task-confirm-scope');
+  var cmdEl = document.getElementById('task-confirm-cmd');
+  var sysEl = document.getElementById('task-confirm-syswarn');
+  var okBtn = document.getElementById('task-confirm-ok');
+
+  function buildCmd(action, name, taskPath) {
+    var n = String(name).replace(/'/g, "''");
+    var p = String(taskPath).replace(/'/g, "''");
+    var m = {
+      start: 'Start-ScheduledTask',
+      stop: 'Stop-ScheduledTask',
+      enable: 'Enable-ScheduledTask',
+      disable: 'Disable-ScheduledTask',
+      delete: 'Unregister-ScheduledTask -Confirm:$false'
+    };
+    return (m[action] || action) + " -TaskName '" + n + "' -TaskPath '" + p + "'";
+  }
+
+  function openConfirm(action, name, taskPath) {
+    pending = { action: action, name: name, path: taskPath };
+    scopeEl.textContent = T.scope.replace('{n}', name).replace('{p}', taskPath);
+    cmdEl.textContent = buildCmd(action, name, taskPath);
+    // \Microsoft\ 系统任务软警示（红色，不硬拦）
+    sysEl.style.display = String(taskPath).indexOf('\\Microsoft\\') === 0 ? '' : 'none';
+    okBtn.className = 'btn ' + ((action === 'stop' || action === 'disable' || action === 'delete') ? 'btn-danger' : 'btn-primary');
+    confirmM.open();
+  }
+
+  okBtn.addEventListener('click', function () {
+    if (!pending) return confirmM.close();
+    var p = pending;
+    pending = null;
+    confirmM.close();
+    htmx.ajax('POST', '/tasks/action', {
+      target: '#task-table-region',
+      swap: 'innerHTML',
+      values: { name: p.name, path: p.path, action: p.action, kw: curKw(), folder: curFolder(), sub: curSub(), state: curState() },
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+
+  // ---- 新建任务 ----
+  var createForm = document.getElementById('task-create-form');
+  var trigSel = document.getElementById('tc-trigger-sel');
+  var startRow = document.getElementById('tc-start-row');
+  var ivRow = document.getElementById('tc-interval-row');
+  var ivLabel = document.getElementById('tc-interval-label');
+  var ivInput = document.getElementById('tc-interval');
+  var startInput = document.getElementById('tc-start');
+  var createPending = false;
+
+  function syncTrigger() {
+    var v = trigSel.value;
+    var needStart = v === 'once' || v === 'daily' || v === 'hourly';
+    var needIv = v === 'daily' || v === 'hourly';
+    startRow.style.display = needStart ? '' : 'none';
+    ivRow.style.display = needIv ? '' : 'none';
+    if (v === 'daily') { ivLabel.textContent = T.dailyLabel; ivInput.max = '365'; }
+    else if (v === 'hourly') { ivLabel.textContent = T.hourlyLabel; ivInput.max = '8760'; }
+  }
+  trigSel.addEventListener('change', syncTrigger);
+  syncTrigger();
+
+  function nowLocal() {
+    var d = new Date();
+    d.setSeconds(0, 0);
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  createForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!createForm.checkValidity()) { createForm.reportValidity(); return; }
+    var needStart = ['once', 'daily', 'hourly'].indexOf(trigSel.value) !== -1;
+    if (needStart && !startInput.value) { WRA.showToast(T.errStartAt, 'warning'); return; }
+    var values = { kw: curKw(), folder: curFolder(), sub: curSub(), state: curState() };
+    new FormData(createForm).forEach(function (v, k) { values[k] = v; });
+    createPending = true;
+    createM.close();
+    htmx.ajax('POST', '/tasks/create', {
+      target: '#task-table-region',
+      swap: 'innerHTML',
+      values: values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+
+  // 创建成功（列表刷新 afterSwap）后重置表单；失败保留输入便于修正重试
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail && e.detail.target && e.detail.target.id === 'task-table-region' && createPending) {
+      createPending = false;
+      createForm.reset();
+      syncTrigger();
+    }
+  });
+
+  // ---- XML 编辑模态 ----
+  var xmlForm = document.getElementById('task-xml-form');
+  var xmlArea = document.getElementById('task-xml-area');
+  var xmlScope = document.getElementById('task-xml-scope');
+  var xmlSys = document.getElementById('task-xml-syswarn');
+  var xmlName = '';
+  var xmlPath = '';
+
+  function openXml(name, taskPath) {
+    xmlName = name;
+    xmlPath = taskPath;
+    xmlScope.textContent = T.scope.replace('{n}', name).replace('{p}', taskPath);
+    xmlSys.style.display = String(taskPath).indexOf('\\Microsoft\\') === 0 ? '' : 'none';
+    xmlArea.value = T.xmlLoading;
+    xmlArea.disabled = true;
+    qxReset();
+    xmlM.open();
+    fetch('/tasks/xml?name=' + encodeURIComponent(name) + '&path=' + encodeURIComponent(taskPath))
+      .then(function (res) { return res.json(); })
+      .then(function (d) {
+        if (!d || !d.ok) {
+          xmlM.close();
+          WRA.showToast(T.xmlLoadFail.replace('{n}', (d && d.error) || ''), 'error');
+          return;
+        }
+        xmlArea.value = d.xml || '';
+        xmlArea.disabled = false;
+        qxFill();
+      })
+      .catch(function () {
+        xmlM.close();
+        WRA.showToast(T.xmlLoadFail.replace('{n}', ''), 'error');
+      });
+  }
+
+  // ---- XML 快速编辑：解析 textarea 当前 XML → 表单；表单变更 → 写回 XML（其余节点原样保留）----
+  var QX_NS = 'http://schemas.microsoft.com/windows/2004/02/mit/task';
+  var qxDesc = document.getElementById('task-qx-desc');
+  var qxExec = document.getElementById('task-qx-exec');
+  var qxArgs = document.getElementById('task-qx-args');
+  var qxDir = document.getElementById('task-qx-dir');
+  var qxHighest = document.getElementById('task-qx-highest');
+  var qxEnabled = document.getElementById('task-qx-enabled');
+  var qxCards = document.getElementById('task-quick-edit');
+
+  // 解析 XML 文本；失败返回 null（快速编辑卡保持上次状态，不影响手改 XML 保存）
+  function qxParse(xmlText) {
+    try {
+      var doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+      if (doc.getElementsByTagName('parsererror').length) return null;
+      var g = function (tag) {
+        return doc.getElementsByTagNameNS(QX_NS, tag)[0] || doc.getElementsByTagName(tag)[0] || null;
+      };
+      return {
+        doc: doc,
+        desc: g('Description'), exec: g('Command'), args: g('Arguments'), dir: g('WorkingDirectory'),
+        runLevel: g('RunLevel'), enabled: g('Enabled'), regInfo: g('RegistrationInfo'),
+      };
+    } catch (e) { return null; }
+  }
+
+  function qxReset() {
+    [qxDesc, qxExec, qxArgs, qxDir].forEach(function (i) { i.value = ''; });
+    qxHighest.checked = false;
+    qxEnabled.checked = true;
+  }
+
+  // XML 加载成功后填充快速编辑表单（赋值不触发 input 事件，无回写）
+  function qxFill() {
+    var p = qxParse(xmlArea.value);
+    qxCards.style.opacity = p ? '1' : '.5';
+    if (!p) return;
+    qxDesc.value = p.desc ? p.desc.textContent : '';
+    qxExec.value = p.exec ? p.exec.textContent : '';
+    qxArgs.value = p.args ? p.args.textContent : '';
+    qxDir.value = p.dir ? p.dir.textContent : '';
+    qxHighest.checked = !!(p.runLevel && p.runLevel.textContent === 'HighestAvailable');
+    qxEnabled.checked = !(p.enabled && p.enabled.textContent === 'false');
+  }
+
+  function qxSetOrInsert(p, node, value, parentTag, elTag, beforeTags) {
+    if (node) { node.textContent = value; return node; }
+    if (!value) return null; // 空值不凭空建节点
+    // 节点缺失时按 schema 顺序创建：插入到父容器内首个 beforeTag 之前，否则 append
+    var parent = p.doc.getElementsByTagNameNS(QX_NS, parentTag)[0] || p.doc.getElementsByTagName(parentTag)[0];
+    if (!parent) return null;
+    var el = p.doc.createElementNS(QX_NS, elTag);
+    el.textContent = value;
+    var anchor = null;
+    for (var i = 0; i < beforeTags.length; i++) {
+      var list = parent.getElementsByTagNameNS(QX_NS, beforeTags[i]);
+      if (!list.length) list = parent.getElementsByTagName(beforeTags[i]);
+      if (list.length) { anchor = list[0]; break; }
+    }
+    parent.insertBefore(el, anchor);
+    return el;
+  }
+
+  // 表单变更 → 基于 textarea 当前内容重新解析并写回（手改过的其他节点原样保留）
+  function qxApply() {
+    if (xmlArea.disabled) return;
+    var p = qxParse(xmlArea.value);
+    if (!p) return;
+    qxSetOrInsert(p, p.desc, qxDesc.value, 'RegistrationInfo', 'Description', ['URI']);
+    qxSetOrInsert(p, p.exec, qxExec.value, 'Exec', 'Command', ['Arguments', 'WorkingDirectory']);
+    if (qxArgs.value) qxSetOrInsert(p, p.args, qxArgs.value, 'Exec', 'Arguments', ['WorkingDirectory']);
+    else if (p.args && p.args.parentNode) p.args.parentNode.removeChild(p.args);
+    if (qxDir.value) qxSetOrInsert(p, p.dir, qxDir.value, 'Exec', 'WorkingDirectory', []);
+    else if (p.dir && p.dir.parentNode) p.dir.parentNode.removeChild(p.dir);
+    if (p.runLevel) p.runLevel.textContent = qxHighest.checked ? 'HighestAvailable' : 'LeastPrivilege';
+    if (p.enabled) p.enabled.textContent = qxEnabled.checked ? 'true' : 'false';
+    // 保留原声明头（Export 常为 UTF-16 声明，Register -Xml 以字符串接收不受影响）
+    var head = '';
+    var m = /^<\?xml[^>]*\?>\s*/.exec(xmlArea.value);
+    if (m) head = m[0];
+    xmlArea.value = head + new XMLSerializer().serializeToString(p.doc.documentElement);
+  }
+
+  [qxDesc, qxExec, qxArgs, qxDir].forEach(function (i) { i.addEventListener('input', qxApply); });
+  qxHighest.addEventListener('change', qxApply);
+  qxEnabled.addEventListener('change', qxApply);
+
+  xmlForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (xmlArea.disabled || !xmlArea.value.trim()) return;
+    htmx.ajax('POST', '/tasks/xml', {
+      target: '#task-table-region',
+      swap: 'innerHTML',
+      values: { name: xmlName, path: xmlPath, xml: xmlArea.value, kw: curKw(), folder: curFolder(), sub: curSub(), state: curState() },
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+    xmlM.close();
+  });
+
+  // ---- 入口按钮（委托，partial 刷新不失效）----
+  document.body.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    var act = e.target.closest('.task-act');
+    if (act) {
+      e.preventDefault();
+      openConfirm(act.dataset.action, act.dataset.name, act.dataset.path);
+      return;
+    }
+    var edit = e.target.closest('.task-edit');
+    if (edit) {
+      e.preventDefault();
+      openXml(edit.dataset.name, edit.dataset.path);
+      return;
+    }
+    var nb = e.target.closest('#task-new-btn');
+    if (nb) {
+      e.preventDefault();
+      if (!startInput.value) startInput.value = nowLocal();
+      createM.open();
+    }
+  });
+})();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

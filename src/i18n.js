@@ -83,7 +83,7 @@ const zhCN = {
 };
 
 // ---- 各页面字典段（独立文件维护，启动时合并；新增页面新建 part 文件并在此注册）----
-for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup', './i18n-parts/process']) {
+for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup', './i18n-parts/process', './i18n-parts/tasks']) {
   const m = require(part);
   Object.assign(en, m.en || {});
   Object.assign(zhCN, m['zh-CN'] || {});

@@ -27,6 +27,7 @@ const editorRoutes = require('./routes/editor');
 const logsRoutes = require('./routes/logs');
 const settingsRoutes = require('./routes/settings');
 const servicesRoutes = require('./routes/services');
+const tasksRoutes = require('./routes/tasks');
 const netRoutes = require('./routes/net');
 const processRoutes = require('./routes/process');
 const eventsRoutes = require('./routes/events');
@@ -197,6 +198,7 @@ async function buildApp() {
   await app.register(logsRoutes);
   await app.register(settingsRoutes);
   await app.register(servicesRoutes);
+  await app.register(tasksRoutes);
   await app.register(netRoutes);
   await app.register(processRoutes);
   await app.register(eventsRoutes);

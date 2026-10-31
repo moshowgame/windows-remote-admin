@@ -1,0 +1,126 @@
+<%# 任务计划列表片段：统计条 + 表格行（筛选/操作后整块刷新） %>
+<% if (msg) { %>
+<div class="alert alert-danger alert-dismissible m-2 mb-0" role="alert">
+  <i class="ti ti-alert-triangle me-1"></i><%= msg %>
+</div>
+<% } %>
+
+<div class="d-flex flex-wrap gap-2 align-items-center px-3 pt-3">
+  <span class="badge bg-secondary-lt"><%= t('tasks.statTotal').replace('{n}', stats.total) %></span>
+  <span class="badge bg-azure-lt"><%= t('tasks.statReady').replace('{n}', stats.ready) %></span>
+  <span class="badge bg-success-lt"><%= t('tasks.statRunning').replace('{n}', stats.running) %></span>
+  <span class="badge bg-orange-lt"><%= t('tasks.statDisabled').replace('{n}', stats.disabled) %></span>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover table-vcenter card-table">
+    <thead>
+      <tr>
+        <th style="width:30%"><%= t('tasks.colTask') %></th>
+        <th style="width:14%"><%= t('tasks.colFolder') %></th>
+        <th style="width:8%"><%= t('tasks.colState') %></th>
+        <th style="width:13%"><%= t('tasks.colLastRun') %></th>
+        <th style="width:10%"><%= t('tasks.colResult') %></th>
+        <th style="width:13%"><%= t('tasks.colNextRun') %></th>
+        <% if (role !== 'readonly') { %>
+        <th style="width:12%" class="text-end"><%= t('tasks.colActions') %></th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!tasks.length) { %>
+      <tr><td colspan="<%= role !== 'readonly' ? 7 : 6 %>" class="text-center text-secondary py-4"><%= t('tasks.noRows') %></td></tr>
+      <% } %>
+      <%
+        // COM 最小日期 1899-12-30 视为「无」
+        const fmtDt = (v) => (!v || Number(String(v).slice(0, 4)) < 1900) ? '—' : v;
+        // LastTaskResult 映射（0x41301=267009 正在运行 / 0x41303=267011 尚未运行 / 0x41304=267012 无后续 / 0x41306=267014 被终止）
+        const resultMap = {
+          0: [t('tasks.resultOk'), 'bg-success-lt'],
+          267009: [t('tasks.resultRunning'), 'bg-azure-lt'],
+          267011: [t('tasks.resultNever'), 'bg-secondary-lt'],
+          267012: [t('tasks.resultNoMore'), 'bg-secondary-lt'],
+          267014: [t('tasks.resultTerminated'), 'bg-warning-lt'],
+        };
+        const stateMap = {
+          Ready: [t('tasks.stateReady'), 'bg-azure-lt'],
+          Running: [t('tasks.stateRunning'), 'bg-success-lt'],
+          Disabled: [t('tasks.stateDisabled'), 'bg-secondary-lt'],
+          Queued: [t('tasks.stateQueued'), 'bg-warning-lt'],
+        };
+      %>
+      <% tasks.forEach(function (x) { %>
+      <%
+        const sys = String(x.p).startsWith('\\Microsoft\\');
+        const si = stateMap[x.s] || [t('tasks.stateUnknown'), 'bg-secondary-lt'];
+        const lr = x.lr == null ? null : Number(x.lr);
+        const ri = lr == null ? null : (resultMap[lr] || [String(lr), 'bg-danger-lt']);
+        const running = x.s === 'Running';
+        const disabled = x.s === 'Disabled';
+      %>
+      <tr>
+        <td>
+          <div class="d-flex align-items-center text-truncate">
+            <i class="ti ti-calendar-time <%= running ? 'text-success' : 'text-secondary' %> me-2"></i>
+            <div class="text-truncate">
+              <div class="d-flex align-items-center gap-1">
+                <span class="text-truncate"><%= x.n %></span>
+                <% if (sys) { %><span class="badge bg-orange-lt" title="<%= t('tasks.sysWarn') %>"><%= t('tasks.sysTask') %></span><% } %>
+              </div>
+              <% if (x.d) { %>
+              <div class="small text-secondary text-truncate" title="<%= x.d %>"><%= x.d %></div>
+              <% } %>
+              <% if (x.ex) { %>
+              <div class="small text-secondary font-monospace text-truncate lh-1" title="<%= x.ex %>">
+                <i class="ti ti-terminal-2 me-1"></i><%= x.ex %>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </td>
+        <td class="small text-secondary font-monospace text-truncate" title="<%= x.p %>"><%= x.p %></td>
+        <td><span class="badge <%= si[1] %>"><%= si[0] %></span></td>
+        <td class="small text-secondary font-monospace"><%= fmtDt(x.l) %></td>
+        <td><% if (ri) { %><span class="badge <%= ri[1] %>" title="<%= x.lr %>"><%= ri[0] %></span><% } else { %><span class="text-secondary">-</span><% } %></td>
+        <td class="small text-secondary font-monospace"><%= fmtDt(x.nr) %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm" role="group">
+            <% if (running) { %>
+            <button type="button" class="btn btn-outline-secondary task-act" title="<%= t('tasks.actStop') %>"
+                    data-action="stop" data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-player-stop"></i>
+            </button>
+            <% } else if (!disabled) { %>
+            <button type="button" class="btn btn-outline-success task-act" title="<%= t('tasks.actStart') %>"
+                    data-action="start" data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-player-play"></i>
+            </button>
+            <% } %>
+            <% if (disabled) { %>
+            <button type="button" class="btn btn-outline-success task-act" title="<%= t('tasks.actEnable') %>"
+                    data-action="enable" data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-toggle-right"></i>
+            </button>
+            <% } else { %>
+            <button type="button" class="btn btn-outline-secondary task-act" title="<%= t('tasks.actDisable') %>"
+                    data-action="disable" data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-ban"></i>
+            </button>
+            <% } %>
+            <button type="button" class="btn btn-outline-azure task-edit" title="<%= t('tasks.actEdit') %>"
+                    data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-code"></i>
+            </button>
+            <button type="button" class="btn btn-outline-danger task-act" title="<%= t('tasks.actDelete') %>"
+                    data-action="delete" data-name="<%= x.n %>" data-path="<%= x.p %>">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
