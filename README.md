@@ -70,7 +70,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 进程管理 `/process` | 全量运行进程列表，内存/CPU 占用率（1.5 秒差分采样，小字附累计 CPU 时间）/PID/名称排序，关键字搜索（进程名/PID/路径），admin 可结束进程释放资源（确认框预览 `Stop-Process` 命令 + 审计），系统关键进程（PID 0/4/8）拒绝操作，只读账号仅可查看 |
 | 事件查看器 `/events` | Windows 事件日志查询（System/Application/Security），按级别（严重/错误/警告/信息）与起止日期时间筛选，关键字搜索消息/来源/事件 ID，支持屏蔽关键字（逗号分隔，隐藏高频噪音事件），最新在前，单次最多 500 条，只读功能 |
 | 本地用户 `/users` | 本地账户列表（启用/锁定状态、上次登录、密码最后设置），admin 可解锁（`Unlock-LocalUser`）、启用已禁用账户（Guest 禁止启用，UI 隐藏 + 后端 403）、重置密码（`net user`，密码 env 注入不落日志），全部操作确认框 + 命令预览（密码打码）+ 独立审计，只读账号仅可查看 |
-| 环境变量 `/env` | Machine / User 作用域环境变量管理：列表、搜索、新增/编辑/删除（`SetEnvironmentVariable`，值 env 注入不落日志）；30 个系统关键变量（Path/ComSpec/OS 等）禁止删除（UI 置灰 + 后端 400 双重拦截）；敏感变量（含 pass/token/key 等）值自动打码，查看走 `/env/reveal`（admin + 审计），编辑打开时按需回填，只读账号仅可查看 |
+| 环境变量 `/env` | Machine / User 作用域环境变量管理：列表、搜索、新增/编辑/删除（`SetEnvironmentVariable`，值 env 注入不落日志）；全员可用的「查看」只读弹窗（避免误触编辑，只读账号仅此操作）；Path 等分号分隔值支持 Windows 风格列表编辑器（拆分行编辑后一键回写）；30 个系统关键变量（Path/ComSpec/OS 等）禁止删除（UI 置灰 + 后端 400 双重拦截）；敏感变量（含 pass/token/key 等）值自动打码，查看走 `/env/reveal`（admin + 审计），编辑打开时按需回填 |
 | 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |

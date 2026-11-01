@@ -5,9 +5,7 @@
         <th style="width:30%;"><%= t('env.nameLabel') %></th>
         <th><%= t('env.valueLabel') %></th>
         <th class="text-end" style="width:1%;"><%= t('env.lenLabel') %></th>
-        <% if (role !== 'readonly') { %>
         <th class="text-end" style="width:1%;"></th>
-        <% } %>
       </tr>
     </thead>
     <tbody>
@@ -35,8 +33,13 @@
           <% } %>
         </td>
         <td class="text-secondary small"><%= val.length %></td>
-        <% if (role !== 'readonly') { %>
         <td class="text-end text-nowrap">
+          <button type="button" class="btn btn-sm btn-outline-secondary env-view"
+                  data-name="<%= i.name %>" data-scope="<%= scope %>"
+                  data-val="<%= sens ? '' : val.replace(/"/g, '&quot;') %>"
+                  data-sens="<%= sens ? '1' : '' %>"
+                  title="<%= t('env.view') %>"><i class="ti ti-eye"></i></button>
+          <% if (role !== 'readonly') { %>
           <button type="button" class="btn btn-sm btn-outline-secondary env-edit"
                   data-name="<%= i.name %>" data-scope="<%= scope %>"
                   data-val="<%= sens ? '' : val.replace(/"/g, '&quot;') %>"
@@ -50,8 +53,8 @@
           <button type="button" class="btn btn-sm btn-outline-secondary" disabled
                   title="<%= t('env.criticalProtected') %>"><i class="ti ti-lock"></i></button>
           <% } %>
+          <% } %>
         </td>
-        <% } %>
       </tr>
       <% }); %>
     </tbody>
