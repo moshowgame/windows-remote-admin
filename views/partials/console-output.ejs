@@ -1,8 +1,10 @@
-<% /* 终端输出片段：命令回显 + 输出 + 状态/耗时（追加到 #console-output） */ %>
+<% /* 终端输出片段：命令回显（多行逐行 PS> / >> 前缀）+ 输出 + 状态/耗时（追加到 #console-output） */ %>
 <div class="wra-term-block">
+  <% var cmdLines = String(command).split(/\r?\n/); %>
   <div class="wra-term-cmd">
-    <span class="wra-term-prompt">PS&gt;</span>
-    <span class="text-info"><%= command %></span>
+    <% for (var ci = 0; ci < cmdLines.length; ci++) { %>
+      <div class="wra-term-cmdline"><span class="wra-term-prompt"><% if (ci === 0) { %>PS&gt;<% } else { %>&gt;&gt;<% } %></span><span class="text-info"><%= cmdLines[ci] %></span></div>
+    <% } %>
   </div>
   <% if (result.output) { %>
     <pre class="wra-term-out <%= result.ok ? '' : 'text-danger' %>"><%= result.output %></pre>

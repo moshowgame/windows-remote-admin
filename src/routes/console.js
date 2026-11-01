@@ -1,7 +1,9 @@
 'use strict';
 
 // PowerShell 控制台路由 + 快捷命令分组（只读查询为主，运维常用场景）
+// 后台长任务：提交/终止走 assertWritable + 审计；查看类（列表/流/输出）不设限不审计
 const ps = require('../services/powershell');
+const jobs = require('../services/jobs');
 const audit = require('../hooks/audit');
 
 // 快捷命令分组：组名按请求语言渲染（PowerShell 命令本身不翻译）
@@ -70,6 +72,87 @@ module.exports = async function consoleRoutes(app) {
     audit(request, 'PowerShell 命令执行', { command, durationMs: result.durationMs, ok: result.ok });
 
     return reply.view('partials/console-output', { command, result });
+  });
+
+  // ---- 后台长任务（Job 模型）----
+
+  // 提交长任务：立即 202 返回 jobId，执行与请求解耦
+  app.post('/console/jobs', async (request, reply) => {
+    app.assertWritable(request);
+    const body = request.body || {};
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    const isScript = String(body.kind || '') === 'script';
+    const job = jobs.submit({
+      username,
+      command: isScript ? null : String(body.command || ''),
+      script: isScript ? String(body.script || '') : null,
+      timeoutMs: Number(body.timeoutMs),
+    });
+    audit(request, 'PowerShell 长任务提交', {
+      jobId: job.id, kind: job.kind, timeoutMs: job.timeoutMs,
+      command: job.commandPreview.slice(0, 200),
+    });
+    return reply.code(202).send({ id: job.id, state: job.state, timeoutMs: job.timeoutMs });
+  });
+
+  // 任务面板 partial（列表 + 历史）
+  app.get('/console/jobs', async (request, reply) => {
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    return reply.view('partials/console-jobs', {
+      jobs: jobs.list(username),
+      t: request.t,
+      role: request.session.get('role') || 'admin',
+    });
+  });
+
+  // 按用户事件流：job-created / job-updated（驱动面板刷新）
+  app.get('/console/stream', async (request, reply) => {
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    jobs.subscribeEvents(username, reply.raw);
+    reply.raw.write(': connected\n\n');
+  });
+
+  // 单任务输出 SSE：先回放环形缓冲，后实时追加；结束发 eof 终帧
+  app.get('/console/jobs/:id/output', async (request, reply) => {
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    const job = jobs.get(request.params.id);
+    if (!job || job.user !== username) {
+      reply.code(404);
+      return reply.send('');
+    }
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    jobs.subscribeOutput(job, reply.raw);
+  });
+
+  // 终止长任务：taskkill /T /F 语义，返回刷新后的面板 partial
+  app.post('/console/jobs/:id/cancel', async (request, reply) => {
+    app.assertWritable(request);
+    const username = (request.session && request.session.get('username')) || 'anonymous';
+    const job = jobs.cancel(request.params.id, username);
+    if (!job) {
+      const err = new Error(request.t('console.jobNotFound'));
+      err.statusCode = 404;
+      throw err;
+    }
+    audit(request, 'PowerShell 长任务终止', { jobId: job.id, command: job.commandPreview, state: job.state });
+    return reply.view('partials/console-jobs', {
+      jobs: jobs.list(username),
+      t: request.t,
+      role: request.session.get('role') || 'admin',
+    });
   });
 };
 

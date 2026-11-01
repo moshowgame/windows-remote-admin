@@ -57,6 +57,7 @@ function startSession(s) {
   s.child.stdout.setEncoding('utf8');
   s.child.stdout.on('data', (d) => {
     s.buf += d;
+    streamWaiterChunk(s);
     if (s.waiter) checkWaiter(s);
     // 哨兵长时间未到且输出暴涨的兜底保护（正常命令由超时强杀处理）
     if (s.buf.length > MAX_OUTPUT * 8) {
@@ -93,6 +94,22 @@ function destroySession(key) {
   } catch { /* 进程可能已退出 */ }
 }
 
+// 流式观察：把哨兵前的新增输出增量交给 waiter.onChunk（仅观察，不消费缓冲、
+// 不改变 checkWaiter 的最终 output 组装）；回执尾扣留 marker 长度防止哨兵被拆块误发
+function streamWaiterChunk(s) {
+  const w = s.waiter;
+  if (!w || !w.onChunk) return;
+  const idx = s.buf.indexOf(w.marker, w.streamed);
+  const safeEnd = idx === -1
+    ? Math.max(w.streamed, s.buf.length - w.marker.length + 1)
+    : idx;
+  if (safeEnd > w.streamed) {
+    const chunk = s.buf.slice(w.streamed, safeEnd);
+    w.streamed = safeEnd;
+    try { w.onChunk(chunk); } catch { /* 回调异常不影响执行与收尾 */ }
+  }
+}
+
 // 哨兵到达：截取本命令输出并消费缓冲
 function checkWaiter(s) {
   const w = s.waiter;
@@ -118,7 +135,8 @@ function checkWaiter(s) {
 }
 
 // 向会话写入单行命令并等待哨兵；进程意外死亡时重建会话并重试一次
-function writeAndWait(s, command, timeoutMs, started) {
+// onChunk：可选流式回调，实时收到本命令输出增量（哨兵前），仅供观察
+function writeAndWait(s, command, timeoutMs, started, onChunk) {
   return new Promise((resolve) => {
     const marker = `__WRA_DONE_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}__`;
     const b64 = Buffer.from(command, 'utf8').toString('base64');
@@ -132,7 +150,9 @@ function writeAndWait(s, command, timeoutMs, started) {
       started,
       retried: false,
       start: s.buf.length,
+      streamed: s.buf.length,
       errStart: s.errbuf.length,
+      onChunk: typeof onChunk === 'function' ? onChunk : null,
       finish: null,
       timer: null,
     };
@@ -154,6 +174,7 @@ function writeAndWait(s, command, timeoutMs, started) {
 
     const send = () => {
       w.start = s.buf.length;
+      w.streamed = s.buf.length;
       w.errStart = s.errbuf.length;
       s.child.stdin.write(line + '\n', (err) => {
         if (!err) return;
@@ -205,8 +226,13 @@ function freshExecute(command, options = {}) {
 
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', (d) => { if (stdout.length < MAX_OUTPUT * 2) stdout += d.toString('utf8'); });
-    child.stderr.on('data', (d) => { if (stderr.length < MAX_OUTPUT * 2) stderr += d.toString('utf8'); });
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (d) => {
+      if (stdout.length < MAX_OUTPUT * 2) stdout += d;
+      if (options.onChunk) { try { options.onChunk(d); } catch { /* 观察回调不影响执行 */ } }
+    });
+    child.stderr.on('data', (d) => { if (stderr.length < MAX_OUTPUT * 2) stderr += d; });
 
     const done = (result) => {
       if (settled) return;
@@ -289,4 +315,4 @@ function startSessionIfDead(s) {
   if (!s.child || s.child.exitCode !== null) startSession(s);
 }
 
-module.exports = { execute };
+module.exports = { execute, cleanClixml };

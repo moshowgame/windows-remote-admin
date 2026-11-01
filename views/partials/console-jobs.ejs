@@ -1,0 +1,57 @@
+<% /* 后台长任务面板：运行中任务 + 最近历史（SSE 驱动整块刷新） */ %>
+<%
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDur(ms) {
+    if (ms == null || ms < 0 || isNaN(ms)) return '—';
+    var s = Math.floor(ms / 1000);
+    var h = Math.floor(s / 3600); s = s % 3600;
+    var m = Math.floor(s / 60); s = s % 60;
+    return h > 0 ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+  var stateMap = {
+    running:   { cls: 'azure',    icon: 'ti-loader-2' },
+    queued:    { cls: 'secondary', icon: 'ti-clock' },
+    done:      { cls: 'success',  icon: 'ti-circle-check' },
+    failed:    { cls: 'danger',   icon: 'ti-circle-x' },
+    timeout:   { cls: 'warning',  icon: 'ti-alarm' },
+    cancelled: { cls: 'secondary', icon: 'ti-ban' },
+  };
+%>
+<% if (!jobs.length) { %>
+<div class="p-3 text-secondary small">
+  <i class="ti ti-moon me-1"></i><%= t('console.jobsEmpty') %>
+</div>
+<% } else { %>
+<div class="list-group list-group-flush">
+  <% for (const job of jobs) {
+       const st = stateMap[job.state] || stateMap.failed;
+       const running = job.state === 'running' || job.state === 'queued';
+       const elapsed = running
+         ? Date.now() - (job.startedAt || job.createdAt)
+         : (job.endedAt || 0) - (job.startedAt || job.createdAt);
+  %>
+  <div class="list-group-item px-3 py-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="badge bg-<%= st.cls %>-lt"><i class="ti <%= st.icon %> me-1"></i><%= t('console.jobState_' + job.state) %></span>
+      <span class="font-monospace small text-secondary"><%= job.id %></span>
+      <span class="text-truncate font-monospace small" style="max-width: 42ch;"
+            title="<%= job.commandPreview %>"><%= job.kind === 'script' ? '[-File] ' : '' %><%= job.commandPreview %></span>
+      <span class="ms-auto text-secondary small font-monospace"><%= fmtDur(elapsed) %></span>
+      <button type="button" class="btn btn-sm btn-outline-secondary job-view" data-id="<%= job.id %>" data-cmd="<%= job.commandPreview %>">
+        <i class="ti ti-eye me-1"></i><%= running ? t('console.jobViewOutput') : t('console.jobViewSnapshot') %>
+      </button>
+      <% if (running && role !== 'readonly') { %>
+      <button type="button" class="btn btn-sm btn-outline-danger job-cancel" data-id="<%= job.id %>" data-cmd="<%= job.commandPreview %>">
+        <i class="ti ti-player-stop-filled me-1"></i><%= t('console.jobCancel') %>
+      </button>
+      <% } %>
+    </div>
+    <div class="text-secondary small mt-1">
+      <%= t('console.jobLines') %> <%= job.lines %> · <%= t('console.jobBudget') %> <%= fmtDur(job.timeoutMs) %>
+      <% if (job.exitCode !== null && job.exitCode !== undefined) { %> · <%= t('console.jobExitCode') %> <%= job.exitCode %><% } %>
+      <% if (job.error) { %> · <span class="text-danger"><%= job.error %></span><% } %>
+    </div>
+  </div>
+  <% } %>
+</div>
+<% } %>

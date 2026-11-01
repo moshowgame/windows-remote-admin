@@ -8,40 +8,81 @@
   font-size: 0.8rem;
 }
 
-/* PowerShell 终端样式 */
+/* ---- PowerShell 终端（经典 PS 蓝，输出与输入行连成一体）---- */
 .wra-terminal {
-  background: #14161a;
-  color: #d6d6d6;
-  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  background: #012456;
+  color: #e8e8e8;
+  font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
   font-size: 0.8rem;
   height: 60vh;
   overflow-y: auto;
+  margin-bottom: 0;
 }
-
 .wra-term-block {
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #26282e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 .wra-term-cmd {
   margin-bottom: 0.25rem;
 }
-
-.wra-term-prompt {
-  color: #4fd1c5;
-  font-weight: 600;
+.wra-term-cmdline {
+  white-space: pre-wrap;
+  word-break: break-all;
 }
-
+.wra-term-prompt {
+  color: #5eead4;
+  font-weight: 600;
+  margin-right: 0.5rem;
+  user-select: none;
+}
 .wra-term-out {
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0 0 0.25rem;
-  color: #d6d6d6;
+  color: #e8e8e8;
 }
-
 .wra-term-meta {
   font-size: 0.72rem;
   font-family: system-ui, sans-serif;
+  color: #94a9cc;
+}
+/* 内嵌输入行：textarea 仿真终端样式（多行自适应，Enter 执行 / Shift+Enter 换行） */
+.wra-term-input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  background: #012456;
+  color: #e8e8e8;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.wra-term-input-row .wra-term-prompt {
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+.wra-term-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none !important;
+  resize: none;
+  color: #e8e8e8;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0;
+  caret-color: #5eead4;
+  border-radius: 0;
+}
+.wra-term-input::placeholder {
+  color: rgba(232, 232, 232, 0.35);
+}
+.wra-term-input:focus {
+  background: transparent;
+  border: 0;
 }
 
 /* ---- 文件资源管理器 ---- */
@@ -461,7 +502,7 @@ body {
 }
 
 /* ---- 终端 / 日志 / 预览深色块圆角，与卡片统一 ---- */
-.wra-terminal, .log-view, .wra-preview-pre { border-radius: 10px; }
+.log-view, .wra-preview-pre { border-radius: 10px; }
 
 /* ---- 编辑器边框与圆角随主题 ---- */
 .ed-wrap {

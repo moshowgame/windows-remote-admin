@@ -65,6 +65,21 @@
             <div class="wra-term-block text-secondary"><%= t('console.ready') %></div>
           </div>
         </div>
+        <% if (role !== 'readonly') { %>
+        <% /* 输入行内嵌终端卡体：深色一体、textarea 支持多行（Enter 执行 / Shift+Enter 换行） */ %>
+        <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
+              hx-swap="beforeend scroll:#terminal-box:bottom"
+              hx-disabled-elt="find button[type=submit]"
+              class="wra-term-input-row">
+          <span class="wra-term-prompt font-monospace">PS&gt;</span>
+          <textarea name="command" id="console-input" class="wra-term-input font-monospace" rows="1"
+                    autocomplete="off" spellcheck="false"
+                    placeholder="<%= t('console.placeholder') %>" autofocus></textarea>
+          <button type="submit" class="btn btn-primary btn-sm px-3 align-self-center">
+            <i class="ti ti-player-play me-1"></i><%= t('console.run') %>
+          </button>
+        </form>
+        <% } %>
       </div>
       <div class="card-footer p-2">
         <% if (role === 'readonly') { %>
@@ -72,19 +87,85 @@
           <i class="ti ti-lock me-1"></i><%= t('console.readonlyPrefix') %><strong><%= t('common.roleReadonly') %></strong><%= t('console.readonlySuffix') %>
         </div>
         <% } else { %>
-        <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
-              hx-swap="beforeend scroll:#terminal-box:bottom"
-              hx-disabled-elt="find button[type=submit]"
-              class="d-flex gap-2 align-items-center">
-          <span class="wra-term-prompt ps-2 font-monospace">PS&gt;</span>
-          <input name="command" id="console-input" class="form-control font-monospace"
-                 autocomplete="off" spellcheck="false"
-                 placeholder="<%= t('console.placeholder') %>" autofocus>
-          <button type="submit" class="btn btn-primary px-3">
-            <i class="ti ti-player-play me-1"></i><%= t('console.run') %>
-          </button>
-        </form>
+        <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="job-enabled">
+            <label class="form-check-label small" for="job-enabled"><%= t('console.jobRunAs') %></label>
+          </div>
+          <div class="d-none align-items-center gap-1" id="job-timeout-wrap">
+            <span class="text-secondary small"><%= t('console.jobTimeoutLabel') %></span>
+            <select id="job-timeout" class="form-select form-select-sm w-auto">
+              <option value="600000">10min</option>
+              <option value="1800000" selected>30min</option>
+              <option value="3600000">1h</option>
+              <option value="21600000">6h</option>
+              <option value="86400000">24h</option>
+            </select>
+          </div>
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="job-script-mode">
+            <label class="form-check-label small" for="job-script-mode"><%= t('console.jobScriptMode') %></label>
+          </div>
+        </div>
+        <textarea id="job-script" class="form-control font-monospace mb-2 d-none" rows="5"
+                  spellcheck="false" placeholder="<%= t('console.jobScriptPlaceholder') %>"></textarea>
         <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center py-2">
+    <h3 class="card-title me-2"><i class="ti ti-list-check me-1"></i><%= t('console.jobsTitle') %></h3>
+    <button id="jobs-refresh" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+      <i class="ti ti-refresh me-1"></i><%= t('console.jobsRefresh') %>
+    </button>
+  </div>
+  <div id="jobs-panel" hx-get="/console/jobs" hx-trigger="load" hx-swap="innerHTML">
+    <div class="p-3 text-secondary small"><i class="ti ti-loader-2 me-1"></i><%= t('console.jobsLoading') %></div>
+  </div>
+</div>
+
+<!-- 长任务终止确认框（自管理 modal，JS 提升到 body） -->
+<div class="modal" id="job-cancel-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-player-stop-filled me-1 text-danger"></i><%= t('console.jobCancelTitle') %></h5>
+        <button type="button" class="btn-close" data-job-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2"><%= t('console.jobCancelMsg') %></p>
+        <pre class="border rounded p-2 font-monospace small mb-2" id="job-cancel-cmd"
+             style="white-space:pre-wrap;word-break:break-all;"></pre>
+        <pre class="border rounded p-2 font-monospace small text-danger mb-0">taskkill /PID &lt;pid&gt; /T /F</pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-job-dismiss><%= t('console.jobClose') %></button>
+        <button type="button" class="btn btn-danger" id="job-cancel-ok"><%= t('console.jobCancel') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 长任务输出查看器（自管理 modal，SSE 回放 + 实时追加） -->
+<div class="modal" id="job-output-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title text-truncate me-2" style="max-width:60vw;">
+          <i class="ti ti-terminal-2 me-1"></i><span id="job-output-title"></span>
+        </h5>
+        <div class="form-check mb-0 ms-auto">
+          <input class="form-check-input" type="checkbox" id="job-output-autoscroll" checked>
+          <label class="form-check-label small" for="job-output-autoscroll"><%= t('console.jobAutoScroll') %></label>
+        </div>
+        <button type="button" class="btn-close ms-2" data-job-dismiss></button>
+      </div>
+      <div class="modal-body p-0">
+        <div id="job-output-body" class="wra-terminal"
+             style="height:auto;max-height:65vh;min-height:320px;white-space:pre-wrap;word-break:break-all;border-radius:0;"></div>
       </div>
     </div>
   </div>
@@ -96,10 +177,10 @@
     'use strict';
     var KEY = 'wra_ps_history';
     var MAX = 100;
-    var input = document.getElementById('console-input');
-    var form = document.getElementById('console-form');
     var output = document.getElementById('console-output');
     var box = document.getElementById('terminal-box');
+    var input = document.getElementById('console-input');
+    var form = document.getElementById('console-form');
     var idx = -1;   // 当前历史指针（-1 = 不在历史中）
     var draft = ''; // 未提交草稿
 
@@ -109,46 +190,273 @@
     function saveHistory(cmds) {
       try { localStorage.setItem(KEY, JSON.stringify(cmds)); } catch (e) { /* 忽略 */ }
     }
-    function scrollToBottom() { box.scrollTop = box.scrollHeight; }
+    function scrollToBottom() { if (box) box.scrollTop = box.scrollHeight; }
 
-    input.addEventListener('keydown', function (e) {
-      var cmds = loadHistory();
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (idx === -1) { draft = input.value; idx = cmds.length; }
-        if (idx > 0) { idx -= 1; input.value = cmds[idx] || ''; }
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (idx !== -1) {
-          idx += 1;
-          if (idx >= cmds.length) { input.value = draft; idx = -1; draft = ''; }
-          else { input.value = cmds[idx] || ''; }
-        }
-      } else if (e.key === 'Enter') {
-        var cmd = input.value.trim();
-        if (cmd) {
-          // 去重后追加，保留最近 MAX 条
-          cmds = cmds.filter(function (c) { return c !== cmd; });
-          cmds.push(cmd);
-          saveHistory(cmds.slice(-MAX));
-        }
-        idx = -1; draft = '';
-      }
-    });
+    // 终端输入行（readonly 时元素不存在，整块跳过防 JS 报错）
+    if (input && form) {
+      // textarea 自适应高度（多行输入，封顶 240px 后内部滚动）
+      var fitInput = function () {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 240) + 'px';
+      };
+      input.addEventListener('input', fitInput);
 
-    // 提交成功后清空输入框并回焦
-    form.addEventListener('htmx:afterRequest', function (e) {
-      if (e.detail.successful) input.value = '';
-      input.focus();
-      scrollToBottom();
-    });
+      input.addEventListener('keydown', function (e) {
+        if (e.isComposing || e.keyCode === 229) return; // 输入法组合中（中文），不抢按键
+        var cmds = loadHistory();
+        var before = input.value.slice(0, input.selectionStart);
+        var after = input.value.slice(input.selectionEnd);
+        if (e.key === 'ArrowUp') {
+          if (before.indexOf('\n') !== -1) return; // 光标不在第一行：交给多行移动
+          e.preventDefault();
+          if (idx === -1) { draft = input.value; idx = cmds.length; }
+          if (idx > 0) { idx -= 1; input.value = cmds[idx] || ''; fitInput(); }
+        } else if (e.key === 'ArrowDown') {
+          if (after.indexOf('\n') !== -1) return; // 光标不在最后一行
+          e.preventDefault();
+          if (idx !== -1) {
+            idx += 1;
+            if (idx >= cmds.length) { input.value = draft; idx = -1; draft = ''; }
+            else { input.value = cmds[idx] || ''; }
+            fitInput();
+          }
+        } else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+          // Enter 执行 / Shift+Enter 换行；textarea 无隐式提交，显式触发 htmx
+          e.preventDefault();
+          var cmd = input.value.trim();
+          if (cmd) {
+            // 去重后追加，保留最近 MAX 条
+            cmds = cmds.filter(function (c) { return c !== cmd; });
+            cmds.push(cmd);
+            saveHistory(cmds.slice(-MAX));
+          }
+          idx = -1; draft = '';
+          if (cmd && form.requestSubmit) form.requestSubmit();
+        }
+      });
+
+      // 提交成功后清空输入框、复位高度并回焦
+      form.addEventListener('htmx:afterRequest', function (e) {
+        if (e.detail.successful) { input.value = ''; fitInput(); }
+        input.focus();
+        scrollToBottom();
+      });
+    }
     output.addEventListener('htmx:afterSwap', scrollToBottom);
 
     // 清屏
     document.getElementById('console-clear').addEventListener('click', function () {
       output.innerHTML = '<div class="wra-term-block text-secondary"><%= t("console.cleared") %></div>';
-      input.focus();
+      if (input) input.focus();
     });
+
+    /* ---- 后台长任务 ---- */
+    var CSRF = '<%= csrf %>';
+    var T2 = {
+      jobEmpty: '<%= t("console.jobEmpty") %>',
+      jobCreated: '<%= t("console.jobCreated") %>',
+      jobSubmitFailed: '<%= t("console.jobSubmitFailed") %>',
+      jobEof: '<%= t("console.jobEof") %>',
+      jobTrimmed: '<%= t("console.jobTrimmed") %>'
+    };
+
+    function toastMsg(msg, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } }));
+    }
+
+    // 面板刷新（事件驱动 + 手动按钮，300ms 防抖合并）
+    var jobsPanel = document.getElementById('jobs-panel');
+    var refreshJobsPanel = function () {
+      if (window.htmx && jobsPanel) htmx.ajax('GET', '/console/jobs', { target: '#jobs-panel', swap: 'innerHTML' });
+    };
+    document.getElementById('jobs-refresh').addEventListener('click', refreshJobsPanel);
+
+    // 自管理 modal（preview-modal 模式：提升到 body、手动 backdrop/ESC/暗区）
+    function openModal(el) {
+      el.style.display = 'block';
+      el.classList.add('show');
+      el._bd = document.createElement('div');
+      el._bd.className = 'modal-backdrop fade show';
+      document.body.appendChild(el._bd);
+    }
+    function closeModal(el) {
+      el.style.display = 'none';
+      el.classList.remove('show');
+      if (el._bd) { el._bd.remove(); el._bd = null; }
+    }
+    ['job-cancel-modal', 'job-output-modal'].forEach(function (id) {
+      var m = document.getElementById(id);
+      document.body.appendChild(m);
+      m.addEventListener('click', function (e) {
+        if (e.target !== m) return;
+        closeModal(m);
+        if (id === 'job-output-modal' && outEs) { outEs.close(); outEs = null; }
+      });
+    });
+    document.addEventListener('click', function (e) {
+      var d = e.target.closest ? e.target.closest('[data-job-dismiss]') : null;
+      if (!d) return;
+      var m = d.closest('.modal');
+      if (!m) return;
+      closeModal(m);
+      if (m.id === 'job-output-modal' && outEs) { outEs.close(); outEs = null; }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      ['job-cancel-modal', 'job-output-modal'].forEach(function (id) {
+        var m = document.getElementById(id);
+        if (m && m.classList.contains('show')) closeModal(m);
+      });
+      if (outEs) { outEs.close(); outEs = null; }
+    });
+
+    // 输出查看器：SSE 回放 + 实时追加 + 5000 行裁剪 + 自动滚动
+    var outEs = null, outLines = 0, outTrimmed = false;
+    var outBody = document.getElementById('job-output-body');
+    var outAuto = document.getElementById('job-output-autoscroll');
+    function appendOutText(chunk) {
+      if (!chunk) return;
+      var node = document.createTextNode(chunk);
+      node.__nl = (chunk.match(/\n/g) || []).length;
+      outLines += node.__nl;
+      outBody.appendChild(node);
+      if (outLines > 5200) {
+        var n = outBody.firstChild;
+        while (n && outLines > 5000) {
+          var next = n.nextSibling;
+          if (n.nodeType === 3) {
+            outLines -= (n.__nl || 0);
+            outBody.removeChild(n);
+            if (!outTrimmed) {
+              outTrimmed = true;
+              var mark = document.createElement('div');
+              mark.className = 'wra-term-block text-secondary';
+              mark.textContent = T2.jobTrimmed;
+              outBody.insertBefore(mark, outBody.firstChild);
+            }
+          }
+          n = next;
+        }
+      }
+      if (outAuto.checked) outBody.scrollTop = outBody.scrollHeight;
+    }
+    function openJobOutput(id, title) {
+      if (outEs) { outEs.close(); outEs = null; }
+      document.getElementById('job-output-title').textContent = title;
+      outBody.innerHTML = '';
+      outLines = 0; outTrimmed = false;
+      openModal(document.getElementById('job-output-modal'));
+      outEs = new EventSource('/console/jobs/' + encodeURIComponent(id) + '/output');
+      outEs.onmessage = function (ev) {
+        try { appendOutText(JSON.parse(ev.data)); } catch (err) { /* 忽略坏帧 */ }
+      };
+      outEs.addEventListener('eof', function (ev) {
+        if (outEs) { outEs.close(); outEs = null; }
+        var d = {};
+        try { d = JSON.parse(ev.data); } catch (err) { /* 忽略 */ }
+        appendOutText('\n' + T2.jobEof.replace('{state}', d.state || '')
+          .replace('{code}', (d.exitCode === undefined || d.exitCode === null) ? '-' : d.exitCode) + '\n');
+      });
+      outEs.onerror = function () {
+        if (outEs) { outEs.close(); outEs = null; }
+      };
+    }
+
+    // 面板按钮委托：终止（确认框）/ 查看输出
+    var pendingCancelId = null;
+    document.addEventListener('click', function (e) {
+      var cbtn = e.target.closest ? e.target.closest('.job-cancel') : null;
+      if (cbtn) {
+        pendingCancelId = cbtn.dataset.id;
+        document.getElementById('job-cancel-cmd').textContent = cbtn.dataset.cmd || cbtn.dataset.id;
+        openModal(document.getElementById('job-cancel-modal'));
+        return;
+      }
+      var vbtn = e.target.closest ? e.target.closest('.job-view') : null;
+      if (vbtn) openJobOutput(vbtn.dataset.id, vbtn.dataset.cmd || vbtn.dataset.id);
+    });
+    document.getElementById('job-cancel-ok').addEventListener('click', function () {
+      if (!pendingCancelId) return;
+      var id = pendingCancelId;
+      pendingCancelId = null;
+      closeModal(document.getElementById('job-cancel-modal'));
+      htmx.ajax('POST', '/console/jobs/' + encodeURIComponent(id) + '/cancel', {
+        target: '#jobs-panel', swap: 'innerHTML',
+        headers: { 'X-CSRF-Token': CSRF }
+      });
+    });
+
+    // 用户级事件流：任务创建/更新 → 防抖刷新面板
+    if (window.EventSource) {
+      var streamEs = new EventSource('/console/stream');
+      var refreshTimer = null;
+      var scheduleRefresh = function () {
+        if (refreshTimer) return;
+        refreshTimer = setTimeout(function () { refreshTimer = null; refreshJobsPanel(); }, 300);
+      };
+      streamEs.addEventListener('job-created', function (ev) {
+        var d = {};
+        try { d = JSON.parse(ev.data); } catch (err) { /* 忽略 */ }
+        toastMsg(T2.jobCreated.replace('{id}', d.id || ''));
+        scheduleRefresh();
+      });
+      streamEs.addEventListener('job-updated', scheduleRefresh);
+    }
+
+    // 提交入口：勾选"后台长任务"后拦截表单（capture 阶段先于 htmx 监听）
+    var jobEnabled = document.getElementById('job-enabled');
+    if (jobEnabled) {
+      var jobTimeout = document.getElementById('job-timeout');
+      var jobTimeoutWrap = document.getElementById('job-timeout-wrap');
+      var jobScriptMode = document.getElementById('job-script-mode');
+      var jobScript = document.getElementById('job-script');
+      jobEnabled.addEventListener('change', function () {
+        jobTimeoutWrap.classList.toggle('d-none', !jobEnabled.checked);
+      });
+      jobScriptMode.addEventListener('change', function () {
+        jobScript.classList.toggle('d-none', !jobScriptMode.checked);
+        if (!jobScriptMode.checked) jobScript.value = '';
+      });
+
+      var jobSubmitting = false;
+      form.parentElement.addEventListener('submit', function (e) {
+        if (e.target !== form || !jobEnabled.checked || jobSubmitting) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var payload;
+        if (jobScriptMode.checked) {
+          var sc = jobScript.value.trim();
+          if (!sc) { toastMsg(T2.jobEmpty, 'warning'); return; }
+          payload = { kind: 'script', script: sc, timeoutMs: Number(jobTimeout.value) };
+        } else {
+          var cmd = input.value.trim();
+          if (!cmd) { toastMsg(T2.jobEmpty, 'warning'); return; }
+          payload = { kind: 'command', command: cmd, timeoutMs: Number(jobTimeout.value) };
+        }
+        jobSubmitting = true;
+        fetch('/console/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+          body: JSON.stringify(payload)
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, data: j }; });
+        }).then(function (res) {
+          jobSubmitting = false;
+          if (!res.ok) {
+            toastMsg(res.data && res.data.error ? res.data.error : T2.jobSubmitFailed, 'error');
+            return;
+          }
+          input.value = '';
+          jobScript.value = '';
+          refreshJobsPanel();
+          input.focus();
+          scrollToBottom();
+        }).catch(function () {
+          jobSubmitting = false;
+          toastMsg(T2.jobSubmitFailed, 'error');
+        });
+      }, true);
+    }
   })();
 </script>
 
