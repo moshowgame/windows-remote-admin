@@ -1,0 +1,209 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-3">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-rocket me-2"></i><%= t('deploy.title') %></h2>
+      <div class="text-secondary small mt-1"><%= t('deploy.subtitle') %></div>
+    </div>
+    <div class="col-auto">
+      <span class="badge bg-blue-lt fs-5"><%= t('deploy.currentVersion') %> v<%= curVersion %></span>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-warning d-flex align-items-start mb-3">
+  <i class="ti ti-alert-triangle fs-2 me-2"></i>
+  <div><strong><%= t('deploy.riskBanner') %></strong></div>
+</div>
+
+<div class="row g-3">
+  <!-- 左：压缩包规范 + 上传 + 操作结果 -->
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header py-2">
+        <h3 class="card-title"><i class="ti ti-package me-1"></i><%= t('deploy.specTitle') %></h3>
+      </div>
+      <div class="card-body p-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-success small mb-1"><i class="ti ti-circle-check me-1"></i><strong><%= t('deploy.specMustTitle') %></strong></div>
+            <div class="small text-secondary font-monospace">package.json · server.js · src/</div>
+            <div class="small text-secondary mt-1"><%= t('deploy.specMust') %></div>
+            <div class="text-secondary small mb-1 mt-3"><i class="ti ti-circle-plus me-1"></i><strong><%= t('deploy.specOptTitle') %></strong></div>
+            <div class="small text-secondary font-monospace">public/ · views/ · scripts/</div>
+            <div class="small text-secondary mt-1"><%= t('deploy.specOpt') %></div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-danger small mb-1"><i class="ti ti-circle-x me-1"></i><strong><%= t('deploy.specNoTitle') %></strong></div>
+            <div class="small text-secondary font-monospace">data/ · logs/ · backups/ · .env*</div>
+            <div class="small text-secondary mt-1"><%= t('deploy.specNo') %></div>
+            <div class="text-warning small mb-1 mt-3"><i class="ti ti-alert-circle me-1"></i><strong><%= t('deploy.specNmTitle') %></strong></div>
+            <div class="small text-secondary font-monospace">node_modules/</div>
+            <div class="small text-secondary mt-1"><%= t('deploy.specNm') %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <% if (role !== 'readonly') { %>
+    <div class="card mb-3">
+      <div class="card-header py-2">
+        <h3 class="card-title"><i class="ti ti-upload me-1"></i><%= t('deploy.uploadTitle') %></h3>
+      </div>
+      <div class="card-body p-3">
+        <form hx-post="/deploy/upload" hx-target="#deploy-result" hx-swap="innerHTML"
+              hx-encoding="multipart/form-data" hx-disabled-elt="find button[type=submit]">
+          <input type="file" class="form-control" name="package" accept=".zip" required>
+          <div class="row g-2 mt-2 mb-1">
+            <div class="col-sm-5">
+              <label class="form-label small mb-1" for="deploy-version"><%= t('deploy.versionLabel') %></label>
+              <input type="text" class="form-control font-monospace" id="deploy-version" name="version"
+                     value="<%= nextVersion %>" placeholder="1.0.1" autocomplete="off" maxlength="16">
+            </div>
+          </div>
+          <div class="text-secondary small mb-2"><%= t('deploy.versionHint').replace('{e}', nextVersion + '-202611012042') %></div>
+          <div class="text-secondary small mt-2 mb-3"><%= t('deploy.uploadHint').replace('{n}', uploadMaxMb) %></div>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-cloud-upload me-1"></i><%= t('deploy.uploadBtn') %>
+          </button>
+        </form>
+      </div>
+    </div>
+    <% } else { %>
+    <div class="alert alert-secondary mb-3">
+      <i class="ti ti-lock me-1"></i><%= t('deploy.readonlyNotice') %>
+    </div>
+    <% } %>
+
+    <div id="deploy-result"></div>
+  </div>
+
+  <!-- 右：待验证状态 + 历史备份 -->
+  <div class="col-lg-5">
+    <% if (pending) { %>
+    <div class="card mb-3 border-warning">
+      <div class="card-header py-2">
+        <h3 class="card-title text-warning"><i class="ti ti-hourglass me-1"></i><%= t('deploy.pendingTitle') %></h3>
+      </div>
+      <div class="card-body p-3 small">
+        <%= t('deploy.pendingDesc').replace('{v}', pending.toVersion || '?').replace('{b}', pending.backupId || '?') %>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title me-2"><i class="ti ti-history me-1"></i><%= t('deploy.backupsTitle') %></h3>
+        <% if (role !== 'readonly') { %>
+        <button id="deploy-backups-refresh" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+          <i class="ti ti-refresh me-1"></i><%= t('deploy.backupRefresh') %>
+        </button>
+        <% } %>
+      </div>
+      <div id="deploy-backups" hx-get="/deploy/backups" hx-trigger="load, wra-refresh-backups from:body" hx-swap="innerHTML">
+        <div class="p-3 text-secondary small"><i class="ti ti-loader-2 me-1"></i><%= t('common.loading') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 回滚确认框（自管理 modal，JS 提升到 body） -->
+<div class="modal" id="deploy-rollback-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-arrow-back-up me-1 text-danger"></i><%= t('deploy.rollbackTitle') %></h5>
+        <button type="button" class="btn-close" data-deploy-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2"><%= t('deploy.rollbackMsg') %></p>
+        <pre class="border rounded p-2 font-monospace small text-danger mb-0" id="deploy-rollback-id"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-deploy-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-danger" id="deploy-rollback-ok"><%= t('deploy.rollbackConfirmBtn') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var CSRF = '<%= csrf %>';
+    var T = {
+      rollbackOk: '<%= t("deploy.toastRollbackOk") %>',
+      rollbackFailed: '<%= t("error.generic") %>'
+    };
+
+    function toastMsg(msg, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } }));
+    }
+    function refreshBackups() {
+      if (window.htmx) htmx.ajax('GET', '/deploy/backups', { target: '#deploy-backups', swap: 'innerHTML' });
+    }
+
+    // 自管理 modal（preview-modal 模式：提升到 body、手动 backdrop/ESC/暗区）
+    var modal = document.getElementById('deploy-rollback-modal');
+    function openModal(el) {
+      el.style.display = 'block';
+      el.classList.add('show');
+      el._bd = document.createElement('div');
+      el._bd.className = 'modal-backdrop fade show';
+      document.body.appendChild(el._bd);
+    }
+    function closeModal(el) {
+      el.style.display = 'none';
+      el.classList.remove('show');
+      if (el._bd) { el._bd.remove(); el._bd = null; }
+    }
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal || e.target.closest('[data-deploy-dismiss]')) closeModal(modal);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('show')) closeModal(modal);
+    });
+
+    // 回滚按钮（事件委托：备份列表局部刷新后仍有效）
+    var pendingBackupId = null;
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.deploy-rollback');
+      if (!btn) return;
+      pendingBackupId = btn.getAttribute('data-id');
+      document.getElementById('deploy-rollback-id').textContent = pendingBackupId;
+      openModal(modal);
+    });
+
+    // 确认回滚：fetch 提交，结果片段写入 #deploy-result
+    document.getElementById('deploy-rollback-ok').addEventListener('click', function () {
+      if (!pendingBackupId) return;
+      var body = new URLSearchParams({ backupId: pendingBackupId });
+      fetch('/deploy/rollback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF },
+        body: body.toString()
+      }).then(function (r) {
+        return r.text().then(function (html) { return { ok: r.ok, html: html }; });
+      }).then(function (res) {
+        closeModal(modal);
+        if (res.ok) {
+          document.getElementById('deploy-result').innerHTML = res.html;
+          toastMsg(T.rollbackOk);
+          refreshBackups();
+        } else {
+          toastMsg(T.rollbackFailed, 'error');
+        }
+      }).catch(function () {
+        closeModal(modal);
+        toastMsg(T.rollbackFailed, 'error');
+      });
+    });
+
+    // 备份手动刷新
+    var refreshBtn = document.getElementById('deploy-backups-refresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', refreshBackups);
+  });
+</script>
+
+<%- include('../layouts/layout-bottom') %>

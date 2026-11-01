@@ -1,0 +1,30 @@
+<% /* 部署/回滚结果：成功落盘提示 + 重启生效说明（pending 标记状态） */ %>
+<% var isRollback = !!locals.rollback; %>
+<div class="card mb-3 <%= isRollback ? 'border-secondary' : 'border-success' %>">
+  <div class="card-header py-2">
+    <h3 class="card-title <%= isRollback ? 'text-secondary' : 'text-success' %>">
+      <i class="ti <%= isRollback ? 'ti-arrow-back-up' : 'ti-circle-check' %> me-1"></i>
+      <%= isRollback ? t('deploy.rollbackOkTitle') : t('deploy.okTitle') %>
+    </h3>
+  </div>
+  <div class="card-body p-3 small">
+    <% if (isRollback) { %>
+      <div class="mb-2"><%= t('deploy.rollbackDesc').replace('{b}', backupId).replace('{items}', (locals.restored || []).join('、')) %></div>
+    <% } else { %>
+      <div class="mb-1">
+        <span class="text-secondary"><%= t('deploy.verFrom') %>:</span> <strong>v<%= a.curVersion %></strong>
+        <i class="ti ti-arrow-right mx-1"></i>
+        <span class="text-secondary"><%= t('deploy.verTo') %>:</span> <strong class="text-primary">v<%= a.version %></strong>
+        <span class="text-secondary ms-2">(<%= a.fileCount %> files)</span>
+      </div>
+      <div class="mb-2 font-monospace text-secondary"><%= backupId %></div>
+      <% if (pending) { %>
+      <div class="alert alert-info py-2 mb-2">
+        <i class="ti ti-hourglass me-1"></i><%= t('deploy.pendingNote') %>
+      </div>
+      <% } %>
+    <% } %>
+    <div class="fw-bold mb-1"><i class="ti ti-refresh me-1"></i><%= t('deploy.restartTitle') %></div>
+    <div class="text-secondary"><%= t('deploy.restartDesc') %></div>
+  </div>
+</div>

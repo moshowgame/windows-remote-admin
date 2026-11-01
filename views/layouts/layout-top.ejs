@@ -122,6 +122,12 @@
               <span class="nav-link-title"><%= t('nav.setup') %></span>
             </a>
           </li>
+          <li class="nav-item <%= active === 'deploy' ? 'active' : '' %>">
+            <a class="nav-link" href="/deploy">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-rocket"></i></span>
+              <span class="nav-link-title"><%= t('nav.deploy') %></span>
+            </a>
+          </li>
           <li class="nav-item <%= active === 'settings' ? 'active' : '' %>">
             <a class="nav-link" href="/settings">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-tool"></i></span>

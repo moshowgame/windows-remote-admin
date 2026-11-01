@@ -1,0 +1,31 @@
+<% /* 历史备份列表（最近 5 份，含回滚按钮） */ %>
+<% function fmtTime(ms) {
+     if (!ms) return '—';
+     var d = new Date(ms);
+     function p(n) { return n < 10 ? '0' + n : '' + n; }
+     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+   }
+%>
+<% if (!backups.length) { %>
+<div class="p-3 text-secondary small">
+  <i class="ti ti-moon me-1"></i><%= t('deploy.noBackups') %>
+</div>
+<% } else { %>
+<div class="list-group list-group-flush">
+  <% for (const b of backups) { %>
+  <div class="list-group-item px-3 py-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <% /* 完整版本标识：主版本-时间戳（去掉 deploy- 前缀），不再截断 */ %>
+      <span class="badge bg-secondary-lt font-monospace" title="<%= b.id %>"><i class="ti ti-history me-1"></i>v<%= b.id.replace(/^deploy-/, '') %></span>
+      <span class="ms-auto text-secondary small font-monospace"><%= fmtTime(b.createdAt) %></span>
+      <% if (typeof role === 'undefined' || role !== 'readonly') { %>
+      <button type="button" class="btn btn-sm btn-outline-warning deploy-rollback" data-id="<%= b.id %>">
+        <i class="ti ti-arrow-back-up me-1"></i><%= t('deploy.backupRollback') %>
+      </button>
+      <% } %>
+    </div>
+    <div class="text-secondary small mt-1 font-monospace"><%= (b.items || []).join(' · ') %></div>
+  </div>
+  <% } %>
+</div>
+<% } %>

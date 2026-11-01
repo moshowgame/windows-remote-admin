@@ -3,6 +3,7 @@
 // 入口：构建应用并监听端口
 const path = require('node:path');
 const fs = require('node:fs');
+const gate = require('./src/boot-gate');
 const { buildApp } = require('./src/app');
 
 // 加载程序目录下的 .env（与启动时的工作目录无关）。
@@ -46,8 +47,9 @@ async function main() {
     await app.listen({ port: app.config.port, host: '0.0.0.0' });
   } catch (err) {
     app.log.error(err, '启动失败');
-    process.exit(1);
+    throw err; // 交由启动门卫处理（部署验证模式下触发自动回滚）
   }
 }
 
-main();
+// 启动门卫：data/deploy-pending.json 存在时进入验证模式，首次启动失败自动回滚到部署前备份
+gate.run(main);

@@ -1,0 +1,66 @@
+<% /* 部署预检结果：确认前不动任何现有代码；依赖变化需显式确认 */ %>
+<div class="card mb-3 border-primary">
+  <div class="card-header py-2">
+    <h3 class="card-title text-primary"><i class="ti ti-circle-check me-1"></i><%= t('deploy.previewTitle') %></h3>
+  </div>
+  <div class="card-body p-3">
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-md-3">
+        <div class="text-secondary small"><%= t('deploy.verFrom') %></div>
+        <div class="fw-bold">v<%= a.curVersion %></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-secondary small"><%= t('deploy.verTo') %></div>
+        <div class="fw-bold text-primary">v<%= a.version %></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-secondary small"><%= t('deploy.fileCount') %></div>
+        <div class="fw-bold"><%= a.fileCount %></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-secondary small">node_modules</div>
+        <div class="fw-bold <%= a.strippedCount > 0 ? 'text-warning' : '' %>"><%= a.strippedCount %></div>
+      </div>
+    </div>
+
+    <% if (a.strippedCount > 0) { %>
+    <div class="alert alert-warning py-2 small mb-2">
+      <i class="ti ti-alert-circle me-1"></i><%= a.strippedCount %> <%= t('deploy.stripped') %>
+    </div>
+    <% } %>
+
+    <% if (a.depDiff.length) { %>
+    <div class="alert alert-warning py-2 small mb-2">
+      <div class="fw-bold mb-1"><i class="ti ti-package me-1"></i><%= t('deploy.depsChangedTitle') %></div>
+      <pre class="mb-0 font-monospace" style="white-space:pre-wrap;"><% for (const d of a.depDiff) { %><%= d %>
+<% } %></pre>
+    </div>
+    <% } %>
+
+    <% /* 主版本标识：确认部署时备份目录命名 deploy-<主版本>-<自动时间戳> */ %>
+    <div class="text-secondary small mb-2">
+      <i class="ti ti-tag me-1"></i><%= t('deploy.backupLabel') %>：
+      <span class="font-monospace"><%= version || a.curVersion %>-<%= t('deploy.backupLabelTs') %></span>
+    </div>
+
+    <div class="text-secondary small mb-1"><%= t('deploy.sampleTitle') %></div>
+    <pre class="border rounded p-2 font-monospace small text-secondary mb-3" style="max-height:9rem;overflow-y:auto;"><% for (const s of a.samples) { %><%= s %>
+<% } %></pre>
+
+    <form hx-post="/deploy/confirm" hx-target="#deploy-result" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+      <input type="hidden" name="token" value="<%= token %>">
+      <input type="hidden" name="version" value="<%= version %>">
+      <% if (a.depDiff.length) { %>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="deps-ack" name="depsAck">
+        <label class="form-check-label small text-warning" for="deps-ack"><%= t('deploy.depsAck') %></label>
+      </div>
+      <% } %>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="ti ti-rocket me-1"></i><%= t('deploy.confirmBtn') %>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

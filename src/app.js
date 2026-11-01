@@ -33,6 +33,7 @@ const processRoutes = require('./routes/process');
 const eventsRoutes = require('./routes/events');
 const usersRoutes = require('./routes/users');
 const setupRoutes = require('./routes/setup');
+const deployRoutes = require('./routes/deploy');
 
 async function buildApp() {
   const loggers = await buildLoggers(path.join(ROOT, 'logs'));
@@ -204,6 +205,7 @@ async function buildApp() {
   await app.register(eventsRoutes);
   await app.register(usersRoutes);
   await app.register(setupRoutes);
+  await app.register(deployRoutes);
 
   return app;
 }
