@@ -44,6 +44,15 @@ npm run pack:code    # 或双击 Pack.cmd
 - **不包含**：`node_modules`、vendor 静态资源（Tabler / HTMX / 图标字体，由 postinstall 自动复制）、`logs/`、`data/`、`screencap/`、`dist/`、本机 `config.json`
 - 接收方解压后双击 `Run.cmd` 即可：首次运行自动 `npm install`（postinstall 同步静态资源）并启动服务
 
+**部署包（对接 `/deploy` 简易部署）**：
+
+```bash
+npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
+```
+
+- 与 `pack:code` 的区别：仅含部署白名单条目（`package.json` / `server.js` / `src` / `views` / `scripts` / `public`），且 `public/` **全量包含 vendor 静态资源**（原地更新不执行 `npm install`，静态资源必须随包携带）
+- 打包完成后打开 `/deploy` 页面上传该文件即可，产物文件名中的版本号即建议的部署版本号
+
 **默认账号：** `admin` / `admin123`（首次登录后请立即修改，见下方"账号管理"）
 
 ## 功能列表
@@ -73,7 +82,7 @@ npm run pack:code    # 或双击 Pack.cmd
 ### 2026-11 —— Node.js 版持续迭代
 - **2026-11-01**：PowerShell 控制台交互升级：内嵌终端式多行输入（Enter 执行 / Shift+Enter 换行，中文输入法友好）、经典 PowerShell 深蓝配色；新增命令自动补全（服务端 Get-Command 全集，Tab 接受 / ↑↓ 切换 / Esc 关闭）与历史前缀搜索（历史面板点击回填）
 - **2026-11-01**：新增后台长任务：命令/脚本提交为独立 Job（与交互会话解耦、每用户并发 ≤3），SSE 实时推送输出、超时预算（10 分钟~24 小时）、随时终止，任务历史保留 24 小时；终端 : 任务面板 7:3 布局，终端高度可拖拽调节（localStorage 记忆、双击恢复），任务提交开关（后台任务 / 脚本模式）内嵌终端底部，提示随状态三态切换
-- **2026-11-01**：新增简易部署 `/deploy`：上传 zip 原地更新（结构白名单预检 + 自动剥离 node_modules + 拒绝运行时目录）、自动备份（保留 5 份）与一键手动回滚；启动门卫在首次启动失败时自动回滚到部署前版本（端口占用等环境性错误不误判），全程审计，admin 专属
+- **2026-11-01**：新增简易部署 `/deploy`：上传 zip 原地更新（结构白名单预检 + 自动剥离 node_modules + 拒绝运行时目录）、自动备份（保留 5 份）与一键手动回滚；启动门卫在首次启动失败时自动回滚到部署前版本（端口占用等环境性错误不误判），全程审计，admin 专属；配套 `npm run pack:deploy` 一键生成符合规范的部署包（含 vendor 静态资源）
 
 ### 2026-10 —— Node.js 版持续迭代
 - **2026-10-31**：易用性改进，编辑器新增"返回文件管理"快捷按钮（跳回最后浏览目录）；文件列表单文件目录保持一致最小高度；
@@ -236,12 +245,13 @@ npm run pack:code    # 或双击 Pack.cmd
 
 面向小版本 / 小功能更新的原地更新：上传 zip 压缩包 → 预检 → 自动备份 → 覆盖解压 → 重启即生效，admin 专属。
 
-- **压缩包规范**（页面同步展示，不满足预检直接拒绝）：
+- **压缩包规范**（页面同步展示，不满足预检直接拒绝；一键生成请用 `npm run pack:deploy`）：
   - **必须包含**：`package.json`、`server.js`，以及代码目录 `src/` / `views/` / `public/` / `scripts/` 中至少一个
-  - **可选包含**：`package-lock.json`、`README.md`、`*.cmd` 等根目录文件
-  - **禁止包含**：`data/`、`logs/`、`backups/`、`.env*`（运行时数据与密钥不随包覆盖）
-  - **不建议**：`node_modules/`（会被自动剥离并在预检中警告；依赖变更请通过 `package.json` 版本对比提示，部署后手动 `npm install`）
+  - **可选包含**：代码目录按需携带，包内出现的目录将整体替换现有同名目录
+  - **禁止包含**：`data/`、`logs/`、`backups/`、`.env*`，以及上述白名单之外的任何条目（如 `package-lock.json`、`README.md`、`*.cmd`——预检一律拒绝）
+  - **不建议**：`node_modules/`（体积大且易覆盖出错，自动剥离 + 预检警告；依赖变更通过 `package.json` 对比提示，部署后手动 `npm install`）
   - 支持单层包裹目录（如 zip 内全部条目位于同一个顶层目录下，自动剥离）
+  - 注意：`public/` 整体替换，vendor 静态资源（Tabler / HTMX / 图标字体）必须随包携带，否则部署后页面样式丢失（`pack:deploy` 已自动处理）
 - **预检**：结构白名单校验、文件数（≤20000）与总解压体积（≤500MB）上限、Zip Slip 路径穿越防护、`package.json` 依赖对比（deps 变更需勾选确认）、node_modules 剥离警告
 - **部署流程**：上传表单可填写**部署版本号**（默认取最近一次部署版本 +1，仅数字与点），确认后自动备份当前版本到 `backups/deploy-<版本号>-<自动时间戳>/`（保留最近 5 份），再移除包内携带的旧代码目录并覆盖解压
 - **启动门卫自动回滚**（`src/boot-gate.js`）：部署写入 `data/deploy-pending.json` 标记，下次重启经门卫启动——启动成功清除标记转正；**首次启动失败（require 报错 / 插件注册失败 / 端口监听失败，60 秒超时未就绪同样视为失败）自动回滚到部署前备份**并退出，由 NSSM / `--watch` / 人工重新拉起旧版本；端口被占用 / 无权限（EADDRINUSE / EACCES）判定为环境问题而非版本问题，不回滚、保留部署与备份交人工处理；最多重试 2 次防循环

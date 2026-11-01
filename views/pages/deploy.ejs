@@ -64,6 +64,9 @@
           </div>
           <div class="text-secondary small mb-2"><%= t('deploy.versionHint').replace('{e}', nextVersion + '-202611012042') %></div>
           <div class="text-secondary small mt-2 mb-3"><%= t('deploy.uploadHint').replace('{n}', uploadMaxMb) %></div>
+          <div class="text-secondary small mb-3">
+            <i class="ti ti-package me-1"></i><%= t('deploy.packHint') %> <code class="font-monospace">npm run pack:deploy</code>
+          </div>
           <button type="submit" class="btn btn-primary">
             <i class="ti ti-cloud-upload me-1"></i><%= t('deploy.uploadBtn') %>
           </button>
