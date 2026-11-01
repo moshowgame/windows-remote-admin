@@ -55,6 +55,50 @@ function getQuickCommands(t) {
 }
 
 module.exports = async function consoleRoutes(app) {
+  // ---- 自动补全命令表：真实 Get-Command 全集（进程级缓存）+ 静态种子兜底 ----
+  const COMPLETION_SEED = [
+    'Get-ChildItem', 'Get-Content', 'Get-Command', 'Get-Date', 'Get-Process', 'Get-Service',
+    'Get-Location', 'Get-Item', 'Get-Volume', 'Get-PSDrive', 'Get-NetTCPConnection', 'Get-ComputerInfo',
+    'Set-Location', 'Set-Content', 'Set-Item', 'Copy-Item', 'Move-Item', 'Remove-Item', 'New-Item',
+    'Select-Object', 'Where-Object', 'ForEach-Object', 'Sort-Object', 'Measure-Object', 'Out-String',
+    'Write-Output', 'Write-Host', 'Start-Process', 'Stop-Process', 'Start-Service', 'Stop-Service',
+    'Restart-Service', 'Restart-Computer', 'Test-Connection', 'Test-Path', 'Invoke-Command',
+    'ipconfig', 'ping', 'netstat', 'tasklist', 'taskkill', 'systeminfo', 'whoami', 'hostname',
+    'foreach', 'if', 'else', 'switch', 'try', 'catch', 'finally', 'function', 'param', 'return',
+    'gci', 'ls', 'dir', 'cat', 'cd', 'pwd', 'sls', 'echo', 'gc', 'sc', 'ni', 'ri', 'cp', 'mv', 'cls', 'ft', 'fl',
+  ];
+  let completionNames = null;
+  let completionPromise = null;
+  const getCompletionNames = () => {
+    if (completionNames) return Promise.resolve(completionNames);
+    if (!completionPromise) {
+      completionPromise = ps
+        .freshExecute(
+          '(Get-Command -CommandType Cmdlet,Alias,Function -ErrorAction SilentlyContinue | ForEach-Object Name | Sort-Object -Unique) -join [Environment]::NewLine',
+          { timeoutMs: 20000 }
+        )
+        .then((r) => {
+          const names = String(r.output || '')
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter((s) => /^[A-Za-z][A-Za-z0-9-]*$/.test(s));
+          completionNames = names.length > 100 ? names.concat(COMPLETION_SEED) : COMPLETION_SEED;
+          // 去重（真实命令在前）
+          const seen = new Set();
+          completionNames = completionNames.filter((n) => (seen.has(n) ? false : (seen.add(n), true)));
+          return completionNames;
+        })
+        .catch(() => {
+          completionNames = COMPLETION_SEED;
+          return completionNames;
+        });
+    }
+    return completionPromise;
+  };
+
+  // 补全命令表（只读，无审计；认证钩子已覆盖）
+  app.get('/console/completions', async () => ({ names: await getCompletionNames() }));
+
   // 执行命令：返回终端输出片段（beforeend 追加）
   app.post('/console/execute', async (request, reply) => {
     app.assertWritable(request);

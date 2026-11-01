@@ -48,6 +48,7 @@
 }
 /* 内嵌输入行：textarea 仿真终端样式（多行自适应，Enter 执行 / Shift+Enter 换行） */
 .wra-term-input-row {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 0.25rem;
@@ -83,6 +84,71 @@
 .wra-term-input:focus {
   background: transparent;
   border: 0;
+}
+/* 命令自动补全下拉（输入行上方弹出，与终端同色系） */
+.wra-ac {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 0.75rem;
+  min-width: 16rem;
+  max-width: min(30rem, 80%);
+  max-height: 14rem;
+  overflow-y: auto;
+  background: #0b1f44;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 1050;
+  padding: 0.25rem;
+}
+.wra-ac-item {
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  color: #e8e8e8;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.wra-ac-item:hover, .wra-ac-item.active {
+  background: rgba(94, 234, 212, 0.18);
+  color: #5eead4;
+}
+/* 命令历史面板（顶栏按钮下方弹出） */
+.wra-history-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0.75rem;
+  width: min(34rem, 90%);
+  max-height: 18rem;
+  overflow-y: auto;
+  background: #0b1f44;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 1050;
+  padding: 0.25rem;
+}
+.wra-history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: #e8e8e8;
+  padding: 0.35rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: pointer;
+}
+.wra-history-item:hover {
+  background: rgba(94, 234, 212, 0.15);
+  color: #5eead4;
+}
+.wra-history-empty {
+  padding: 0.6rem;
+  color: #94a9cc;
+  font-size: 0.8rem;
 }
 
 /* ---- 文件资源管理器 ---- */

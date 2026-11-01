@@ -53,9 +53,15 @@
   <!-- 右侧：终端输出 + 输入行 -->
   <div class="col-lg-9 order-lg-1">
     <div class="card">
-      <div class="card-header d-flex align-items-center">
+      <div class="card-header d-flex align-items-center position-relative">
         <h3 class="card-title"><i class="ti ti-square-rounded-letter-p me-1"></i><%= t('console.output') %></h3>
-        <button id="console-clear" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+        <% if (role !== 'readonly') { %>
+        <button id="console-history-btn" class="btn btn-sm btn-outline-secondary ms-auto" type="button" title="<%= t('console.historyPanel') %>">
+          <i class="ti ti-history me-1"></i><%= t('console.historyPanel') %>
+        </button>
+        <div id="console-history-panel" class="wra-history-panel d-none"></div>
+        <% } %>
+        <button id="console-clear" class="btn btn-sm btn-outline-secondary <%= role !== 'readonly' ? 'ms-1' : 'ms-auto' %>" type="button">
           <i class="ti ti-eraser me-1"></i><%= t('console.clear') %>
         </button>
       </div>
@@ -78,6 +84,7 @@
           <button type="submit" class="btn btn-primary btn-sm px-3 align-self-center">
             <i class="ti ti-player-play me-1"></i><%= t('console.run') %>
           </button>
+          <div id="console-ac" class="wra-ac d-none"></div>
         </form>
         <% } %>
       </div>
@@ -181,8 +188,10 @@
     var box = document.getElementById('terminal-box');
     var input = document.getElementById('console-input');
     var form = document.getElementById('console-form');
-    var idx = -1;   // 当前历史指针（-1 = 不在历史中）
-    var draft = ''; // 未提交草稿
+    var histPool = [];      // 当前历史过滤池（↑↓ 前缀搜索用）
+    var hidx = -1;          // 池内指针（-1 = 不在历史中）
+    var histPrefix = '';    // 触发当前过滤池的前缀
+    var draft = '';         // 未提交草稿
 
     function loadHistory() {
       try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; }
@@ -191,33 +200,171 @@
       try { localStorage.setItem(KEY, JSON.stringify(cmds)); } catch (e) { /* 忽略 */ }
     }
     function scrollToBottom() { if (box) box.scrollTop = box.scrollHeight; }
+    function resetHistNav() { hidx = -1; histPool = []; histPrefix = ''; }
 
     // 终端输入行（readonly 时元素不存在，整块跳过防 JS 报错）
     if (input && form) {
+      var TXT_HISTORY_EMPTY = '<%= t("console.historyEmpty") %>';
+
       // textarea 自适应高度（多行输入，封顶 240px 后内部滚动）
       var fitInput = function () {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 240) + 'px';
       };
-      input.addEventListener('input', fitInput);
+
+      // ---- 命令自动补全：↑↓ 选择 / Tab 或点击接受 / Esc 关闭 / Enter 照常执行 ----
+      var AC_MAX = 8;
+      var acNames = [];
+      var acNamesLoaded = false;
+      var acEl = document.getElementById('console-ac');
+      var acItems = [];
+      var acActive = -1;
+      var loadCompletions = function () {
+        if (acNamesLoaded) return;
+        acNamesLoaded = true;
+        fetch('/console/completions').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+          if (d && Array.isArray(d.names) && d.names.length) {
+            acNames = d.names;
+            // 命令表迟到场景：若焦点仍在输入框且已有输入，立即补弹一次
+            if (document.activeElement === input && input.value) updateAC();
+          } else { acNamesLoaded = false; } // 空/异常结果允许下次重试
+        }).catch(function () { acNamesLoaded = false; });
+      };
+      loadCompletions(); // 初始化即预热，不等首次输入（避开 Get-Command 首采窗口）
+      var currentToken = function () {
+        var before = input.value.slice(0, input.selectionStart);
+        var lineStart = before.lastIndexOf('\n') + 1;
+        var m = before.slice(lineStart).match(/[^\s|;{()]*$/);
+        return m ? m[0] : '';
+      };
+      var closeAC = function () { acEl.classList.add('d-none'); acItems = []; acActive = -1; };
+      var paintAC = function () {
+        var kids = acEl.children;
+        for (var i = 0; i < kids.length; i++) kids[i].className = 'wra-ac-item' + (i === acActive ? ' active' : '');
+        if (kids[acActive]) kids[acActive].scrollIntoView({ block: 'nearest' });
+      };
+      var acceptAC = function (name) {
+        var pos = input.selectionStart;
+        var before = input.value.slice(0, pos);
+        var after = input.value.slice(input.selectionEnd);
+        var lineStart = before.lastIndexOf('\n') + 1;
+        var m = before.slice(lineStart).match(/[^\s|;{()]*$/);
+        var tokLen = m ? m[0].length : 0;
+        var newBefore = before.slice(0, before.length - tokLen) + name + ' ';
+        input.value = newBefore + after;
+        input.setSelectionRange(newBefore.length, newBefore.length);
+        closeAC();
+        resetHistNav();
+        fitInput();
+        input.focus();
+      };
+      var updateAC = function () {
+        var tok = currentToken();
+        if (!tok || tok.length < 2 || !/^[\w.-]+$/.test(tok) || !acNames.length) { closeAC(); return; }
+        var lower = tok.toLowerCase();
+        var starts = [];
+        var contains = [];
+        for (var i = 0; i < acNames.length && (starts.length < AC_MAX || contains.length < AC_MAX); i++) {
+          var nl = acNames[i].toLowerCase();
+          if (nl === lower) continue;
+          if (nl.indexOf(lower) === 0) { if (starts.length < AC_MAX) starts.push(acNames[i]); }
+          else if (nl.indexOf(lower) > 0 && acNames[i].indexOf('-') > 0) { if (contains.length < AC_MAX) contains.push(acNames[i]); }
+        }
+        var matches = starts.concat(contains).slice(0, AC_MAX);
+        if (!matches.length) { closeAC(); return; }
+        acItems = matches;
+        acActive = 0;
+        acEl.innerHTML = '';
+        matches.forEach(function (name, i2) {
+          var div = document.createElement('div');
+          div.className = 'wra-ac-item' + (i2 === 0 ? ' active' : '');
+          div.textContent = name;
+          div.addEventListener('mousedown', function (e) { e.preventDefault(); acceptAC(name); });
+          acEl.appendChild(div);
+        });
+        acEl.classList.remove('d-none');
+      };
+
+      // ---- 历史面板：最近命令点击回填 ----
+      var histBtn = document.getElementById('console-history-btn');
+      var histPanel = document.getElementById('console-history-panel');
+      var renderHistoryPanel = function () {
+        var cmds = loadHistory().slice().reverse(); // 最新在上
+        histPanel.innerHTML = '';
+        if (!cmds.length) {
+          var empty = document.createElement('div');
+          empty.className = 'wra-history-empty';
+          empty.textContent = TXT_HISTORY_EMPTY;
+          histPanel.appendChild(empty);
+          return;
+        }
+        cmds.forEach(function (c) {
+          var item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'wra-history-item font-monospace';
+          item.textContent = c;
+          item.addEventListener('mousedown', function (e) { e.preventDefault(); });
+          item.addEventListener('click', function () {
+            input.value = c;
+            resetHistNav();
+            fitInput();
+            histPanel.classList.add('d-none');
+            input.focus();
+          });
+          histPanel.appendChild(item);
+        });
+      };
+      if (histBtn && histPanel) {
+        histBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var willShow = histPanel.classList.contains('d-none');
+          if (willShow) renderHistoryPanel();
+          histPanel.classList.toggle('d-none', !willShow);
+        });
+        document.addEventListener('click', function (e) {
+          if (!histPanel.classList.contains('d-none') && !histPanel.contains(e.target) && !histBtn.contains(e.target)) {
+            histPanel.classList.add('d-none');
+          }
+        });
+      }
+
+      input.addEventListener('focus', loadCompletions);
+      input.addEventListener('input', function () {
+        resetHistNav();
+        fitInput();
+        loadCompletions();
+        updateAC();
+      });
 
       input.addEventListener('keydown', function (e) {
         if (e.isComposing || e.keyCode === 229) return; // 输入法组合中（中文），不抢按键
+        var acOpen = acItems.length > 0;
+        if (acOpen) {
+          if (e.key === 'ArrowDown') { e.preventDefault(); acActive = (acActive + 1) % acItems.length; paintAC(); return; }
+          if (e.key === 'ArrowUp') { e.preventDefault(); acActive = (acActive - 1 + acItems.length) % acItems.length; paintAC(); return; }
+          if (e.key === 'Tab') { e.preventDefault(); acceptAC(acItems[acActive]); return; }
+          if (e.key === 'Escape') { closeAC(); return; }
+          // Enter/其他键不拦截：Enter 照常执行，输入继续更新补全
+        }
         var cmds = loadHistory();
         var before = input.value.slice(0, input.selectionStart);
         var after = input.value.slice(input.selectionEnd);
         if (e.key === 'ArrowUp') {
           if (before.indexOf('\n') !== -1) return; // 光标不在第一行：交给多行移动
           e.preventDefault();
-          if (idx === -1) { draft = input.value; idx = cmds.length; }
-          if (idx > 0) { idx -= 1; input.value = cmds[idx] || ''; fitInput(); }
+          // 前缀搜索：以当前输入为前缀过滤历史（无输入则全量），空格断词
+          var prefix = input.value.trim().toLowerCase();
+          var pool = prefix ? cmds.filter(function (c) { return c.toLowerCase().indexOf(prefix) === 0; }) : cmds;
+          if (!pool.length) return;
+          if (hidx === -1 || histPrefix !== prefix) { draft = input.value; histPool = pool; histPrefix = prefix; hidx = pool.length; }
+          if (hidx > 0) { hidx -= 1; input.value = histPool[hidx]; fitInput(); }
         } else if (e.key === 'ArrowDown') {
           if (after.indexOf('\n') !== -1) return; // 光标不在最后一行
           e.preventDefault();
-          if (idx !== -1) {
-            idx += 1;
-            if (idx >= cmds.length) { input.value = draft; idx = -1; draft = ''; }
-            else { input.value = cmds[idx] || ''; }
+          if (hidx !== -1) {
+            hidx += 1;
+            if (hidx >= histPool.length) { input.value = draft; resetHistNav(); }
+            else { input.value = histPool[hidx]; }
             fitInput();
           }
         } else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
@@ -230,7 +377,8 @@
             cmds.push(cmd);
             saveHistory(cmds.slice(-MAX));
           }
-          idx = -1; draft = '';
+          resetHistNav();
+          closeAC();
           if (cmd && form.requestSubmit) form.requestSubmit();
         }
       });

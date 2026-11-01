@@ -315,4 +315,4 @@ function startSessionIfDead(s) {
   if (!s.child || s.child.exitCode !== null) startSession(s);
 }
 
-module.exports = { execute, cleanClixml };
+module.exports = { execute, cleanClixml, freshExecute };
