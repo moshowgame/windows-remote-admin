@@ -13,8 +13,17 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 const MARKER = path.join(ROOT, 'data', 'deploy-pending.json');
+const RESULT_FILE = path.join(ROOT, 'data', 'deploy-last-result.json');
 const BACKUPS_DIR = path.join(ROOT, 'backups');
 const MAX_ATTEMPTS = 2;
+
+// 部署结果落盘（/deploy 页展示 + 首次被读取时补写审计）；写失败不影响主流程
+function writeResult(result) {
+  try {
+    fs.mkdirSync(path.dirname(RESULT_FILE), { recursive: true });
+    fs.writeFileSync(RESULT_FILE, JSON.stringify({ ...result, at: Date.now() }, null, 2));
+  } catch { /* 忽略 */ }
+}
 
 // 验证模式启动超时：超时视为新版本失败（可 env 覆盖便于测试）
 const BOOT_TIMEOUT_MS = Number(process.env.WRA_BOOT_TIMEOUT_MS) || 60000;
@@ -89,23 +98,28 @@ async function run(bootFn) {
 
   // 验证模式
   console.log(`[WRA] 检测到待验证部署 v${marker.toVersion || '?'}（备份 ${marker.backupId}），进入启动验证…`);
+  let bootError = '';
   try {
     await withTimeout(bootFn);
     clearMarker();
+    writeResult({ outcome: 'verified', toVersion: marker.toVersion || null, backupId: marker.backupId });
     console.log(`[WRA] 部署 v${marker.toVersion || '?'} 启动成功，已转正`);
     return;
   } catch (err) {
     // 环境性错误（端口被占用/无权限）≠ 版本问题：不回滚，保留部署与备份，交人工释放端口后重启
     if (err && ENV_ERR_CODES.has(err.code)) {
+      writeResult({ outcome: 'env-error', code: err.code, toVersion: marker.toVersion || null, backupId: marker.backupId, error: String(err.message || err) });
       console.error(`[WRA] 启动失败为环境问题（${err.code}），非版本问题，不回滚；请释放端口后重启验证（备份保留：${marker.backupId}）`);
       process.exit(1);
     }
     console.error('[WRA] 部署后首次启动失败：', err && err.message ? err.message : err);
+    bootError = err && err.message ? err.message : String(err);
   }
 
   marker.attempts = (marker.attempts || 0) + 1;
   if (marker.attempts > MAX_ATTEMPTS) {
     clearMarker();
+    writeResult({ outcome: 'gave-up', toVersion: marker.toVersion || null, backupId: marker.backupId, attempts: marker.attempts, error: bootError });
     console.error(`[WRA] 启动失败超过 ${MAX_ATTEMPTS} 次，停止自动回滚，请人工处理（备份：${marker.backupId}）`);
     process.exit(1);
   }
@@ -115,12 +129,15 @@ async function run(bootFn) {
     ok = rollback(marker.backupId);
   } catch (e) {
     console.error('[WRA] 回滚过程出错：', e && e.message ? e.message : e);
+    bootError += `；回滚出错：${e && e.message ? e.message : e}`;
   }
   clearMarker();
   if (ok) {
+    writeResult({ outcome: 'rolled-back', toVersion: marker.toVersion || null, backupId: marker.backupId, error: bootError });
     console.error(`[WRA] 已自动回滚到备份 ${marker.backupId}，进程即将退出；重启后将运行上一版本`);
     process.exit(0);
   }
+  writeResult({ outcome: 'rollback-failed', toVersion: marker.toVersion || null, backupId: marker.backupId, error: bootError });
   console.error(`[WRA] 自动回滚失败（备份 ${marker.backupId} 缺失或为空），请人工处理`);
   process.exit(1);
 }

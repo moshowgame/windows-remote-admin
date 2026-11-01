@@ -11,17 +11,35 @@ const deploy = require('../services/deploy');
 const audit = require('../hooks/audit');
 
 module.exports = async function deployRoutes(app) {
-  // 部署页：当前版本 + 建议版本（最新备份 +1）+ 备份列表 + 待验证状态
+  // 启动时顺手清理超龄 staging（上传后一直未确认的 zip）
+  deploy.cleanupStaging().catch(() => {});
+
+  // 部署页：当前版本 + 建议版本（最新备份 +1）+ 备份列表 + 待验证状态 + 最近一次启动结果
   app.get('/deploy', async (request, reply) => {
-    const [backups, pending, nextVersion] = await Promise.all([
-      deploy.listBackups(), deploy.readPending(), deploy.suggestNextVersion(),
+    const [backups, pending, nextVersion, lastResult] = await Promise.all([
+      deploy.listBackups(), deploy.readPending(), deploy.suggestNextVersion(), deploy.readLastResult(),
     ]);
+    deploy.cleanupStaging().catch(() => {});
+    // 门卫结果首次被看到时补写审计（回滚发生在进程外，无法在事发的请求内审计）
+    let result = lastResult;
+    if (lastResult && !lastResult.audited) {
+      audit(request, '启动门卫部署结果', {
+        username: 'system',
+        outcome: lastResult.outcome,
+        toVersion: lastResult.toVersion,
+        backupId: lastResult.backupId,
+        error: lastResult.error,
+      });
+      await deploy.markResultAudited(lastResult);
+      result = { ...lastResult, audited: true };
+    }
     const cur = JSON.parse(await fs.promises.readFile(path.join(ROOT, 'package.json'), 'utf8').catch(() => ({})));
     return reply.renderPage('pages/deploy', {
       title: request.t('deploy.title'),
       active: 'deploy',
       backups,
       pending,
+      lastResult: result,
       curVersion: cur.version || '?',
       nextVersion,
       uploadMaxMb: app.config.uploadMaxMb || 100,

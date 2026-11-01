@@ -18,6 +18,7 @@ const ROOT = path.join(__dirname, '../..');
 const BACKUPS_DIR = path.join(ROOT, 'backups');
 const STAGING_DIR = path.join(ROOT, 'data', 'deploy-staging');
 const PENDING_FILE = path.join(ROOT, 'data', 'deploy-pending.json');
+const RESULT_FILE = path.join(ROOT, 'data', 'deploy-last-result.json');
 
 // 备份/覆盖涉及的代码项（存在才处理）
 const CODE_ITEMS = ['package.json', 'server.js', 'src', 'public', 'views', 'scripts'];
@@ -367,6 +368,30 @@ async function newStagingPath() {
   return path.join(STAGING_DIR, `deploy-${stamp()}.zip`);
 }
 
+// 清理超龄 staging（上传后一直未确认的 zip），默认保留 24 小时
+async function cleanupStaging(maxAgeMs = 24 * 60 * 60 * 1000) {
+  try {
+    const names = await fsp.readdir(STAGING_DIR);
+    const cutoff = Date.now() - maxAgeMs;
+    for (const name of names) {
+      if (!/^deploy-[0-9_-]+\.zip$/.test(name)) continue;
+      const p = path.join(STAGING_DIR, name);
+      try {
+        const st = await fsp.stat(p);
+        if (st.mtimeMs < cutoff) await fsp.rm(p, { force: true });
+      } catch { /* 单文件失败忽略 */ }
+    }
+  } catch { /* 目录不存在等忽略 */ }
+}
+
+// ---- 部署启动结果（boot-gate 落盘，页面展示；首次被读取时补写审计后打标记）----
+async function readLastResult() {
+  try { return JSON.parse(await fsp.readFile(RESULT_FILE, 'utf8')); } catch { return null; }
+}
+async function markResultAudited(result) {
+  try { await fsp.writeFile(RESULT_FILE, JSON.stringify({ ...result, audited: true }, null, 2)); } catch { /* 忽略 */ }
+}
+
 module.exports = {
   DeployError,
   beginDeploy,
@@ -381,6 +406,9 @@ module.exports = {
   clearPending,
   stagingPath,
   newStagingPath,
+  cleanupStaging,
+  readLastResult,
+  markResultAudited,
   sanitizeVersion,
   suggestNextVersion,
 };

@@ -82,8 +82,40 @@
     <div id="deploy-result"></div>
   </div>
 
-  <!-- 右：待验证状态 + 历史备份 -->
+  <!-- 右：最近启动结果 + 待验证状态 + 历史备份 -->
   <div class="col-lg-5">
+    <% if (locals.lastResult) { %>
+    <% /* 门卫启动结果：verified / rolled-back / env-error / gave-up / rollback-failed（locals 防御，路由未传时不渲染） */ %>
+    <%
+      const LR = locals.lastResult;
+      const RC = ({
+        verified: { cls: 'border-success', icon: 'ti-circle-check text-success' },
+        'rolled-back': { cls: 'border-danger', icon: 'ti-arrow-back-up text-danger' },
+        'env-error': { cls: 'border-warning', icon: 'ti-alert-triangle text-warning' },
+        'gave-up': { cls: 'border-danger', icon: 'ti-alert-octagon text-danger' },
+        'rollback-failed': { cls: 'border-danger', icon: 'ti-alert-octagon text-danger' },
+      }[LR.outcome] || { cls: 'border-secondary', icon: 'ti-info-circle text-secondary' });
+      const RMSG = ({
+        verified: t('deploy.resultVerified').replace('{v}', LR.toVersion || '?'),
+        'rolled-back': t('deploy.resultRolledBack').replace('{v}', LR.toVersion || '?').replace('{b}', LR.backupId || '?'),
+        'env-error': t('deploy.resultEnvError').replace('{code}', LR.code || '?'),
+        'gave-up': t('deploy.resultGaveUp'),
+        'rollback-failed': t('deploy.resultRollbackFailed'),
+      }[LR.outcome] || t('deploy.resultVerified').replace('{v}', LR.toVersion || '?'));
+    %>
+    <div class="card mb-3 <%= RC.cls %>">
+      <div class="card-header py-2 d-flex align-items-center">
+        <h3 class="card-title me-2"><i class="ti <%= RC.icon %> me-1"></i><%= t('deploy.resultTitle') %></h3>
+        <span class="ms-auto text-secondary small"><%= new Date(LR.at || Date.now()).toLocaleString() %></span>
+      </div>
+      <div class="card-body p-3 small">
+        <div><%= RMSG %></div>
+        <% if (LR.error) { %>
+        <div class="text-secondary mt-1 font-monospace" style="word-break:break-all;"><%= LR.error %></div>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
     <% if (pending) { %>
     <div class="card mb-3 border-warning">
       <div class="card-header py-2">
