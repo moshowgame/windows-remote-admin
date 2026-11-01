@@ -14,6 +14,7 @@ const en = {
   'common.appName': 'Windows Remote Admin',
   'common.confirm': 'Confirm',
   'common.cancel': 'Cancel',
+  'common.save': 'Save',
   'common.close': 'Close',
   'common.delete': 'Delete',
   'common.loading': 'Loading…',
@@ -30,6 +31,8 @@ const en = {
   'nav.process': 'Processes',
   'nav.events': 'Event Viewer',
   'nav.users': 'Users',
+  'nav.env': 'Env Vars',
+  'nav.certs': 'Certificates',
   'nav.setup': 'Setup',
   'nav.deploy': 'Deploy',
   'nav.settings': 'Settings',
@@ -51,6 +54,7 @@ const zhCN = {
   'common.appName': 'Windows 远程管理',
   'common.confirm': '确认',
   'common.cancel': '取消',
+  'common.save': '保存',
   'common.close': '关闭',
   'common.delete': '删除',
   'common.loading': '加载中…',
@@ -67,6 +71,8 @@ const zhCN = {
   'nav.process': '进程管理',
   'nav.events': '事件查看器',
   'nav.users': '本地用户',
+  'nav.env': '环境变量',
+  'nav.certs': '证书管理',
   'nav.setup': '部署向导',
   'nav.deploy': '简易部署',
   'nav.settings': '设置',
@@ -85,7 +91,7 @@ const zhCN = {
 };
 
 // ---- 各页面字典段（独立文件维护，启动时合并；新增页面新建 part 文件并在此注册）----
-for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup', './i18n-parts/process', './i18n-parts/tasks', './i18n-parts/deploy']) {
+for (const part of ['./i18n-parts/pages-a', './i18n-parts/files', './i18n-parts/pages-c', './i18n-parts/setup', './i18n-parts/process', './i18n-parts/tasks', './i18n-parts/deploy', './i18n-parts/env', './i18n-parts/certs']) {
   const m = require(part);
   Object.assign(en, m.en || {});
   Object.assign(zhCN, m['zh-CN'] || {});

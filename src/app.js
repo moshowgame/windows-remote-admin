@@ -32,6 +32,8 @@ const netRoutes = require('./routes/net');
 const processRoutes = require('./routes/process');
 const eventsRoutes = require('./routes/events');
 const usersRoutes = require('./routes/users');
+const envRoutes = require('./routes/env');
+const certRoutes = require('./routes/certs');
 const setupRoutes = require('./routes/setup');
 const deployRoutes = require('./routes/deploy');
 
@@ -204,6 +206,8 @@ async function buildApp() {
   await app.register(processRoutes);
   await app.register(eventsRoutes);
   await app.register(usersRoutes);
+  await app.register(envRoutes);
+  await app.register(certRoutes);
   await app.register(setupRoutes);
   await app.register(deployRoutes);
 

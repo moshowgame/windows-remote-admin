@@ -116,6 +116,18 @@
               <span class="nav-link-title"><%= t('nav.users') %></span>
             </a>
           </li>
+          <li class="nav-item <%= active === 'env' ? 'active' : '' %>">
+            <a class="nav-link" href="/env">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-variable"></i></span>
+              <span class="nav-link-title"><%= t('nav.env') %></span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'certs' ? 'active' : '' %>">
+            <a class="nav-link" href="/certs">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-certificate"></i></span>
+              <span class="nav-link-title"><%= t('nav.certs') %></span>
+            </a>
+          </li>
           <li class="nav-item <%= active === 'setup' ? 'active' : '' %>">
             <a class="nav-link" href="/setup">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-server-2"></i></span>

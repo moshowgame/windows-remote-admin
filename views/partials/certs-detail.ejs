@@ -1,0 +1,43 @@
+<% var st = certState(c); %>
+<div class="row g-3">
+  <div class="col-md-6">
+    <table class="table table-sm mb-0 small">
+      <tr><td class="text-secondary" style="width:38%;"><%= t('certs.subject') %></td><td class="font-monospace text-break"><%= c.subj || '—' %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.issuer') %></td><td class="font-monospace text-break"><%= c.iss || '—' %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.validFrom') %></td><td class="font-monospace"><%= c.nb.replace('T', ' ') %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.expires') %></td>
+        <td>
+          <% if (st === 'expired') { %><span class="badge bg-danger-lt"><% } else if (st === 'soon') { %><span class="badge bg-orange-lt"><% } else { %><span class="badge bg-success-lt"><% } %><%= c.na.replace('T', ' ') %></span>
+        </td></tr>
+      <tr><td class="text-secondary"><%= t('certs.thumbprint') %></td><td class="font-monospace text-break"><%= c.tp %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.serial') %></td><td class="font-monospace text-break"><%= c.sn || '—' %></td></tr>
+    </table>
+  </div>
+  <div class="col-md-6">
+    <table class="table table-sm mb-0 small">
+      <tr><td class="text-secondary" style="width:38%;"><%= t('certs.keyAlg') %></td>
+        <td class="font-monospace"><%= c.alg || '—' %><%= c.ks ? ' / ' + c.ks + ' bits' : '' %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.privateKey') %></td>
+        <td><%= c.pk ? '<span class="badge bg-success-lt">' + t('certs.hasPk') + '</span>' : '<span class="text-secondary">—</span>' %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.eku') %></td><td class="text-break"><%= c.eku || '—' %></td></tr>
+      <tr><td class="text-secondary"><%= t('certs.san') %></td><td class="font-monospace text-break"><%= c.san || '—' %></td></tr>
+    </table>
+  </div>
+</div>
+<div class="hr-text my-2"><%= t('certs.actions') %></div>
+<div class="d-flex gap-2 flex-wrap">
+  <a href="#" class="btn btn-sm btn-outline-secondary certs-export-cer" data-store="<%= store %>" data-tp="<%= c.tp %>">
+    <i class="ti ti-download me-1"></i><%= t('certs.exportCer') %>
+  </a>
+  <% if (c.pk) { %>
+  <a href="#" class="btn btn-sm btn-outline-secondary certs-export-pfx" data-store="<%= store %>" data-tp="<%= c.tp %>">
+    <i class="ti ti-package me-1"></i><%= t('certs.exportPfx') %>
+  </a>
+  <% } %>
+  <% if (role !== 'readonly') { %>
+  <button type="button" class="btn btn-sm btn-outline-danger ms-auto certs-del" data-store="<%= store %>" data-tp="<%= c.tp %>">
+    <i class="ti ti-trash me-1"></i><%= t('certs.delete') %>
+  </button>
+  <% } %>
+</div>
+<div class="text-secondary small mt-2"><%= t('certs.adminNote') %></div>

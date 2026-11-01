@@ -70,6 +70,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 进程管理 `/process` | 全量运行进程列表，内存/CPU 占用率（1.5 秒差分采样，小字附累计 CPU 时间）/PID/名称排序，关键字搜索（进程名/PID/路径），admin 可结束进程释放资源（确认框预览 `Stop-Process` 命令 + 审计），系统关键进程（PID 0/4/8）拒绝操作，只读账号仅可查看 |
 | 事件查看器 `/events` | Windows 事件日志查询（System/Application/Security），按级别（严重/错误/警告/信息）与起止日期时间筛选，关键字搜索消息/来源/事件 ID，支持屏蔽关键字（逗号分隔，隐藏高频噪音事件），最新在前，单次最多 500 条，只读功能 |
 | 本地用户 `/users` | 本地账户列表（启用/锁定状态、上次登录、密码最后设置），admin 可解锁（`Unlock-LocalUser`）、启用已禁用账户（Guest 禁止启用，UI 隐藏 + 后端 403）、重置密码（`net user`，密码 env 注入不落日志），全部操作确认框 + 命令预览（密码打码）+ 独立审计，只读账号仅可查看 |
+| 环境变量 `/env` | Machine / User 作用域环境变量管理：列表、搜索、新增/编辑/删除（`SetEnvironmentVariable`，值 env 注入不落日志）；30 个系统关键变量（Path/ComSpec/OS 等）禁止删除（UI 置灰 + 后端 400 双重拦截）；敏感变量（含 pass/token/key 等）值自动打码，查看走 `/env/reveal`（admin + 审计），编辑打开时按需回填，只读账号仅可查看 |
+| 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |
 | 简易部署 `/deploy` | 上传 zip 压缩包原地更新程序：预检（结构白名单校验 + 自动剥离 node_modules + 拒绝 data/logs/backups/.env）、确认后自动备份当前版本到 `backups/`（保留最近 5 份）再覆盖解压；重启后若首次启动失败，启动门卫自动回滚到部署前版本；备份列表一键手动回滚（确认框 + 审计）；页面明示压缩包规范与「先在 low environment 多次验证再上 production」风险提示，admin 专属 |
@@ -80,6 +82,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-11 —— Node.js 版持续迭代
+- **2026-11-02**：新增环境变量管理 `/env` 与证书管理 `/certs`：Machine/User 双作用域变量增删改（关键系统变量禁删、敏感值打码 + 按需 reveal 审计、作用域筛选 + 新建跟随筛选 + 已有变量作用域锁定、Path 等分号分隔值支持 Windows 风格列表编辑器），LocalMachine 六大存储区证书浏览（有效期预警、指纹列、SAN/EKU 详情）、证书上传（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码）、.cer/.pem/.pfx 导出（pfx 走一次性 token，密码仅展示一次）与删除，写操作全部确认框/审计；顺带修复 PowerShell 子进程 PSModulePath 被父进程（PS7）污染导致 `Cert:` 驱动器缺失的底层问题（惠及全部 PS 命令）
 - **2026-11-01**：PowerShell 控制台交互升级：内嵌终端式多行输入（Enter 执行 / Shift+Enter 换行，中文输入法友好）、经典 PowerShell 深蓝配色；新增命令自动补全（服务端 Get-Command 全集，Tab 接受 / ↑↓ 切换 / Esc 关闭）与历史前缀搜索（历史面板点击回填）
 - **2026-11-01**：新增后台长任务：命令/脚本提交为独立 Job（与交互会话解耦、每用户并发 ≤3），SSE 实时推送输出、超时预算（10 分钟~24 小时）、随时终止，任务历史保留 24 小时；终端 : 任务面板 7:3 布局，终端高度可拖拽调节（localStorage 记忆、双击恢复），任务提交开关（后台任务 / 脚本模式）内嵌终端底部，提示随状态三态切换
 - **2026-11-01**：新增简易部署 `/deploy`：上传 zip 原地更新（结构白名单预检 + 自动剥离 node_modules + 拒绝运行时目录）、自动备份（保留 5 份）与一键手动回滚；启动门卫在首次启动失败时自动回滚到部署前版本（端口占用等环境性错误不误判），启动结果落盘并在页面展示（含补写审计），未确认上传包 24h 自动清理，全程审计，admin 专属；配套 `npm run pack:deploy` 一键生成符合规范的部署包（含 vendor 静态资源）
@@ -260,6 +263,28 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 - **手动回滚**：备份列表一键回滚到任一历史版本（确认框 + 审计）
 - **审计**：上传部署包 / 执行部署 / 回滚全部记录审计日志
 - ⚠️ **风险提示**（页面常驻横幅）：部署有风险，请先在 low environment 进行多次验证再上 production
+
+### 环境变量管理 `/env`
+
+Machine / User 两个作用域的系统环境变量管理（读写走 `[Environment]::SetEnvironmentVariable`，变量名与值均经 spawn env 注入，绝不拼接进命令串）。
+
+- **浏览**：作用域 Tab 切换、关键字搜索（名称即搜即显）、值长度列；新进程级生效（已运行进程需重启感知）
+- **新增 / 编辑**：变量名正则校验（`[A-Za-z0-9_.\-\s()]`），值上限 32000 字符；编辑敏感变量时按需调 `/env/reveal` 回填原值
+- **关键变量保护**：30 个系统关键变量（Path / PathExt / ComSpec / OS / SystemRoot / windir 等）禁止删除——UI 删除按钮置灰（换锁形图标）+ 后端 400 双重拦截
+- **敏感值打码**：名称含 pass / pwd / token / secret / key / credential / apikey 的变量值默认显示 `••••••••`，查看走 `/env/reveal`（admin 专属 + 审计「查看敏感环境变量」）
+- **审计**：保存 / 删除 / reveal 全部审计
+
+### 证书管理 `/certs`
+
+LocalMachine 计算机证书存储区浏览与导出（仅 LocalMachine，不涉 CurrentUser）。
+
+- **浏览**：六大常用存储区切换（My / WebHosting / Root / CA / TrustedPeople / TrustedPublisher）、状态筛选（已过期 / 30 天内到期 / 正常，色块徽章）+ 关键字搜索（主题 / 颁发者 / SAN / 指纹）
+- **列表信息**：主题 / 颁发者（CN 提取）、指纹（SHA-1，悬停显示完整值）、有效期与剩余天数、SAN（截断显示）、私钥标识
+- **详情弹窗**：完整主题 / 颁发者、有效期、指纹、序列号、签名算法、密钥位长、EKU 用途、SAN 全量
+- **上传证书**（admin + 审计）：`.cer/.crt/.pem` 导入公钥（PEM 文本自动转 DER，无需密码）；`.pfx/.p12` 含私钥需填写导入密码（密码 env 注入不落日志）；文件落临时目录导入后即删
+- **导出**（admin + 审计）：`.cer` DER 公钥、`.pem` PEM 公钥文本直接下载；`.pfx` 走一次性下载 token（5 分钟 TTL）+ 随机密码，密码仅通过响应头 / Toast 展示一次，不落日志不落审计
+- **删除**（admin + 审计）：确认框预览 `Remove-Item Cert:\LocalMachine\<存储区>\<指纹>` 命令
+- 动态值（指纹 / 密码 / 存储区）全部 spawn env 注入；列表与详情全员只读可见
 
 ### 全局
 

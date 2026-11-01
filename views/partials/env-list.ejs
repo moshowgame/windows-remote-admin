@@ -1,0 +1,63 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th style="width:30%;"><%= t('env.nameLabel') %></th>
+        <th><%= t('env.valueLabel') %></th>
+        <th class="text-end" style="width:1%;"><%= t('env.lenLabel') %></th>
+        <% if (role !== 'readonly') { %>
+        <th class="text-end" style="width:1%;"></th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!items.length) { %>
+      <tr><td colspan="4" class="text-center text-secondary py-4"><%= t('env.empty') %></td></tr>
+      <% } %>
+      <% items.forEach(function (i) {
+           var sens = (/pass|pwd|token|secret|key|credential|apikey/i).test(i.name);
+           var val = String(i.value || '');
+           var critical = (/^(path|pathext|os|systemroot|windir|comspec|systemdrive|programdata|programfiles|programfiles\(x86\)|programw6432|processor_architecture|number_of_processors|driverdata|temp|tmp|username|userprofile|homedrive|homepath|allusersprofile|appdata|localappdata|commonprogramfiles|psmodulepath|public|sessionname|computername)$/i).test(i.name);
+      %>
+      <tr>
+        <td class="font-monospace text-break">
+          <%= i.name %>
+          <% if (critical) { %><span class="badge bg-secondary-lt ms-1" title="<%= t('env.criticalBadge') %>"><%= t('env.criticalShort') %></span><% } %>
+        </td>
+        <td class="font-monospace text-break small" id="env-cell-<%= i.name %>-<%= scope %>">
+          <% if (sens) { %>
+          <span class="text-secondary env-masked">••••••••</span>
+          <% if (role === 'admin') { %>
+          <a href="#" class="env-reveal ms-1" data-name="<%= i.name %>" data-scope="<%= scope %>" title="<%= t('env.reveal') %>"><i class="ti ti-eye fs-2"></i></a>
+          <% } %>
+          <% } else { %>
+          <%= val.length > 160 ? val.slice(0, 160) + '…' : val %>
+          <% } %>
+        </td>
+        <td class="text-secondary small"><%= val.length %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end text-nowrap">
+          <button type="button" class="btn btn-sm btn-outline-secondary env-edit"
+                  data-name="<%= i.name %>" data-scope="<%= scope %>"
+                  data-val="<%= sens ? '' : val.replace(/"/g, '&quot;') %>"
+                  data-sens="<%= sens ? '1' : '' %>"
+                  title="<%= t('env.edit') %>"><i class="ti ti-pencil"></i></button>
+          <% if (!critical) { %>
+          <button type="button" class="btn btn-sm btn-outline-danger env-del"
+                  data-name="<%= i.name %>" data-scope="<%= scope %>"
+                  title="<%= t('env.delete') %>"><i class="ti ti-trash"></i></button>
+          <% } else { %>
+          <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                  title="<%= t('env.criticalProtected') %>"><i class="ti ti-lock"></i></button>
+          <% } %>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('env.count').replace('{n}', String(items.length)).replace('{total}', String(total)) %>
+  <% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>

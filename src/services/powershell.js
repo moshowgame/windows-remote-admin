@@ -12,6 +12,13 @@
 // - CLIXML 错误流清洗（对齐 Go 版逻辑）+ 输出上限 2MB 截断
 const { spawn } = require('node:child_process');
 
+// WinPS 5.1 默认模块路径：父进程（如 PS7 终端 / 编辑器）注入的 PSModulePath 会指向 PS7 模块目录，
+// 导致 WinPS 加载到不兼容的 Microsoft.PowerShell.Security → Cert: 等核心驱动器缺失，必须强制归位
+const WINPS_MODULE_PATH = 'C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules';
+function childEnv(extra) {
+  return Object.assign({}, process.env, extra || {}, { PSModulePath: WINPS_MODULE_PATH });
+}
+
 const MAX_OUTPUT = 2 * 1024 * 1024;   // 单命令输出上限 2MB
 const IDLE_TTL_MS = 10 * 60 * 1000;   // 会话空闲 10 分钟自动回收
 
@@ -50,7 +57,7 @@ function startSession(s) {
     '-NonInteractive',
     '-ExecutionPolicy', 'Bypass',
     '-Command', '-', // 从 stdin 逐条读取并执行，同一进程内状态连续
-  ], { windowsHide: true, env: Object.assign({}, process.env, s.env) });
+  ], { windowsHide: true, env: childEnv(s.env) });
   s.buf = '';
   s.errbuf = '';
 
@@ -219,7 +226,7 @@ function freshExecute(command, options = {}) {
         '-NonInteractive',
         '-ExecutionPolicy', 'Bypass',
         '-EncodedCommand', Buffer.from(wrapped, 'utf16le').toString('base64'),
-      ], { windowsHide: true, env: Object.assign({}, process.env, options.env || {}) });
+      ], { windowsHide: true, env: childEnv(options.env) });
     } catch (err) {
       return resolve({ ok: false, output: `无法启动 PowerShell：${err.message}`, durationMs: 0, exitCode: -1, timedOut: false });
     }

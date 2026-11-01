@@ -1,0 +1,68 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th style="width:20%;"><%= t('certs.subject') %></th>
+        <th style="width:12%;"><%= t('certs.issuer') %></th>
+        <th style="width:16%;"><%= t('certs.thumbprint') %></th>
+        <th style="width:15%;"><%= t('certs.expires') %></th>
+        <th><%= t('certs.san') %></th>
+        <th class="text-end" style="width:1%;"><%= t('certs.privateKey') %></th>
+        <% if (role !== 'readonly') { %>
+        <th class="text-end" style="width:1%;"></th>
+        <% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!items.length) { %>
+      <tr><td colspan="7" class="text-center text-secondary py-4"><%= t('certs.empty') %></td></tr>
+      <% } %>
+      <% items.forEach(function (c) {
+           var st = certState(c);
+           var days = Math.ceil((new Date(c.na).getTime() - Date.now()) / 86400000);
+           var cn = function (dn) { var m = String(dn || '').match(/CN=([^,]+)/); return m ? m[1] : (dn || '?'); };
+      %>
+      <tr>
+        <td class="text-break">
+          <span class="font-monospace"><%= cn(c.subj) %></span>
+          <% if (c.self) { %><span class="badge bg-azure-lt ms-1" title="<%= t('certs.selfSigned') %>"><%= t('certs.selfShort') %></span><% } %>
+        </td>
+        <td class="text-break small text-secondary"><%= cn(c.iss) %></td>
+        <td class="font-monospace small text-break" title="<%= c.tp %>"><%= c.tp.slice(0, 20) %>…</td>
+        <td class="small text-nowrap">
+          <% if (st === 'expired') { %><span class="badge bg-danger-lt"><% } else if (st === 'soon') { %><span class="badge bg-orange-lt"><% } else { %><span class="badge bg-success-lt"><% } %>
+          <%= days < 0 ? t('certs.expiredDays').replace('{n}', String(-days)) : t('certs.daysLeft').replace('{n}', String(days)) %>
+          </span>
+          <div class="text-secondary mt-1"><%= c.na.replace('T', ' ') %></div>
+        </td>
+        <td class="small text-break text-secondary" title="<%= c.san || '' %>">
+          <%= c.san ? (c.san.length > 80 ? c.san.slice(0, 80) + '…' : c.san) : '—' %>
+        </td>
+        <td class="text-end">
+          <% if (c.pk) { %><i class="ti ti-key text-success" title="<%= t('certs.hasPk') %>"></i><% } else { %><span class="text-secondary">—</span><% } %>
+        </td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end text-nowrap">
+          <button type="button" class="btn btn-sm btn-outline-secondary certs-detail"
+                  data-store="<%= store %>" data-tp="<%= c.tp %>" title="<%= t('certs.detailTitle') %>"><i class="ti ti-info-circle"></i></button>
+          <a href="#" class="btn btn-sm btn-outline-secondary certs-export-cer"
+             data-store="<%= store %>" data-tp="<%= c.tp %>" title="<%= t('certs.exportCer') %>"><i class="ti ti-download"></i></a>
+          <a href="#" class="btn btn-sm btn-outline-secondary certs-export-pem"
+             data-store="<%= store %>" data-tp="<%= c.tp %>" title="<%= t('certs.exportPem') %>"><i class="ti ti-file-text"></i></a>
+          <% if (c.pk) { %>
+          <a href="#" class="btn btn-sm btn-outline-secondary certs-export-pfx"
+             data-store="<%= store %>" data-tp="<%= c.tp %>" title="<%= t('certs.exportPfx') %>"><i class="ti ti-package"></i></a>
+          <% } %>
+          <button type="button" class="btn btn-sm btn-outline-danger certs-del"
+                  data-store="<%= store %>" data-tp="<%= c.tp %>" title="<%= t('certs.delete') %>"><i class="ti ti-trash"></i></button>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('certs.count').replace('{n}', String(items.length)).replace('{total}', String(total)) %>
+  <% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>

@@ -1,0 +1,291 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-certificate me-2"></i><%= t('certs.title') %></h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      <%= t('certs.subtitle') %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex flex-wrap align-items-center py-2 gap-2">
+    <select id="certs-store" class="form-select form-select-sm w-auto">
+      <% ['My', 'WebHosting', 'Root', 'CA', 'TrustedPeople', 'TrustedPublisher'].forEach(function (s) { %>
+      <option value="<%= s %>" <%= store === s ? 'selected' : '' %>><%= t('certs.store_' + s) %></option>
+      <% }); %>
+    </select>
+    <select id="certs-state" class="form-select form-select-sm w-auto">
+      <option value="" <%= !state ? 'selected' : '' %>><%= t('certs.stateAll') %></option>
+      <option value="expired" <%= state === 'expired' ? 'selected' : '' %>><%= t('certs.stateExpired') %></option>
+      <option value="soon" <%= state === 'soon' ? 'selected' : '' %>><%= t('certs.stateSoon') %></option>
+      <option value="ok" <%= state === 'ok' ? 'selected' : '' %>><%= t('certs.stateOk') %></option>
+    </select>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <input id="certs-kw" class="form-control form-control-sm" type="search"
+             placeholder="<%= t('certs.searchPlaceholder') %>" value="<%= kw %>" style="max-width:220px;">
+      <% if (role !== 'readonly') { %>
+      <button id="certs-import" class="btn btn-sm btn-primary" type="button">
+        <i class="ti ti-upload me-1"></i><%= t('certs.import') %>
+      </button>
+      <% } %>
+    </div>
+  </div>
+  <div id="certs-table" hx-get="/certs/list?store=<%= store %>&kw=<%= encodeURIComponent(kw) %>&state=<%= state %>"
+       hx-trigger="refresh from:body" hx-swap="innerHTML">
+    <%- include('../partials/certs-list', { items: items, total: total, store: store, kw: kw, state: state, certState: certState, t: t, role: role, msg: msg }) %>
+  </div>
+</div>
+
+<!-- 证书详情 modal -->
+<div class="modal" id="certs-detail-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-id-badge me-1"></i><%= t('certs.detailTitle') %></h5>
+        <button type="button" class="btn-close" data-certs-dismiss></button>
+      </div>
+      <div class="modal-body" id="certs-detail-body">
+        <div class="text-center text-secondary py-4"><i class="ti ti-loader-2 me-1"></i><%= t('common.loading') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 上传证书 modal -->
+<div class="modal" id="certs-import-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-upload me-1"></i><%= t('certs.importTitle') %></h5>
+        <button type="button" class="btn-close" data-certs-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label small mb-1"><%= t('certs.importStore') %></label>
+          <select id="certs-import-store" class="form-select form-select-sm">
+            <% ['My', 'WebHosting', 'Root', 'CA', 'TrustedPeople', 'TrustedPublisher'].forEach(function (s) { %>
+            <option value="<%= s %>"><%= t('certs.store_' + s) %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small mb-1"><%= t('certs.importFile') %></label>
+          <input id="certs-import-file" type="file" class="form-control form-control-sm" accept=".cer,.crt,.pem,.pfx,.p12">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small mb-1"><%= t('certs.importPwd') %></label>
+          <input id="certs-import-pwd" type="password" class="form-control form-control-sm" autocomplete="new-password">
+        </div>
+        <div class="text-secondary small"><i class="ti ti-info-circle me-1"></i><%= t('certs.importHint') %></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-certs-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-primary" id="certs-import-confirm"><%= t('certs.import') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认（预览命令） -->
+<div class="modal" id="certs-delete-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="ti ti-trash me-1"></i><%= t('certs.deleteTitle') %></h5>
+        <button type="button" class="btn-close" data-certs-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2 small"><%= t('certs.deleteMsg') %></p>
+        <div class="alert alert-danger py-2 small mb-2"><i class="ti ti-alert-triangle me-1"></i><%= t('certs.deleteWarn') %></div>
+        <pre class="border rounded p-2 font-monospace small mb-0">Remove-Item Cert:\LocalMachine\<span id="certs-del-store"></span>\<span id="certs-del-tp"></span></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-certs-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="certs-del-confirm"><%= t('common.delete') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var CSRF = '<%= csrf %>';
+    var T = {
+      deleted: '<%= t("certs.deleted").replace("{n}", "TP") %>',
+      actionFailed: '<%= t("certs.actionFailed").replace("{n}", "") %>',
+      pfxDownloading: '<%= t("certs.pfxDownloading") %>',
+      pfxPwd: '<%= t("certs.pfxPwd") %>',
+      imported: '<%= t("certs.imported").replace("{n}", "TP") %>',
+      importing: '<%= t("certs.importing") %>',
+      noFile: '<%= t("certs.noFile") %>'
+    };
+
+    function toastMsg(msg, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } }));
+    }
+    function refreshList() { htmx.ajax('GET', document.getElementById('certs-table').getAttribute('hx-get'), '#certs-table'); }
+
+    // 自管理 modal
+    function openModal(el) { el.style.display = 'block'; el.classList.add('show'); document.body.classList.add('modal-open'); }
+    function closeModal(el) {
+      el.style.display = 'none'; el.classList.remove('show'); document.body.classList.remove('modal-open');
+      var bd = document.querySelector('.modal-backdrop'); if (bd) bd.remove();
+    }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-certs-dismiss]')) {
+        var m = e.target.closest('.modal'); if (m) closeModal(m);
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(closeModal);
+    });
+
+    var detailModal = document.getElementById('certs-detail-modal');
+    var delModal = document.getElementById('certs-delete-modal');
+    var importModal = document.getElementById('certs-import-modal');
+
+    function listUrl() {
+      return '/certs/list?store=' + document.getElementById('certs-store').value
+        + '&kw=' + encodeURIComponent(document.getElementById('certs-kw').value.trim())
+        + '&state=' + document.getElementById('certs-state').value;
+    }
+
+    // 筛选控件
+    document.getElementById('certs-store').addEventListener('change', function () {
+      document.getElementById('certs-table').setAttribute('hx-get', listUrl()); refreshList();
+    });
+    document.getElementById('certs-state').addEventListener('change', function () {
+      document.getElementById('certs-table').setAttribute('hx-get', listUrl()); refreshList();
+    });
+    document.getElementById('certs-kw').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { document.getElementById('certs-table').setAttribute('hx-get', listUrl()); refreshList(); }
+    });
+
+    // 事件委托：详情 / 导出 / 删除
+    document.addEventListener('click', function (e) {
+      var d = e.target.closest('.certs-detail');
+      if (d) {
+        e.preventDefault();
+        document.getElementById('certs-detail-body').innerHTML =
+          '<div class="text-center text-secondary py-4"><i class="ti ti-loader-2 me-1"></i><%= t("common.loading") %></div>';
+        openModal(detailModal);
+        htmx.ajax('GET', '/certs/detail?store=' + d.getAttribute('data-store') + '&tp=' + d.getAttribute('data-tp'), '#certs-detail-body');
+        return;
+      }
+      var cer = e.target.closest('.certs-export-cer');
+      if (cer) {
+        e.preventDefault();
+        window.location = '/certs/export/cer?store=' + cer.getAttribute('data-store') + '&tp=' + cer.getAttribute('data-tp');
+        return;
+      }
+      var pem = e.target.closest('.certs-export-pem');
+      if (pem) {
+        e.preventDefault();
+        window.location = '/certs/export/pem?store=' + pem.getAttribute('data-store') + '&tp=' + pem.getAttribute('data-tp');
+        return;
+      }
+      var pfx = e.target.closest('.certs-export-pfx');
+      if (pfx) {
+        e.preventDefault();
+        toastMsg(T.pfxDownloading, 'info');
+        fetch('/certs/export/pfx-token?store=' + pfx.getAttribute('data-store') + '&tp=' + pfx.getAttribute('data-tp'), { headers: { 'x-csrf-token': CSRF } })
+          .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+          .then(function (res) {
+            if (!res.ok) { toastMsg(res.html.slice(0, 150), 'error'); return; }
+            var box = document.createElement('div');
+            box.innerHTML = res.html;
+            document.body.appendChild(box);
+          })
+          .catch(function () { toastMsg(T.actionFailed, 'error'); });
+        return;
+      }
+      var del = e.target.closest('.certs-del');
+      if (del) {
+        e.preventDefault();
+        document.getElementById('certs-del-store').textContent = del.getAttribute('data-store');
+        document.getElementById('certs-del-tp').textContent = del.getAttribute('data-tp');
+        delModal.setAttribute('data-store', del.getAttribute('data-store'));
+        delModal.setAttribute('data-tp', del.getAttribute('data-tp'));
+        openModal(delModal);
+      }
+    });
+
+    // pfx 下载（凭一次性 token，二进制 + X-Cert-Pwd 头展示密码）
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.certs-pfx-download');
+      if (!btn) return;
+      e.preventDefault();
+      var token = btn.getAttribute('data-token');
+      var modal = btn.closest('.modal');
+      fetch('/certs/export/pfx?token=' + encodeURIComponent(token), { headers: { 'x-csrf-token': CSRF } })
+        .then(function (r) {
+          if (!r.ok) return r.text().then(function (t) { throw new Error(t.slice(0, 150)); });
+          var pwd = r.headers.get('X-Cert-Pwd') || '';
+          return r.blob().then(function (b) { return { b: b, pwd: pwd }; });
+        })
+        .then(function (res) {
+          if (modal) closeModal(modal);
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(res.b);
+          a.download = 'cert.pfx';
+          a.click();
+          URL.revokeObjectURL(a.href);
+          toastMsg(T.pfxPwd + ' ' + res.pwd, 'success');
+          refreshList();
+        })
+        .catch(function (err) { toastMsg(err.message || T.actionFailed, 'error'); });
+    });
+
+    // 删除确认
+    <% if (role !== 'readonly') { %>
+    // 上传证书
+    document.getElementById('certs-import').addEventListener('click', function () {
+      document.getElementById('certs-import-store').value = document.getElementById('certs-store').value;
+      document.getElementById('certs-import-file').value = '';
+      document.getElementById('certs-import-pwd').value = '';
+      openModal(importModal);
+    });
+    document.getElementById('certs-import-confirm').addEventListener('click', function () {
+      var fileInput = document.getElementById('certs-import-file');
+      if (!fileInput.files.length) { toastMsg(T.noFile, 'error'); return; }
+      var btn = this;
+      btn.disabled = true;
+      var fd = new FormData();
+      fd.append('store', document.getElementById('certs-import-store').value);
+      fd.append('pwd', document.getElementById('certs-import-pwd').value);
+      fd.append('file', fileInput.files[0]);
+      fetch('/certs/import', { method: 'POST', headers: { 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          btn.disabled = false;
+          if (res.ok && res.j.ok) {
+            closeModal(importModal);
+            toastMsg(T.imported.replace('TP', (res.j.tp || '').slice(0, 8) + '…'), 'success');
+            document.getElementById('certs-store').value = document.getElementById('certs-import-store').value;
+            document.getElementById('certs-table').setAttribute('hx-get', listUrl());
+            refreshList();
+          } else { toastMsg(T.actionFailed + ' ' + (res.j.msg || '').slice(0, 120), 'error'); }
+        })
+        .catch(function () { btn.disabled = false; toastMsg(T.actionFailed, 'error'); });
+    });
+
+    document.getElementById('certs-del-confirm').addEventListener('click', function () {
+      var store = delModal.getAttribute('data-store'), tp = delModal.getAttribute('data-tp');
+      var fd = new URLSearchParams({ store: store, tp: tp });
+      fetch('/certs/delete', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+        .then(function (res) {
+          closeModal(delModal);
+          if (res.ok) { toastMsg(T.deleted.replace('TP', tp.slice(0, 8) + '…')); document.getElementById('certs-table').setAttribute('hx-get', listUrl()); refreshList(); }
+          else { toastMsg(T.actionFailed + ' ' + res.html.slice(0, 120), 'error'); }
+        })
+        .catch(function () { closeModal(delModal); toastMsg(T.actionFailed, 'error'); });
+    });
+    <% } %>
+  });
+</script>
+<%- include('../layouts/layout-bottom') %>
