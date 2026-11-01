@@ -1,58 +1,10 @@
 'use strict';
 
-// PowerShell 控制台路由 + 快捷命令分组（只读查询为主，运维常用场景）
+// PowerShell 控制台路由（只读查询为主，运维常用场景）
 // 后台长任务：提交/终止走 assertWritable + 审计；查看类（列表/流/输出）不设限不审计
 const ps = require('../services/powershell');
 const jobs = require('../services/jobs');
 const audit = require('../hooks/audit');
-
-// 快捷命令分组：组名按请求语言渲染（PowerShell 命令本身不翻译）
-function getQuickCommands(t) {
-  return [
-    {
-      name: t('console.groupSystem'),
-      icon: 'ti-device-desktop',
-      items: [
-        'Get-ComputerInfo | Select-Object WindowsProductName, OsBuildNumber, OsArchitecture',
-        'systeminfo',
-        'Get-Date -Format "yyyy-MM-dd HH:mm:ss"',
-      ],
-    },
-    {
-      name: t('console.groupProcesses'),
-      icon: 'ti-list-details',
-      items: [
-        'Get-Process | Sort-Object WS -Descending | Select-Object -First 10 Name, Id, WS',
-        'Get-Process | Where-Object { $_.CPU -gt 60 } | Select-Object Name, Id, CPU',
-      ],
-    },
-    {
-      name: t('console.groupServices'),
-      icon: 'ti-settings',
-      items: [
-        'Get-Service | Where-Object Status -eq "Running" | Select-Object -First 20 Name, DisplayName',
-        'Get-Service | Where-Object StartType -eq "Automatic" | Where-Object Status -ne "Running"',
-      ],
-    },
-    {
-      name: t('console.groupNetwork'),
-      icon: 'ti-network',
-      items: [
-        'ipconfig /all',
-        'Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Sort-Object LocalPort',
-        'Test-Connection -ComputerName localhost -Count 2',
-      ],
-    },
-    {
-      name: t('console.groupDisk'),
-      icon: 'ti-database',
-      items: [
-        'Get-Volume | Format-Table DriveLetter, FileSystemLabel, Size, SizeRemaining',
-        'Get-PSDrive -PSProvider FileSystem',
-      ],
-    },
-  ];
-}
 
 module.exports = async function consoleRoutes(app) {
   // ---- 自动补全命令表：真实 Get-Command 全集（进程级缓存）+ 静态种子兜底 ----
@@ -199,5 +151,3 @@ module.exports = async function consoleRoutes(app) {
     });
   });
 };
-
-module.exports.getQuickCommands = getQuickCommands;

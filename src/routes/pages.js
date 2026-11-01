@@ -2,7 +2,6 @@
 
 // 整页路由（/dashboard、/console）；/files /editor /logs 由各自模块注册
 const systeminfo = require('../services/systeminfo');
-const { getQuickCommands } = require('./console');
 const i18n = require('../i18n');
 
 module.exports = async function pageRoutes(app) {
@@ -28,7 +27,6 @@ module.exports = async function pageRoutes(app) {
     return reply.renderPage('pages/console', {
       title: request.t('console.title'),
       active: 'console',
-      quickCommands: getQuickCommands(request.t),
       timeoutMs: app.config.psTimeoutMs,
     });
   });

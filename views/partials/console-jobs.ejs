@@ -38,7 +38,7 @@
             title="<%= job.commandPreview %>"><%= job.kind === 'script' ? '[-File] ' : '' %><%= job.commandPreview %></span>
       <span class="ms-auto text-secondary small font-monospace"><%= fmtDur(elapsed) %></span>
       <button type="button" class="btn btn-sm btn-outline-secondary job-view" data-id="<%= job.id %>" data-cmd="<%= job.commandPreview %>">
-        <i class="ti ti-eye me-1"></i><%= running ? t('console.jobViewOutput') : t('console.jobViewSnapshot') %>
+        <i class="ti ti-eye me-1"></i><%= t('console.jobDetails') %>
       </button>
       <% if (running && role !== 'readonly') { %>
       <button type="button" class="btn btn-sm btn-outline-danger job-cancel" data-id="<%= job.id %>" data-cmd="<%= job.commandPreview %>">

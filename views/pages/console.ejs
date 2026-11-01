@@ -1,6 +1,6 @@
 <%- include('../layouts/layout-top') %>
 
-<div class="page-header d-print-none mb-3">
+<div class="page-header d-print-none mb-2">
   <div class="row align-items-center g-2">
     <div class="col">
       <h2 class="page-title"><i class="ti ti-terminal-2 me-2"></i><%= t('console.title') %></h2>
@@ -11,47 +11,50 @@
   </div>
 </div>
 
-<div class="row g-3">
-  <!-- 左侧：快捷命令分组 -->
-  <% if (role === 'readonly') { %>
-  <div class="col-lg-3 order-lg-2">
+<!-- 终端高度拖拽条：拖动调整终端/任务面板高度（localStorage 记忆），双击恢复视口自适应 -->
+<div id="console-resizer" class="wra-term-resizer d-none d-lg-flex" title="<%= t('console.resizeHint') %>" role="separator" aria-orientation="horizontal" tabindex="0">
+  <i class="ti ti-grip-horizontal"></i>
+</div>
+
+<div class="row g-3 wra-console-row">
+  <!-- 右侧：后台长任务（与终端输出等高，列表内部滚动） -->
+  <div class="col-lg-3 order-lg-2 wra-console-side">
+    <% if (role === 'readonly') { %>
     <div class="card">
       <div class="card-body p-3 text-center text-secondary">
         <i class="ti ti-lock fs-2 d-block mb-2"></i>
         <%= t('console.readonlyBlocked') %>
       </div>
     </div>
-  </div>
-  <% } else { %>
-  <div class="col-lg-3 order-lg-2">
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title"><i class="ti ti-bolt me-1"></i><%= t('console.quickCommands') %></h3>
+    <!-- 后台长任务：只读账号仅可查看 -->
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center py-2">
+        <h3 class="card-title me-2"><i class="ti ti-list-check me-1"></i><%= t('console.jobsTitle') %></h3>
+        <button id="jobs-refresh" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+          <i class="ti ti-refresh me-1"></i><%= t('console.jobsRefresh') %>
+        </button>
       </div>
-      <div class="card-body p-2" style="max-height: 65vh; overflow-y: auto;">
-        <% for (const group of quickCommands) { %>
-          <div class="mb-3">
-            <div class="text-secondary small mb-1">
-              <i class="ti <%= group.icon %> me-1"></i><%= group.name %>
-            </div>
-            <% for (const cmd of group.items) { %>
-              <button class="btn btn-outline-secondary w-100 text-start text-truncate mb-1 font-monospace"
-                      style="font-size: 0.75rem;"
-                      hx-post="/console/execute"
-                      hx-vals='<%= JSON.stringify({ command: cmd }) %>'
-                      hx-target="#console-output"
-                      hx-swap="beforeend scroll:#terminal-box:bottom"
-                      title="<%= cmd %>"><%= cmd %></button>
-            <% } %>
-          </div>
-        <% } %>
+      <div id="jobs-panel" class="wra-jobs-scroll" hx-get="/console/jobs" hx-trigger="load" hx-swap="innerHTML">
+        <div class="p-3 text-secondary small"><i class="ti ti-loader-2 me-1"></i><%= t('console.jobsLoading') %></div>
       </div>
     </div>
+    <% } else { %>
+    <div class="card">
+      <div class="card-header d-flex align-items-center py-2">
+        <h3 class="card-title me-2"><i class="ti ti-list-check me-1"></i><%= t('console.jobsTitle') %></h3>
+        <button id="jobs-refresh" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+          <i class="ti ti-refresh me-1"></i><%= t('console.jobsRefresh') %>
+        </button>
+      </div>
+      <div id="jobs-panel" class="wra-jobs-scroll" hx-get="/console/jobs" hx-trigger="load" hx-swap="innerHTML">
+        <div class="p-3 text-secondary small"><i class="ti ti-loader-2 me-1"></i><%= t('console.jobsLoading') %></div>
+      </div>
+    </div>
+    <% } %>
   </div>
-  <% } %>
 
-  <!-- 右侧：终端输出 + 输入行 -->
-  <div class="col-lg-9 order-lg-1">
+  <!-- 左侧：终端输出 + 输入行 -->
+  <div class="col-lg-9 order-lg-1 wra-console-main">
     <div class="card">
       <div class="card-header d-flex align-items-center position-relative">
         <h3 class="card-title"><i class="ti ti-square-rounded-letter-p me-1"></i><%= t('console.output') %></h3>
@@ -72,6 +75,9 @@
           </div>
         </div>
         <% if (role !== 'readonly') { %>
+        <% /* 脚本模式编辑区：勾选「脚本模式」后替换输出框，多行脚本在此编辑，点「执行」提交 */ %>
+        <textarea id="job-script-editor" class="wra-script-editor d-none" rows="10"
+                  spellcheck="false" placeholder="<%= t('console.jobScriptPlaceholder') %>"></textarea>
         <% /* 输入行内嵌终端卡体：深色一体、textarea 支持多行（Enter 执行 / Shift+Enter 换行） */ %>
         <form id="console-form" hx-post="/console/execute" hx-target="#console-output"
               hx-swap="beforeend scroll:#terminal-box:bottom"
@@ -86,20 +92,13 @@
           </button>
           <div id="console-ac" class="wra-ac d-none"></div>
         </form>
-        <% } %>
-      </div>
-      <div class="card-footer p-2">
-        <% if (role === 'readonly') { %>
-        <div class="alert alert-warning mb-0 py-2 text-center">
-          <i class="ti ti-lock me-1"></i><%= t('console.readonlyPrefix') %><strong><%= t('common.roleReadonly') %></strong><%= t('console.readonlySuffix') %>
-        </div>
-        <% } else { %>
-        <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+        <% /* 后台任务选项条（卡体底部）：作用于终端输入框——勾选后点击「执行」即把输入提交为后台长任务 */ %>
+        <div class="d-flex flex-wrap align-items-center gap-3 px-2 py-1 border-top">
           <div class="form-check mb-0">
             <input class="form-check-input" type="checkbox" id="job-enabled">
             <label class="form-check-label small" for="job-enabled"><%= t('console.jobRunAs') %></label>
           </div>
-          <div class="d-none align-items-center gap-1" id="job-timeout-wrap">
+          <div class="d-none d-flex align-items-center gap-1" id="job-timeout-wrap">
             <span class="text-secondary small"><%= t('console.jobTimeoutLabel') %></span>
             <select id="job-timeout" class="form-select form-select-sm w-auto">
               <option value="600000">10min</option>
@@ -109,28 +108,22 @@
               <option value="86400000">24h</option>
             </select>
           </div>
-          <div class="form-check mb-0">
+          <div class="form-check mb-0 d-none" id="job-script-wrap">
             <input class="form-check-input" type="checkbox" id="job-script-mode">
             <label class="form-check-label small" for="job-script-mode"><%= t('console.jobScriptMode') %></label>
           </div>
+          <span id="job-submit-hint" class="ms-auto small text-secondary pe-1"><%= t('console.hintDirect') %></span>
         </div>
-        <textarea id="job-script" class="form-control font-monospace mb-2 d-none" rows="5"
-                  spellcheck="false" placeholder="<%= t('console.jobScriptPlaceholder') %>"></textarea>
         <% } %>
       </div>
+      <% if (role === 'readonly') { %>
+      <div class="card-footer p-2">
+        <div class="alert alert-warning mb-0 py-2 text-center">
+          <i class="ti ti-lock me-1"></i><%= t('console.readonlyPrefix') %><strong><%= t('common.roleReadonly') %></strong><%= t('console.readonlySuffix') %>
+        </div>
+      </div>
+      <% } %>
     </div>
-  </div>
-</div>
-
-<div class="card mt-3">
-  <div class="card-header d-flex align-items-center py-2">
-    <h3 class="card-title me-2"><i class="ti ti-list-check me-1"></i><%= t('console.jobsTitle') %></h3>
-    <button id="jobs-refresh" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
-      <i class="ti ti-refresh me-1"></i><%= t('console.jobsRefresh') %>
-    </button>
-  </div>
-  <div id="jobs-panel" hx-get="/console/jobs" hx-trigger="load" hx-swap="innerHTML">
-    <div class="p-3 text-secondary small"><i class="ti ti-loader-2 me-1"></i><%= t('console.jobsLoading') %></div>
   </div>
 </div>
 
@@ -392,6 +385,41 @@
     }
     output.addEventListener('htmx:afterSwap', scrollToBottom);
 
+    // ---- 终端高度拖拽条：拖动调高调低（终端与任务面板联动等高），双击恢复自适应 ----
+    var resizer = document.getElementById('console-resizer');
+    if (resizer) {
+      var TERM_MIN = 240, TERM_MAX = 1200, TERM_KEY = 'wra_term_h';
+      var applyH = function (h) {
+        document.documentElement.style.setProperty('--wra-term-h', Math.round(h) + 'px');
+      };
+      // 恢复上次拖拽高度（非法值忽略，回落到 clamp 自适应）
+      var savedH = parseInt(localStorage.getItem(TERM_KEY) || '', 10);
+      if (savedH >= TERM_MIN && savedH <= TERM_MAX) applyH(savedH);
+
+      var dragging = false, startY = 0, startH = 0;
+      resizer.addEventListener('pointerdown', function (e) {
+        dragging = true; startY = e.clientY;
+        startH = box.getBoundingClientRect().height;
+        document.body.classList.add('wra-resizing');
+        e.preventDefault();
+      });
+      document.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        applyH(Math.min(TERM_MAX, Math.max(TERM_MIN, startH + (e.clientY - startY))));
+      });
+      document.addEventListener('pointerup', function () {
+        if (!dragging) return;
+        dragging = false;
+        document.body.classList.remove('wra-resizing');
+        try { localStorage.setItem(TERM_KEY, String(Math.round(box.getBoundingClientRect().height))); } catch (err) { /* 忽略 */ }
+      });
+      resizer.addEventListener('dblclick', function () {
+        document.documentElement.style.removeProperty('--wra-term-h');
+        try { localStorage.removeItem(TERM_KEY); } catch (err) { /* 忽略 */ }
+        scrollToBottom();
+      });
+    }
+
     // 清屏
     document.getElementById('console-clear').addEventListener('click', function () {
       output.innerHTML = '<div class="wra-term-block text-secondary"><%= t("console.cleared") %></div>';
@@ -551,20 +579,43 @@
       streamEs.addEventListener('job-updated', scheduleRefresh);
     }
 
-    // 提交入口：勾选"后台长任务"后拦截表单（capture 阶段先于 htmx 监听）
+    // 提交入口：勾选"后台长任务"后拦截表单（capture 阶段先于 htmx 监听），
+    // 命令取自终端输入框；脚本模式用输出框位置的编辑区内容（存临时 .ps1 执行）
     var jobEnabled = document.getElementById('job-enabled');
     if (jobEnabled) {
       var jobTimeout = document.getElementById('job-timeout');
       var jobTimeoutWrap = document.getElementById('job-timeout-wrap');
       var jobScriptMode = document.getElementById('job-script-mode');
-      var jobScript = document.getElementById('job-script');
+      var jobScriptWrap = document.getElementById('job-script-wrap');
+      var scriptEditor = document.getElementById('job-script-editor');
+      // 右侧提示随状态三态切换：直连 / 后台任务 / 脚本任务
+      var hintEl = document.getElementById('job-submit-hint');
+      var HINT = {
+        direct: '<%= t("console.hintDirect") %>',
+        job: '<%= t("console.hintJob") %>',
+        script: '<%= t("console.hintScript") %>'
+      };
+      function updateHint() {
+        if (!hintEl) return;
+        hintEl.textContent = !jobEnabled.checked ? HINT.direct
+          : (jobScriptMode.checked ? HINT.script : HINT.job);
+      }
+      // 脚本模式切换：输出框 ↔ 脚本编辑区互换显示
+      function applyScriptMode() {
+        scriptEditor.classList.toggle('d-none', !jobScriptMode.checked);
+        box.classList.toggle('d-none', jobScriptMode.checked);
+        updateHint();
+      }
       jobEnabled.addEventListener('change', function () {
         jobTimeoutWrap.classList.toggle('d-none', !jobEnabled.checked);
+        jobScriptWrap.classList.toggle('d-none', !jobEnabled.checked);
+        if (!jobEnabled.checked) {
+          jobScriptMode.checked = false;
+          applyScriptMode();
+        }
+        updateHint();
       });
-      jobScriptMode.addEventListener('change', function () {
-        jobScript.classList.toggle('d-none', !jobScriptMode.checked);
-        if (!jobScriptMode.checked) jobScript.value = '';
-      });
+      jobScriptMode.addEventListener('change', applyScriptMode);
 
       var jobSubmitting = false;
       form.parentElement.addEventListener('submit', function (e) {
@@ -573,7 +624,7 @@
         e.stopPropagation();
         var payload;
         if (jobScriptMode.checked) {
-          var sc = jobScript.value.trim();
+          var sc = scriptEditor.value.trim();
           if (!sc) { toastMsg(T2.jobEmpty, 'warning'); return; }
           payload = { kind: 'script', script: sc, timeoutMs: Number(jobTimeout.value) };
         } else {
@@ -595,7 +646,8 @@
             return;
           }
           input.value = '';
-          jobScript.value = '';
+          scriptEditor.value = '';
+          fitInput();
           refreshJobsPanel();
           input.focus();
           scrollToBottom();
