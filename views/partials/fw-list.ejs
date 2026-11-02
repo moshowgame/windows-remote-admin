@@ -1,0 +1,94 @@
+<% if (listErr) { %>
+<div class="alert alert-warning mb-3"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></div>
+<% } %>
+
+<!-- 配置文件状态（Domain / Private / Public） -->
+<div class="row g-3 mb-3">
+  <% profiles.forEach(function (p) { %>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body py-2 d-flex align-items-center">
+        <i class="ti ti-shield-check text-<%= p.on ? 'success' : 'danger' %> fs-2"></i>
+        <div class="ms-2 flex-fill min-width-0">
+          <div class="fw-bold"><%= t('fw.prof.' + p.name) %></div>
+          <div class="small text-secondary text-truncate">
+            <span class="badge bg-<%= p.on ? 'success' : 'secondary' %>-lt me-1"><%= p.on ? t('fw.stateOn') : t('fw.stateOff') %></span>
+            <%= t('fw.defaultIn') %> <%= t('fw.' + String(p.in).toLowerCase()) %> · <%= t('fw.defaultOut') %> <%= t('fw.' + String(p.out).toLowerCase()) %>
+          </div>
+        </div>
+        <% if (role !== 'readonly') { %>
+        <button type="button" class="btn btn-sm btn-outline-<%= p.on ? 'danger' : 'success' %> fw-prof-toggle"
+                data-name="<%= p.name %>" data-on="<%= p.on ? '1' : '0' %>"
+                title="<%= p.on ? t('fw.profOffTitle') : t('fw.profOnTitle') %>">
+          <i class="ti <%= p.on ? 'ti-shield-off' : 'ti-shield-check' %>"></i>
+        </button>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <% }); %>
+</div>
+
+<!-- 规则列表 -->
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table table-hover wra-sticky-head">
+      <thead>
+        <tr>
+          <th style="width:28%;"><%= t('fw.ruleName') %></th>
+          <th style="width:12%;"><%= t('fw.direction') %> / <%= t('fw.action') %></th>
+          <th style="width:16%;"><%= t('fw.protocol') %> / <%= t('fw.localPort') %></th>
+          <th style="width:14%;"><%= t('fw.profile') %></th>
+          <th><%= t('fw.status') %></th>
+          <% if (role !== 'readonly') { %><th class="text-end" style="width:1%;"></th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!items.length) { %>
+        <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('fw.emptyRules') %></td></tr>
+        <% } %>
+        <% items.forEach(function (r) { %>
+        <tr>
+          <td class="text-break">
+            <div class="fw-bold"><%= r.name %></div>
+            <% if (r.grp) { %><div class="small text-secondary"><%= r.grp %></div><% } %>
+          </td>
+          <td>
+            <span class="badge bg-<%= r.dir === 'Inbound' ? 'blue' : 'teal' %>-lt me-1" title="<%= t('fw.direction') %>">
+              <i class="ti <%= r.dir === 'Inbound' ? 'ti-arrow-down-left' : 'ti-arrow-up-right' %> me-1"></i><%= t('fw.' + r.dir.toLowerCase()) %>
+            </span>
+            <span class="badge bg-<%= r.act === 'Allow' ? 'success' : 'danger' %>-lt" title="<%= t('fw.action') %>"><%= t('fw.' + r.act.toLowerCase()) %></span>
+          </td>
+          <td class="font-monospace small">
+            <%= r.proto || 'Any' %><% if (r.lp) { %>: <span class="text-break"><%= r.lp %></span><% } %>
+          </td>
+          <td>
+            <% r.profNames.forEach(function (pn) { %>
+            <span class="badge bg-secondary-lt me-1 mb-1"><%= t('fw.prof.' + pn) %></span>
+            <% }); %>
+          </td>
+          <td>
+            <span class="badge bg-<%= r.on ? 'success' : 'secondary' %>-lt"><%= r.on ? t('fw.stateOn') : t('fw.stateOff') %></span>
+            <% if (r.desc) { %><div class="small text-secondary text-truncate" style="max-width:220px;" title="<%= r.desc %>"><%= r.desc %></div><% } %>
+          </td>
+          <% if (role !== 'readonly') { %>
+          <td class="text-end text-nowrap">
+            <button type="button" class="btn btn-sm btn-outline-<%= r.on ? 'secondary' : 'success' %> fw-toggle"
+                    data-id="<%= r.id %>" data-name="<%= r.name %>" data-on="<%= r.on ? '1' : '0' %>"
+                    title="<%= r.on ? t('fw.toggleOff') : t('fw.toggleOn') %>">
+              <i class="ti <%= r.on ? 'ti-player-pause' : 'ti-player-play' %>"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger fw-del"
+                    data-id="<%= r.id %>" data-name="<%= r.name %>"
+                    title="<%= t('fw.deleteRule') %>"><i class="ti ti-trash"></i></button>
+          </td>
+          <% } %>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <div class="px-3 py-2 text-secondary small border-top">
+    <%= t('fw.count').replace('{n}', String(total)) %><% if (total > cap) { %><%= t('fw.capNote').replace('{n}', String(cap)) %><% } %><% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+  </div>
+</div>

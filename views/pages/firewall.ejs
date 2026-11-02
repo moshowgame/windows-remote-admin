@@ -1,0 +1,335 @@
+<%- include('../layouts/layout-top') %>
+<% const isRO = (role === 'readonly'); %>
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-shield me-2"></i><%= t('fw.title') %></h2>
+      <div class="text-secondary small"><%= t('fw.subtitle') %></div>
+    </div>
+    <% if (!isRO) { %>
+    <div class="col-auto">
+      <button id="fw-new" class="btn btn-primary" type="button">
+        <i class="ti ti-plus me-1"></i><%= t('fw.new') %>
+      </button>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- 筛选栏：JS 驱动刷新（change / 输入防抖 / Enter），与 /smb 同模式 -->
+<form id="fw-filters" class="card card-body py-2 mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col-6 col-md-auto">
+      <select id="fw-f-dir" class="form-select form-select-sm" title="<%= t('fw.direction') %>">
+        <option value=""><%= t('fw.all') %> · <%= t('fw.direction') %></option>
+        <option value="Inbound" <%= f.dir === 'Inbound' ? 'selected' : '' %>><%= t('fw.inbound') %></option>
+        <option value="Outbound" <%= f.dir === 'Outbound' ? 'selected' : '' %>><%= t('fw.outbound') %></option>
+      </select>
+    </div>
+    <div class="col-6 col-md-auto">
+      <select id="fw-f-act" class="form-select form-select-sm" title="<%= t('fw.action') %>">
+        <option value=""><%= t('fw.all') %> · <%= t('fw.action') %></option>
+        <option value="Allow" <%= f.act === 'Allow' ? 'selected' : '' %>><%= t('fw.allow') %></option>
+        <option value="Block" <%= f.act === 'Block' ? 'selected' : '' %>><%= t('fw.block') %></option>
+      </select>
+    </div>
+    <div class="col-6 col-md-auto">
+      <select id="fw-f-prof" class="form-select form-select-sm" title="<%= t('fw.profile') %>">
+        <option value=""><%= t('fw.all') %> · <%= t('fw.profile') %></option>
+        <% fw.PROFILE_NAMES.forEach(function (p) { %>
+        <option value="<%= p %>" <%= f.prof === p ? 'selected' : '' %>><%= t('fw.prof.' + p) %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="col-6 col-md-auto">
+      <select id="fw-f-state" class="form-select form-select-sm" title="<%= t('fw.status') %>">
+        <option value=""><%= t('fw.all') %> · <%= t('fw.status') %></option>
+        <option value="on" <%= f.state === 'on' ? 'selected' : '' %>><%= t('fw.stateOn') %></option>
+        <option value="off" <%= f.state === 'off' ? 'selected' : '' %>><%= t('fw.stateOff') %></option>
+      </select>
+    </div>
+    <div class="col-md-auto ms-auto">
+      <input id="fw-kw" class="form-control form-control-sm" type="search"
+             placeholder="<%= t('fw.search') %>" value="<%= f.kw %>" style="min-width:200px;">
+    </div>
+  </div>
+</form>
+
+<div id="fw-panel" hx-get="/firewall/list<%= initQs ? '?' + initQs : '' %>" hx-trigger="load" hx-swap="innerHTML">
+  <div class="text-center text-secondary py-4"><%= t('fw.loading') %></div>
+</div>
+
+<!-- 新建规则 modal -->
+<div class="modal" id="fw-rule-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t('fw.createTitle') %></h5>
+        <button type="button" class="btn-close" data-fw-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label small mb-1"><%= t('fw.ruleNameLabel') %></label>
+            <input id="fw-edit-name" class="form-control form-control-sm" maxlength="120" placeholder="<%= t('fw.namePlaceholder') %>">
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-1"><%= t('fw.direction') %></label>
+            <select id="fw-edit-dir" class="form-select form-select-sm">
+              <option value="Inbound"><%= t('fw.inbound') %></option>
+              <option value="Outbound"><%= t('fw.outbound') %></option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-1"><%= t('fw.action') %></label>
+            <select id="fw-edit-act" class="form-select form-select-sm">
+              <option value="Allow"><%= t('fw.allow') %></option>
+              <option value="Block"><%= t('fw.block') %></option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-1"><%= t('fw.protocol') %></label>
+            <select id="fw-edit-proto" class="form-select form-select-sm">
+              <option value="TCP">TCP</option>
+              <option value="UDP">UDP</option>
+              <option value="Any">Any</option>
+              <option value="ICMPv4">ICMPv4</option>
+              <option value="ICMPv6">ICMPv6</option>
+            </select>
+          </div>
+          <div class="col-6" id="fw-edit-port-row">
+            <label class="form-label small mb-1"><%= t('fw.localPort') %></label>
+            <input id="fw-edit-port" class="form-control form-control-sm font-monospace" placeholder="<%= t('fw.portPlaceholder') %>">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1"><%= t('fw.profile') %></label>
+            <select id="fw-edit-prof" class="form-select form-select-sm">
+              <% fw.PROFILE_NAMES.forEach(function (p) { %>
+              <option value="<%= p %>"><%= t('fw.prof.' + p) %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small mb-1"><%= t('fw.descLabel') %></label>
+            <input id="fw-edit-desc" class="form-control form-control-sm" maxlength="200">
+          </div>
+        </div>
+        <div class="form-hint mt-2"><%= t('fw.portHint') %></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-fw-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-primary" id="fw-edit-save"><%= t('fw.create') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 通用确认框（删除规则 / 配置文件开关） -->
+<div class="modal" id="fw-confirm-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="fw-confirm-title"></h5>
+        <button type="button" class="btn-close" data-fw-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div id="fw-confirm-warn" class="alert alert-danger d-none"></div>
+        <div id="fw-confirm-body" class="small"></div>
+        <pre id="fw-confirm-cmd" class="bg-secondary-lt rounded p-2 font-monospace small mt-2 mb-0" style="white-space:pre-wrap;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-fw-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="fw-confirm-go"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var CSRF = '<%= csrf %>';
+    var PROTOCOLS = <%- JSON.stringify(fw.PROTOCOLS) %>;
+    var T = {
+      ruleCreated: '<%= t("fw.ruleCreated").replace("{n}", "N") %>',
+      ruleDeleted: '<%= t("fw.ruleDeleted").replace("{n}", "N") %>',
+      ruleEnabled: '<%= t("fw.ruleEnabled").replace("{n}", "N") %>',
+      ruleDisabled: '<%= t("fw.ruleDisabled").replace("{n}", "N") %>',
+      profOn: '<%= t("fw.profOn").replace("{n}", "N") %>',
+      profOff: '<%= t("fw.profOff").replace("{n}", "N") %>',
+      actionFailed: '<%= t("fw.actionFailed") %>',
+      confirmDeleteTitle: '<%= t("fw.confirmDeleteTitle") %>',
+      confirmDeleteBody: '<%= t("fw.confirmDeleteBody") %>',
+      deleteGo: '<%= t("fw.deleteGo") %>',
+      profConfirmTitle: '<%= t("fw.profConfirmTitle") %>',
+      profConfirmOnBody: '<%= t("fw.profConfirmOnBody") %>',
+      profConfirmOffBody: '<%= t("fw.profConfirmOffBody") %>',
+      profOffWarn: '<%= t("fw.profOffWarn") %>',
+      invalidPort: '<%= t("fw.invalidPort") %>',
+      profDomain: '<%= t("fw.prof.Domain") %>',
+      profPrivate: '<%= t("fw.prof.Private") %>',
+      profPublic: '<%= t("fw.prof.Public") %>'
+    };
+    function profText(n) { return T['prof' + n] || n; }
+    // 全局 toast 走 body 自定义事件（app.js 监听）
+    function toastMsg(message, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: message, type: type } }));
+    }
+    var panel = document.getElementById('fw-panel');
+    var ruleModal = document.getElementById('fw-rule-modal');
+    var confirmModal = document.getElementById('fw-confirm-modal');
+    var portRow = document.getElementById('fw-edit-port-row');
+
+    function openModal(el) { el.style.display = 'block'; el.classList.add('show'); document.body.classList.add('modal-open'); }
+    function closeModal(el) {
+      el.style.display = 'none'; el.classList.remove('show'); document.body.classList.remove('modal-open');
+      var bd = document.querySelector('.modal-backdrop'); if (bd) bd.remove();
+    }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-fw-dismiss]')) {
+        var m = e.target.closest('.modal'); if (m) closeModal(m);
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(closeModal);
+    });
+
+    // ---- 当前筛选（POST 回渲染保持视图一致）----
+    var panel = document.getElementById('fw-panel');
+    function fv(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function listUrl() {
+      var p = new URLSearchParams();
+      if (fv('fw-f-dir')) p.append('dir', fv('fw-f-dir'));
+      if (fv('fw-f-act')) p.append('act', fv('fw-f-act'));
+      if (fv('fw-f-prof')) p.append('prof', fv('fw-f-prof'));
+      if (fv('fw-f-state')) p.append('state', fv('fw-f-state'));
+      if (fv('fw-kw')) p.append('kw', fv('fw-kw'));
+      var s = p.toString();
+      return '/firewall/list' + (s ? '?' + s : '');
+    }
+    function refreshPanel() { htmx.ajax('GET', listUrl(), panel); }
+    // select 筛选即改即查；关键字输入防抖 400ms；Enter 立即查
+    document.getElementById('fw-filters').addEventListener('change', refreshPanel);
+    document.getElementById('fw-filters').addEventListener('submit', function (e) { e.preventDefault(); refreshPanel(); });
+    var kwTimer = null;
+    document.getElementById('fw-kw').addEventListener('input', function () {
+      clearTimeout(kwTimer);
+      kwTimer = setTimeout(refreshPanel, 400);
+    });
+
+    // fetch POST → 面板 innerHTML + 手动 toast（fetch 不触发 HX-Trigger）
+    function fwPost(url, params, okMsg) {
+      var p = {};
+      ['fw-f-dir', 'fw-f-act', 'fw-f-prof', 'fw-f-state', 'fw-kw'].forEach(function (id) {
+        var v = fv(id);
+        if (v) p[id.replace('fw-f-', '').replace('fw-', '')] = v;
+      });
+      Object.keys(params).forEach(function (k) { if (params[k] !== undefined && params[k] !== null) p[k] = params[k]; });
+      var fd = new URLSearchParams(p);
+      fetch(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+        .then(function (res) {
+          panel.innerHTML = res.html;
+          if (res.ok && okMsg) toastMsg(okMsg, 'success');
+          if (!res.ok) toastMsg(T.actionFailed + ' ' + res.html.slice(0, 100), 'error');
+        })
+        .catch(function () { toastMsg(T.actionFailed, 'error'); });
+    }
+
+    // ---- 行操作（事件委托）----
+    document.addEventListener('click', function (e) {
+      var tg = e.target.closest('.fw-toggle');
+      if (tg) {
+        var on = tg.getAttribute('data-on') === '1';
+        fwPost('/firewall/rule/toggle', { id: tg.getAttribute('data-id'), on: on ? '0' : '1' },
+          (on ? T.ruleDisabled : T.ruleEnabled).replace('N', tg.getAttribute('data-name')));
+        return;
+      }
+      var del = e.target.closest('.fw-del');
+      if (del) {
+        var dname = del.getAttribute('data-name');
+        document.getElementById('fw-confirm-warn').classList.add('d-none');
+        document.getElementById('fw-confirm-title').textContent = T.confirmDeleteTitle;
+        document.getElementById('fw-confirm-body').textContent = T.confirmDeleteBody + ' ' + dname;
+        document.getElementById('fw-confirm-cmd').textContent = 'Remove-NetFirewallRule -Name "' + del.getAttribute('data-id') + '" -Force';
+        document.getElementById('fw-confirm-go').textContent = T.deleteGo;
+        confirmModal.setAttribute('data-action', 'rule/delete');
+        confirmModal.setAttribute('data-id', del.getAttribute('data-id'));
+        confirmModal.setAttribute('data-name', dname);
+        openModal(confirmModal);
+        return;
+      }
+      var pf = e.target.closest('.fw-prof-toggle');
+      if (pf) {
+        var pOn = pf.getAttribute('data-on') === '1';
+        var pName = pf.getAttribute('data-name');
+        var warn = document.getElementById('fw-confirm-warn');
+        // 红色警示仅在「禁用」时出现（当前启用 → 动作是关闭防火墙面）
+        if (pOn) { warn.textContent = T.profOffWarn.replace('{n}', profText(pName)); warn.classList.remove('d-none'); }
+        else warn.classList.add('d-none');
+        document.getElementById('fw-confirm-title').textContent = T.profConfirmTitle;
+        document.getElementById('fw-confirm-body').textContent = (pOn ? T.profConfirmOffBody : T.profConfirmOnBody) + ' ' + profText(pName);
+        document.getElementById('fw-confirm-cmd').textContent = 'Set-NetFirewallProfile -Name ' + pName + ' -Enabled ' + (pOn ? 'False' : 'True');
+        document.getElementById('fw-confirm-go').textContent = T.deleteGo;
+        confirmModal.setAttribute('data-action', 'profile/toggle');
+        confirmModal.setAttribute('data-id', pName);
+        confirmModal.setAttribute('data-name', pOn ? '0' : '1');
+        openModal(confirmModal);
+        return;
+      }
+      if (e.target.closest('#fw-new')) {
+        document.getElementById('fw-edit-name').value = '';
+        document.getElementById('fw-edit-desc').value = '';
+        document.getElementById('fw-edit-dir').value = 'Inbound';
+        document.getElementById('fw-edit-act').value = 'Allow';
+        document.getElementById('fw-edit-proto').value = 'TCP';
+        document.getElementById('fw-edit-port').value = '';
+        document.getElementById('fw-edit-prof').value = 'Any';
+        portRow.classList.remove('d-none');
+        openModal(ruleModal);
+      }
+    });
+
+    // 协议切换：仅 TCP/UDP 显示端口
+    document.getElementById('fw-edit-proto').addEventListener('change', function () {
+      portRow.classList.toggle('d-none', !(this.value === 'TCP' || this.value === 'UDP'));
+    });
+
+    // 确认执行（删除规则 / 配置文件开关）
+    document.getElementById('fw-confirm-go').addEventListener('click', function () {
+      var action = confirmModal.getAttribute('data-action');
+      var id = confirmModal.getAttribute('data-id');
+      var name = confirmModal.getAttribute('data-name');
+      closeModal(confirmModal);
+      if (action === 'rule/delete') {
+        fwPost('/firewall/rule/delete', { id: id, name: name }, T.ruleDeleted.replace('N', (name || id).slice(0, 40)));
+      } else {
+        var on = name === '1'; // profile 分支：data-name 暂存目标状态
+        fwPost('/firewall/profile/toggle', { name: id, on: on ? '1' : '0' },
+          (on ? T.profOn : T.profOff).replace('N', profText(id)));
+      }
+    });
+
+    // 保存新建规则
+    document.getElementById('fw-edit-save').addEventListener('click', function () {
+      var name = document.getElementById('fw-edit-name').value.trim();
+      var proto = document.getElementById('fw-edit-proto').value;
+      var lport = document.getElementById('fw-edit-port').value.trim();
+      if (!name) { toastMsg(T.actionFailed, 'error'); return; }
+      if ((proto === 'TCP' || proto === 'UDP') && lport && !/^\d{1,5}(-\d{1,5})?(,\d{1,5}(-\d{1,5})?)*$/.test(lport)) {
+        toastMsg(T.invalidPort, 'error'); return;
+      }
+      fwPost('/firewall/rule/create', {
+        name: name,
+        dir: document.getElementById('fw-edit-dir').value,
+        act: document.getElementById('fw-edit-act').value,
+        proto: proto,
+        lport: lport,
+        prof: document.getElementById('fw-edit-prof').value,
+        desc: document.getElementById('fw-edit-desc').value.trim()
+      }, T.ruleCreated.replace('N', name));
+      closeModal(ruleModal);
+    });
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>
