@@ -1,0 +1,375 @@
+<%- include('../layouts/layout-top') %>
+<% const isRO = (role === 'readonly'); %>
+<div class="card">
+  <div class="card-header">
+    <div class="row g-2 align-items-center w-100">
+      <div class="col-auto">
+        <ul class="nav nav-pills mb-0" id="smb-tabs">
+          <li class="nav-item"><a href="#" class="nav-link py-1 px-3 smb-tab <%= tab === 'shares' ? 'active' : '' %>" data-tab="shares"><i class="ti ti-folder-share me-1"></i><%= t('smb.tabShares') %></a></li>
+          <li class="nav-item"><a href="#" class="nav-link py-1 px-3 smb-tab <%= tab === 'sessions' ? 'active' : '' %>" data-tab="sessions"><i class="ti ti-users me-1"></i><%= t('smb.tabSessions') %></a></li>
+          <li class="nav-item"><a href="#" class="nav-link py-1 px-3 smb-tab <%= tab === 'openfiles' ? 'active' : '' %>" data-tab="openfiles"><i class="ti ti-file-open me-1"></i><%= t('smb.tabOpenFiles') %></a></li>
+        </ul>
+      </div>
+      <div class="ms-auto col-auto d-flex align-items-center gap-2">
+        <label class="form-check form-switch mb-0 text-nowrap" title="<%= t('smb.everyoneOnly') %>"
+               data-bs-toggle="tooltip" data-bs-placement="bottom">
+          <input class="form-check-input" type="checkbox" id="smb-everyone-only" <%= everyoneOnly ? 'checked' : '' %>>
+          <span class="form-check-label small text-warning"><i class="ti ti-alert-triangle me-1"></i><%= t('smb.everyoneOnly') %></span>
+        </label>
+        <input id="smb-kw" class="form-control form-control-sm" type="search"
+               placeholder="<%= t('smb.searchPlaceholder') %>" value="<%= kw %>" style="max-width:220px;">
+        <button id="smb-refresh" class="btn btn-sm btn-outline-secondary" type="button" title="<%= t('smb.refresh') %>">
+          <i class="ti ti-refresh"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0" id="smb-panel"
+       hx-get="/smb/list/<%= tab %><%= kw ? ('?kw=' + encodeURIComponent(kw)) : '' %>"
+       hx-trigger="load" hx-swap="innerHTML">
+    <div class="text-center text-secondary py-4"><%= t('smb.loading') %></div>
+  </div>
+</div>
+
+<!-- 共享编辑器（新建 / 权限编辑共用） -->
+<div class="modal" id="smb-share-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="smb-share-title"></h5>
+        <button type="button" class="btn-close" data-smb-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label small mb-1"><%= t('smb.shareName') %></label>
+            <input id="smb-edit-name" class="form-control form-control-sm font-monospace" maxlength="80">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label small mb-1"><%= t('smb.sharePath') %></label>
+            <input id="smb-edit-path" class="form-control form-control-sm font-monospace" placeholder="D:\share">
+          </div>
+          <div class="col-12">
+            <label class="form-label small mb-1"><%= t('smb.shareDesc') %></label>
+            <input id="smb-edit-desc" class="form-control form-control-sm" maxlength="200">
+          </div>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mt-3 mb-1">
+          <label class="form-label small mb-0"><%= t('smb.accessTitle') %></label>
+          <% if (!isRO) { %>
+          <button id="smb-acc-add" type="button" class="btn btn-sm btn-outline-secondary">
+            <i class="ti ti-plus me-1"></i><%= t('smb.accessAdd') %>
+          </button>
+          <% } %>
+        </div>
+        <div id="smb-acc-rows" class="border rounded p-2" style="max-height:220px; overflow-y:auto;"></div>
+        <div id="smb-everyone-warn" class="alert alert-warning py-2 mt-2 mb-0 d-none">
+          <i class="ti ti-alert-triangle me-1"></i><%= t('smb.everyoneWarn') %>
+        </div>
+        <div class="form-hint mt-1"><%= t('smb.accessHint') %></div>
+        <datalist id="smb-common-accounts">
+          <option value="Administrators"></option>
+          <option value="Authenticated Users"></option>
+          <option value="Users"></option>
+          <option value="Domain Users"></option>
+          <option value="Guest"></option>
+        </datalist>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-smb-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-primary" id="smb-edit-save"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 通用操作确认框（取消共享 / 断会话 / 关文件） -->
+<div class="modal" id="smb-confirm-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="smb-confirm-title"></h5>
+        <button type="button" class="btn-close" data-smb-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div id="smb-confirm-warn" class="alert alert-warning d-none"></div>
+        <div id="smb-confirm-body" class="small"></div>
+        <pre id="smb-confirm-cmd" class="bg-secondary-lt rounded p-2 font-monospace small mt-2 mb-0" style="white-space:pre-wrap;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-smb-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="smb-confirm-go"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var CSRF = '<%= csrf %>';
+    var T = {
+      editAccessTitle: '<%= t("smb.editAccessTitle") %>',
+      createTitle: '<%= t("smb.createTitle") %>',
+      saveAccess: '<%= t("smb.saveAccess") %>',
+      create: '<%= t("smb.create") %>',
+      invalidAccess: '<%= t("smb.invalidAccess") %>',
+      duplicate: '<%= t("smb.duplicate") %>',
+      actionFailed: '<%= t("smb.actionFailed").replace("{n}", "") %>',
+      shareCreated: '<%= t("smb.shareCreated").replace("{n}", "N") %>',
+      shareRemoved: '<%= t("smb.shareRemoved").replace("{n}", "N") %>',
+      accessUpdated: '<%= t("smb.accessUpdated").replace("{n}", "N") %>',
+      sessionClosed: '<%= t("smb.sessionClosed").replace("{n}", "N") %>',
+      fileClosed: '<%= t("smb.fileClosed").replace("{n}", "N") %>',
+      removeShareTitle: '<%= t("smb.removeShareTitle") %>',
+      closeSessTitle: '<%= t("smb.closeSessTitle") %>',
+      closeFileTitle: '<%= t("smb.closeFileTitle") %>',
+      confirmGo: '<%= t("smb.confirmGo") %>',
+      usersWarn: '<%= t("smb.usersWarn").replace("{n}", "N") %>',
+      managedNote: '<%= t("smb.managedNote") %>',
+      everyoneWarn: '<%= t("smb.everyoneWarn") %>'
+    };
+    var shareModal = document.getElementById('smb-share-modal');
+    var confirmModal = document.getElementById('smb-confirm-modal');
+    var panel = document.getElementById('smb-panel');
+    var curTab = '<%= tab %>';
+    var curKw = '<%= encodeURIComponent(kw) %>';
+    var editingShare = null; // null = 新建模式
+
+    function openModal(el) { el.style.display = 'block'; el.classList.add('show'); document.body.classList.add('modal-open'); }
+    function closeModal(el) {
+      el.style.display = 'none'; el.classList.remove('show'); document.body.classList.remove('modal-open');
+      var bd = document.querySelector('.modal-backdrop'); if (bd) bd.remove();
+    }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-smb-dismiss]')) {
+        var m = e.target.closest('.modal'); if (m) closeModal(m);
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(closeModal);
+    });
+
+    function listUrl() {
+      var params = [];
+      if (curKw) params.push('kw=' + curKw);
+      // Everyone 检测开关仅对共享 Tab 生效
+      if (curTab === 'shares' && document.getElementById('smb-everyone-only').checked) params.push('everyone=1');
+      return '/smb/list/' + curTab + (params.length ? '?' + params.join('&') : '');
+    }
+    function refreshTab() { htmx.ajax('GET', listUrl(), '#smb-panel'); }
+
+    // Tab 切换
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('.smb-tab');
+      if (!t) return;
+      e.preventDefault();
+      curTab = t.getAttribute('data-tab');
+      document.querySelectorAll('.smb-tab').forEach(function (x) { x.classList.toggle('active', x === t); });
+      panel.setAttribute('hx-get', listUrl());
+      refreshTab();
+    });
+    // 搜索（回车）+ 刷新
+    document.getElementById('smb-kw').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      curKw = encodeURIComponent(this.value.trim());
+      panel.setAttribute('hx-get', listUrl());
+      refreshTab();
+    });
+    document.getElementById('smb-refresh').addEventListener('click', refreshTab);
+    // Everyone 检测开关：切换立即刷新列表
+    document.getElementById('smb-everyone-only').addEventListener('change', refreshTab);
+
+    // ---- 权限行编辑器 ----
+    var accRows = document.getElementById('smb-acc-rows');
+    function addAccRow(account, right, locked) {
+      var div = document.createElement('div');
+      div.className = 'input-group input-group-sm mb-1';
+      div.innerHTML = '<input class="form-control font-monospace smb-acc-account" list="smb-common-accounts" placeholder="DOMAIN\\user" maxlength="104"'
+        + (account ? ' value="' + account.replace(/"/g, '&quot;') + '"' : '') + '>'
+        + '<select class="form-select smb-acc-right" style="max-width:130px;">'
+        + '<option value="Read">Read</option><option value="Change">Change</option><option value="Full">Full</option>'
+        + '</select>'
+        + (locked
+          ? '<button type="button" class="btn btn-outline-secondary" disabled title="' + '<%= t("smb.fullLocked") %>' + '"><i class="ti ti-lock"></i></button>'
+          : '<button type="button" class="btn btn-outline-danger smb-acc-del"><i class="ti ti-trash"></i></button>');
+      var sel = div.querySelector('select');
+      sel.value = right;
+      if (locked) sel.disabled = true;
+      accRows.appendChild(div);
+      return div;
+    }
+    function collectAccess() {
+      var out = [];
+      accRows.querySelectorAll('.input-group').forEach(function (row) {
+        var acc = row.querySelector('.smb-acc-account').value.trim();
+        var right = row.querySelector('.smb-acc-right').value;
+        if (acc) out.push({ account: acc, right: right });
+      });
+      return out;
+    }
+    document.getElementById('smb-acc-add').addEventListener('click', function () {
+      addAccRow('', 'Read', false);
+      var inputs = accRows.querySelectorAll('.smb-acc-account');
+      inputs[inputs.length - 1].focus();
+      updateEveryoneWarn();
+    });
+    accRows.addEventListener('click', function (e) {
+      var row = e.target.closest('.input-group');
+      if (row && e.target.closest('.smb-acc-del')) { row.remove(); updateEveryoneWarn(); }
+    });
+    // 手动输入账户名时实时检测 Everyone
+    accRows.addEventListener('input', updateEveryoneWarn);
+    // Everyone 警示：权限行中出现 Everyone 账户时显示（打开编辑器 / 添加 / 删除行时刷新）
+    function updateEveryoneWarn() {
+      var has = collectAccess().some(function (a) { return /everyone$/i.test(a.account); });
+      document.getElementById('smb-everyone-warn').classList.toggle('d-none', !has);
+    }
+
+    // ---- 共享编辑器打开（新建 / 权限编辑）----
+    function openShareEditor(mode, share, accessStr) {
+      editingShare = mode === 'edit' ? share : null;
+      document.getElementById('smb-share-title').textContent = mode === 'edit' ? T.editAccessTitle.replace('{n}', share.name) : T.createTitle;
+      document.getElementById('smb-edit-save').textContent = mode === 'edit' ? T.saveAccess : T.create;
+      var nameInput = document.getElementById('smb-edit-name');
+      var pathInput = document.getElementById('smb-edit-path');
+      nameInput.value = mode === 'edit' ? share.name : '';
+      nameInput.disabled = mode === 'edit';
+      pathInput.value = mode === 'edit' ? share.path : '';
+      pathInput.disabled = mode === 'edit';
+      document.getElementById('smb-edit-desc').value = mode === 'edit' ? (share.desc || '') : '';
+      accRows.innerHTML = '';
+      var access = (accessStr || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (mode === 'edit') {
+        // 现有权限逐行预填；Full 行锁定（防误降权，服务端兜底）
+        access.forEach(function (s) {
+          var i = s.lastIndexOf(':');
+          var acc = i === -1 ? s : s.slice(0, i);
+          var right = i === -1 ? 'Read' : s.slice(i + 1);
+          addAccRow(acc, right, right === 'Full');
+        });
+      } else {
+        // 默认不授予 Everyone 任何权限（安全基线）；仅保留 Administrators=Full 锁定行
+        addAccRow('Administrators', 'Full', true);
+      }
+      updateEveryoneWarn();
+      openModal(shareModal);
+    }
+    // 新建（admin）
+    <% if (!isRO) { %>
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('#smb-new')) openShareEditor('create', null, '');
+      var ed = e.target.closest('.smb-editaccess');
+      if (ed) openShareEditor('edit', { name: ed.getAttribute('data-name'), path: ed.getAttribute('data-path'), desc: ed.getAttribute('data-desc') }, ed.getAttribute('data-access'));
+      var rm = e.target.closest('.smb-remshare');
+      if (rm) {
+        var name = rm.getAttribute('data-name');
+        var users = parseInt(rm.getAttribute('data-users'), 10) || 0;
+        var warn = document.getElementById('smb-confirm-warn');
+        if (users > 0) { warn.textContent = T.usersWarn.replace('N', String(users)); warn.classList.remove('d-none'); }
+        else warn.classList.add('d-none');
+        document.getElementById('smb-confirm-title').textContent = T.removeShareTitle;
+        document.getElementById('smb-confirm-body').textContent = '<%= t("smb.removeShareBody") %> ' + name;
+        document.getElementById('smb-confirm-cmd').textContent = 'Remove-SmbShare -Name "' + name + '" -Force';
+        document.getElementById('smb-confirm-go').textContent = T.confirmGo;
+        confirmModal.setAttribute('data-action', 'share/remove');
+        confirmModal.setAttribute('data-name', name);
+        openModal(confirmModal);
+        return;
+      }
+      var cs = e.target.closest('.smb-closesess');
+      if (cs) {
+        var sid = cs.getAttribute('data-id');
+        var who = cs.getAttribute('data-who');
+        document.getElementById('smb-confirm-warn').classList.add('d-none');
+        document.getElementById('smb-confirm-title').textContent = T.closeSessTitle;
+        document.getElementById('smb-confirm-body').textContent = '<%= t("smb.closeSessBody") %> ' + who;
+        document.getElementById('smb-confirm-cmd').textContent = 'Close-SmbSession -SessionId ' + sid + ' -Force';
+        document.getElementById('smb-confirm-go').textContent = T.confirmGo;
+        confirmModal.setAttribute('data-action', 'session/close');
+        confirmModal.setAttribute('data-id', sid);
+        confirmModal.setAttribute('data-user', who);
+        openModal(confirmModal);
+        return;
+      }
+      var cf = e.target.closest('.smb-closefile');
+      if (cf) {
+        var fid = cf.getAttribute('data-id');
+        var fpath = cf.getAttribute('data-path');
+        document.getElementById('smb-confirm-warn').classList.add('d-none');
+        document.getElementById('smb-confirm-title').textContent = T.closeFileTitle;
+        document.getElementById('smb-confirm-body').textContent = '<%= t("smb.closeFileBody") %> ' + fpath;
+        document.getElementById('smb-confirm-cmd').textContent = 'Close-SmbOpenFile -FileId ' + fid + ' -Force';
+        document.getElementById('smb-confirm-go').textContent = T.confirmGo;
+        confirmModal.setAttribute('data-action', 'file/close');
+        confirmModal.setAttribute('data-id', fid);
+        confirmModal.setAttribute('data-path', fpath);
+        openModal(confirmModal);
+        return;
+      }
+    });
+    <% } %>
+
+    // 通用确认执行（取消共享 / 断会话 / 关文件）
+    document.getElementById('smb-confirm-go').addEventListener('click', function () {
+      var action = confirmModal.getAttribute('data-action');
+      var fd = new URLSearchParams({
+        kw: decodeURIComponent(curKw),
+        name: confirmModal.getAttribute('data-name') || '',
+        id: confirmModal.getAttribute('data-id') || '',
+        user: confirmModal.getAttribute('data-user') || '',
+        path: confirmModal.getAttribute('data-path') || '',
+      });
+      fetch('/smb/' + action, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+        .then(function (res) {
+          closeModal(confirmModal);
+          panel.innerHTML = res.html;
+          if (res.ok) {
+            var a = confirmModal.getAttribute('data-action');
+            var n = confirmModal.getAttribute('data-name') || confirmModal.getAttribute('data-user') || confirmModal.getAttribute('data-path') || '';
+            toastMsg((a === 'share/remove' ? T.shareRemoved : a === 'session/close' ? T.sessionClosed : T.fileClosed).replace('N', n.slice(0, 30)), 'success');
+          } else toastMsg(T.actionFailed + ' ' + res.html.slice(0, 100), 'error');
+        })
+        .catch(function () { closeModal(confirmModal); toastMsg(T.actionFailed, 'error'); });
+    });
+
+    // 保存（新建共享 / 权限编辑）
+    <% if (!isRO) { %>
+    document.getElementById('smb-edit-save').addEventListener('click', function () {
+      var access = collectAccess();
+      var lower = {};
+      for (var i = 0; i < access.length; i++) {
+        if (lower[access[i].account.toLowerCase()]) { toastMsg(T.duplicate.replace('{n}', access[i].account), 'error'); return; }
+        lower[access[i].account.toLowerCase()] = 1;
+      }
+      var editing = editingShare !== null;
+      var fd = new FormData();
+      fd.append('kw', decodeURIComponent(curKw));
+      if (editing) fd.append('name', editingShare.name);
+      else {
+        var name = document.getElementById('smb-edit-name').value.trim();
+        var path = document.getElementById('smb-edit-path').value.trim();
+        if (!name) { toastMsg(T.invalidAccess, 'error'); return; }
+        fd.append('name', name);
+        fd.append('path', path);
+        fd.append('desc', document.getElementById('smb-edit-desc').value.trim());
+      }
+      if (!access.length) { toastMsg(T.invalidAccess, 'error'); return; }
+      access.forEach(function (a) { fd.append('access', JSON.stringify(a)); });
+      fetch(editing ? '/smb/share/access' : '/smb/share/create', { method: 'POST', headers: { 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+        .then(function (res) {
+          if (res.ok) {
+            closeModal(shareModal);
+            toastMsg((editing ? T.accessUpdated : T.shareCreated).replace('N', editing ? editingShare.name : document.getElementById('smb-edit-name').value.trim()), 'success');
+          }
+          panel.innerHTML = res.html;
+          if (!res.ok) toastMsg(T.actionFailed + ' ' + res.html.slice(0, 100), 'error');
+        })
+        .catch(function () { toastMsg(T.actionFailed, 'error'); });
+    });
+    <% } %>
+  })();
+</script>
+
+<%- include('../layouts/layout-bottom') %>

@@ -72,6 +72,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 本地用户 `/users` | 本地账户列表（启用/锁定状态、上次登录、密码最后设置），admin 可解锁（`Unlock-LocalUser`）、启用已禁用账户（Guest 禁止启用，UI 隐藏 + 后端 403）、重置密码（`net user`，密码 env 注入不落日志），全部操作确认框 + 命令预览（密码打码）+ 独立审计，只读账号仅可查看 |
 | 环境变量 `/env` | Machine / User 作用域环境变量管理：列表、搜索、新增/编辑/删除（`SetEnvironmentVariable`，值 env 注入不落日志）；全员可用的「查看」只读弹窗（避免误触编辑，只读账号仅此操作）；Path 等分号分隔值支持 Windows 风格列表编辑器（拆分行编辑后一键回写）；30 个系统关键变量（Path/ComSpec/OS 等）禁止删除（UI 置灰 + 后端 400 双重拦截）；敏感变量（含 pass/token/key 等）值自动打码，查看走 `/env/reveal`（admin + 审计），编辑打开时按需回填 |
 | 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
+| SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行，diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号仅可查看 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |
 | 简易部署 `/deploy` | 上传 zip 压缩包原地更新程序：预检（结构白名单校验 + 自动剥离 node_modules + 拒绝 data/logs/backups/.env）、确认后自动备份当前版本到 `backups/`（保留最近 5 份）再覆盖解压；重启后若首次启动失败，启动门卫自动回滚到部署前版本；备份列表一键手动回滚（确认框 + 审计）；页面明示压缩包规范与「先在 low environment 多次验证再上 production」风险提示，admin 专属 |
@@ -82,7 +83,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-11 —— Node.js 版持续迭代
-- **2026-11-02**：新增环境变量管理 `/env` 与证书管理 `/certs`：Machine/User 双作用域变量增删改（关键系统变量禁删、敏感值打码 + 按需 reveal 审计、作用域筛选 + 新建跟随筛选 + 已有变量作用域锁定、Path 等分号分隔值支持 Windows 风格列表编辑器），LocalMachine 六大存储区证书浏览（有效期预警、指纹列、SAN/EKU 详情）、证书上传（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码）、.cer/.pem/.pfx 导出（pfx 走一次性 token，密码仅展示一次）与删除，写操作全部确认框/审计；顺带修复 PowerShell 子进程 PSModulePath 被父进程（PS7）污染导致 `Cert:` 驱动器缺失的底层问题（惠及全部 PS 命令）
+- **2026-11-02**：新增环境变量管理 `/env`、证书管理 `/certs` 与 SMB 共享管理 `/smb`：Machine/User 双作用域变量增删改（关键系统变量禁删、敏感值打码 + 按需 reveal 审计、作用域筛选 + 新建跟随筛选 + 已有变量作用域锁定、Path 等分号分隔值支持 Windows 风格列表编辑器），LocalMachine 六大存储区证书浏览（有效期预警、指纹列、SAN/EKU 详情）、证书上传（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码）、.cer/.pem/.pfx 导出（pfx 走一次性 token，密码仅展示一次）与删除，SMB 共享/会话/打开文件三 Tab 浏览与共享新建/权限 diff 编辑（revoke + grant 不断连接）/取消共享/断会话/关文件，写操作全部确认框/审计；顺带修复 PowerShell 子进程 PSModulePath 被父进程（PS7）污染导致 `Cert:` 驱动器缺失的底层问题（惠及全部 PS 命令）
 - **2026-11-01**：PowerShell 控制台交互升级：内嵌终端式多行输入（Enter 执行 / Shift+Enter 换行，中文输入法友好）、经典 PowerShell 深蓝配色；新增命令自动补全（服务端 Get-Command 全集，Tab 接受 / ↑↓ 切换 / Esc 关闭）与历史前缀搜索（历史面板点击回填）
 - **2026-11-01**：新增后台长任务：命令/脚本提交为独立 Job（与交互会话解耦、每用户并发 ≤3），SSE 实时推送输出、超时预算（10 分钟~24 小时）、随时终止，任务历史保留 24 小时；终端 : 任务面板 7:3 布局，终端高度可拖拽调节（localStorage 记忆、双击恢复），任务提交开关（后台任务 / 脚本模式）内嵌终端底部，提示随状态三态切换
 - **2026-11-01**：新增简易部署 `/deploy`：上传 zip 原地更新（结构白名单预检 + 自动剥离 node_modules + 拒绝运行时目录）、自动备份（保留 5 份）与一键手动回滚；启动门卫在首次启动失败时自动回滚到部署前版本（端口占用等环境性错误不误判），启动结果落盘并在页面展示（含补写审计），未确认上传包 24h 自动清理，全程审计，admin 专属；配套 `npm run pack:deploy` 一键生成符合规范的部署包（含 vendor 静态资源）
@@ -285,6 +286,17 @@ LocalMachine 计算机证书存储区浏览与导出（仅 LocalMachine，不涉
 - **导出**（admin + 审计）：`.cer` DER 公钥、`.pem` PEM 公钥文本直接下载；`.pfx` 走一次性下载 token（5 分钟 TTL）+ 随机密码，密码仅通过响应头 / Toast 展示一次，不落日志不落审计
 - **删除**（admin + 审计）：确认框预览 `Remove-Item Cert:\LocalMachine\<存储区>\<指纹>` 命令
 - 动态值（指纹 / 密码 / 存储区）全部 spawn env 注入；列表与详情全员只读可见
+
+### SMB 共享管理 `/smb`
+
+SMB 服务端（LanmanServer）视角的共享管理：谁连进来、开了哪些文件、共享了哪些目录。
+
+- **三 Tab 浏览**（全员可看，刷新 / 关键字搜索）：共享目录（名称 / 本地路径 / 描述 / 活动连接数>0 橙色 / 访问权限徽章组，Full 红 / Change 橙 / Read 绿）；客户端会话（计算机 / 用户 / 连接数 / 空闲 / 接入时间）；打开的文件（路径 / 打开者 / 打开数 / 锁定数>0 红色）
+- **新建共享**（admin + 审计）：分组权限行编辑器——账户名 datalist 预置常用组（Everyone / Administrators / Authenticated Users 等）且支持自由输入 `DOMAIN\user`，级别 Read / Change / Full；Full 行默认锁定（防误降权），新建默认预置 `Everyone=Read` + `Administrators=Full`；映射为 `New-SmbShare -ReadAccess/-ChangeAccess/-FullAccess`，共享名 / 本地路径（盘符开头、拒 UNC）白名单校验
+- **权限编辑**（admin + 审计，「重新共享」）：预填该共享当前 `Get-SmbShareAccess` 全部条目，保存时与服务端现状做 diff——移除 = `Revoke-SmbShareAccess`、新增/改级别 = `Grant-SmbShareAccess`（改级别自动先收后授），**不中断现有连接**；既有 Full 权限服务端强制保留兜底
+- **取消共享**（admin + 审计）：确认框显示命令与本地路径，`CurrentUsers > 0` 时红色警告仍有用户连接；系统管理共享（`ADMIN$`/`C$`/`IPC$`/`PRINT$`/SYSVOL/NETLOGON 等 `$` 结尾隐藏共享）UI 置灰 + 后端 400 双重拦截
+- **断开会话 / 关闭文件**（admin + 审计）：确认框预览受影响客户端用户 / 文件路径与 `Close-SmbSession` / `Close-SmbOpenFile` 命令
+- 动态值（共享名 / 路径 / 账户列表 / FileId / SessionId）全部 spawn env 注入；Server 服务未运行时列表降级为友好提示不 500；multipart 表单字段手动流式收集（`request.parts()`）
 
 ### 全局
 

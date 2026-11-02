@@ -1,0 +1,40 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th><%= t('smb.filePath') %></th>
+        <th style="width:18%;"><%= t('smb.fileUser') %></th>
+        <th style="width:14%;"><%= t('smb.fileClient') %></th>
+        <th class="text-end" style="width:1%;"><%= t('smb.fileOpens') %></th>
+        <th class="text-end" style="width:1%;"><%= t('smb.fileLocks') %></th>
+        <% if (role !== 'readonly') { %><th class="text-end" style="width:1%;"></th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (listErr) { %>
+      <tr><td colspan="6" class="text-center text-warning py-4"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></td></tr>
+      <% } else if (!items.length) { %>
+      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('smb.emptyOpenFiles') %></td></tr>
+      <% } %>
+      <% items.forEach(function (f) { %>
+      <tr>
+        <td class="font-monospace text-break small"><%= f.path || '—' %></td>
+        <td class="font-monospace text-break small"><%= f.user || '—' %></td>
+        <td class="font-monospace text-break small"><%= f.client || '—' %></td>
+        <td class="text-end text-secondary"><%= f.opens %></td>
+        <td class="text-end <%= f.locks > 0 ? 'text-danger fw-bold' : 'text-secondary' %>"><%= f.locks %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger smb-closefile"
+                  data-id="<%= f.id %>" data-path="<%= f.path %>"
+                  title="<%= t('smb.closeFile') %>"><i class="ti ti-x"></i></button>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('smb.count').replace('{n}', String(total)) %><% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>

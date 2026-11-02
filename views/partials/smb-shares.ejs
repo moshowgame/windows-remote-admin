@@ -1,0 +1,67 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th style="width:14%;"><%= t('smb.shareName') %></th>
+        <th style="width:24%;"><%= t('smb.sharePath') %></th>
+        <th><%= t('smb.accessTitle') %></th>
+        <th class="text-end" style="width:1%;"><%= t('smb.shareUsers') %></th>
+        <% if (role !== 'readonly') { %><th class="text-end" style="width:1%;"></th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (listErr) { %>
+      <tr><td colspan="6" class="text-center text-warning py-4"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></td></tr>
+      <% } else if (!items.length) { %>
+      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('smb.emptyShares') %></td></tr>
+      <% } %>
+      <% items.forEach(function (s) {
+           var accs = String(s.access || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      %>
+      <tr>
+        <td class="font-monospace text-break">
+          <%= s.name %>
+          <% if (s.managed) { %><span class="badge bg-secondary-lt ms-1" title="<%= t('smb.managedBadge') %>"><i class="ti ti-lock"></i> <%= t('smb.managedShort') %></span><% } %>
+        </td>
+        <td class="font-monospace text-break small"><%= s.path || '—' %></td>
+        <td>
+          <% accs.forEach(function (a) {
+               var i = a.lastIndexOf(':');
+               var acc = i === -1 ? a : a.slice(0, i);
+               var right = i === -1 ? 'Read' : a.slice(i + 1);
+               var isEv = /everyone$/i.test(acc.trim());
+               var cls = isEv ? 'bg-red-lt' : right === 'Full' ? 'bg-purple-lt' : right === 'Change' ? 'bg-orange-lt' : 'bg-success-lt';
+          %>
+          <span class="badge <%= cls %> me-1 mb-1" title="<%= isEv ? t('smb.everyoneWarn') : right %>"><% if (isEv) { %><i class="ti ti-alert-triangle me-1"></i><% } %><%= acc %><span class="fw-bold ms-1"><%= right %></span></span>
+          <% }); %>
+        </td>
+        <td class="text-end <%= s.users > 0 ? 'text-orange fw-bold' : 'text-secondary' %>"><%= s.users %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end text-nowrap">
+          <button type="button" class="btn btn-sm btn-outline-secondary smb-editaccess"
+                  data-name="<%= s.name %>" data-path="<%= s.path %>" data-desc="<%= s.desc %>" data-access="<%= s.access %>"
+                  title="<%= t('smb.editAccess') %>"><i class="ti ti-adjustments-horizontal"></i></button>
+          <% if (s.managed) { %>
+          <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="<%= t('smb.managedProtected') %>"><i class="ti ti-lock"></i></button>
+          <% } else { %>
+          <button type="button" class="btn btn-sm btn-outline-danger smb-remshare"
+                  data-name="<%= s.name %>" data-users="<%= s.users %>"
+                  title="<%= t('smb.removeShare') %>"><i class="ti ti-trash"></i></button>
+          <% } %>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<% if (!role || role !== 'readonly') { %>
+<div class="px-3 py-2 border-top">
+  <button id="smb-new" class="btn btn-sm btn-primary" type="button">
+    <i class="ti ti-plus me-1"></i><%= t('smb.create') %>
+  </button>
+</div>
+<% } %>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('smb.count').replace('{n}', String(total)) %><% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>

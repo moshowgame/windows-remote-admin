@@ -1,0 +1,40 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th style="width:20%;"><%= t('smb.sessClient') %></th>
+        <th style="width:24%;"><%= t('smb.sessUser') %></th>
+        <th class="text-end" style="width:1%;"><%= t('smb.sessConns') %></th>
+        <th class="text-end" style="width:10%;"><%= t('smb.sessIdle') %></th>
+        <th style="width:18%;"><%= t('smb.sessSince') %></th>
+        <% if (role !== 'readonly') { %><th class="text-end" style="width:1%;"></th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (listErr) { %>
+      <tr><td colspan="6" class="text-center text-warning py-4"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></td></tr>
+      <% } else if (!items.length) { %>
+      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('smb.emptySessions') %></td></tr>
+      <% } %>
+      <% items.forEach(function (s) { %>
+      <tr>
+        <td class="font-monospace text-break"><%= s.client || '—' %></td>
+        <td class="font-monospace text-break"><%= s.user || '—' %></td>
+        <td class="text-end <%= s.conns > 0 ? 'text-orange fw-bold' : 'text-secondary' %>"><%= s.conns %></td>
+        <td class="text-end text-secondary"><%= s.idle || '—' %></td>
+        <td class="text-secondary small"><%= s.since || '—' %></td>
+        <% if (role !== 'readonly') { %>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger smb-closesess"
+                  data-id="<%= s.id %>" data-who="<%= s.user %> @ <%= s.client %>"
+                  title="<%= t('smb.closeSession') %>"><i class="ti ti-plug-connected-x"></i></button>
+        </td>
+        <% } %>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('smb.count').replace('{n}', String(total)) %><% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>
