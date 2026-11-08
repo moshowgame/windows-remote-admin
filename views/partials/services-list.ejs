@@ -111,6 +111,11 @@
                   <% if (m === modeShort) { %><i class="ti ti-check ms-1"></i><% } %>
                 </button>
                 <% }); %>
+                <div class="dropdown-divider"></div>
+                <button type="button" class="dropdown-item text-danger svc-act"
+                        data-action="uninstall" data-name="<%= s.Name %>">
+                  <i class="ti ti-trash me-1"></i><%= t('services.uninstall') %>
+                </button>
               </div>
             </div>
           </div>

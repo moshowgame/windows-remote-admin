@@ -26,8 +26,13 @@
               <i class="ti ti-search position-absolute top-50 translate-middle-y ms-2 text-secondary"></i>
             </div>
           </div>
-          <div class="col text-md-end small text-secondary">
-            <%= t('services.listSource') %>
+          <div class="col text-md-end">
+            <% if (role !== 'readonly') { %>
+            <button type="button" class="btn btn-sm btn-primary mb-1" id="svc-reg-open">
+              <i class="ti ti-plus me-1"></i><%= t('services.regBtn') %>
+            </button>
+            <% } %>
+            <div class="small text-secondary"><%= t('services.listSource') %></div>
           </div>
         </div>
       </div>
@@ -58,13 +63,104 @@
   </div>
 </div>
 
+<%# 服务注册框（NSSM）：模板驱动，动态字段 + 命令预览，提交走 /services/register %>
+<% if (role !== 'readonly') { %>
+<div class="modal" id="svc-reg-modal" tabindex="-1" style="display:none">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-plus me-1"></i><%= t('services.regTitle') %></h5>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label"><%= t('services.regTpl') %></label>
+            <select id="svc-reg-tpl" class="form-select">
+              <option value="nodejs">Node.js</option>
+              <option value="java">Java</option>
+              <option value="powershell">PowerShell</option>
+              <option value="custom"><%= t('services.regTplCustom') %></option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label"><%= t('services.regName') %> <span class="text-danger">*</span></label>
+            <input type="text" id="svc-reg-name" class="form-control" placeholder="my-app" maxlength="80" autocomplete="off">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label"><%= t('services.regDisplay') %></label>
+            <input type="text" id="svc-reg-display" class="form-control" maxlength="200" autocomplete="off">
+          </div>
+          <div class="col-12">
+            <label class="form-label"><%= t('services.regDesc') %></label>
+            <input type="text" id="svc-reg-desc" class="form-control" maxlength="200" autocomplete="off">
+          </div>
+          <div class="col-md-6" id="svc-reg-exe-row">
+            <label class="form-label" id="svc-reg-exe-label"><%= t('services.regExe') %></label>
+            <input type="text" id="svc-reg-exe" class="form-control font-monospace" placeholder="node.exe" autocomplete="off">
+          </div>
+          <div class="col-md-6" id="svc-reg-script-row">
+            <label class="form-label"><span id="svc-reg-script-label"><%= t('services.regScriptNodejs') %></span> <span class="text-danger">*</span></label>
+            <input type="text" id="svc-reg-script" class="form-control font-monospace" placeholder="D:\app\server.js" autocomplete="off">
+          </div>
+          <div class="col-12">
+            <label class="form-label"><%= t('services.regArgs') %></label>
+            <input type="text" id="svc-reg-args" class="form-control font-monospace" autocomplete="off">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><%= t('services.regWorkDir') %></label>
+            <input type="text" id="svc-reg-workdir" class="form-control font-monospace" placeholder="D:\app" autocomplete="off">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><%= t('services.regLogDir') %></label>
+            <input type="text" id="svc-reg-logdir" class="form-control font-monospace" placeholder="D:\logs" autocomplete="off">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><%= t('services.regStartType') %></label>
+            <select id="svc-reg-mode" class="form-select">
+              <option value="auto"><%= t('services.modeAuto') %></option>
+              <option value="manual"><%= t('services.modeManual') %></option>
+            </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <label class="form-check mb-2">
+              <input type="checkbox" id="svc-reg-autostart" class="form-check-input" checked>
+              <span class="form-check-label"><%= t('services.regAutoStart') %></span>
+            </label>
+          </div>
+          <div class="col-12">
+            <div class="fw-bold small mb-1"><%= t('services.regPreview') %></div>
+            <pre class="bg-secondary-lt rounded p-2 mb-1 font-monospace" id="svc-reg-preview" style="max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
+            <div class="small text-secondary"><%= t('services.regNssmHint') %></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="svc-reg-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-primary" id="svc-reg-submit"><i class="ti ti-plus me-1"></i><%= t('services.regSubmit') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <script>
 (function () {
   'use strict';
   var T = {
     scope: '<%= t("services.confirmScope") %>',
     more: '<%= t("services.cmdMore") %>',
-    sel: '<%= t("services.selectHint") %>'
+    sel: '<%= t("services.selectHint") %>',
+    scriptNode: '<%= t("services.regScriptNodejs") %>',
+    scriptJava: '<%= t("services.regScriptJava") %>',
+    scriptPs: '<%= t("services.regScriptPs") %>',
+    scriptPh: 'D:\\app\\server.js',
+    jarPh: 'D:\\app\\app.jar',
+    psPh: 'D:\\scripts\\task.ps1',
+    exeLbl: '<%= t("services.regExe") %>',
+    exeReqLbl: '<%= t("services.regExeRequired") %>',
+    nodePh: 'node.exe',
+    javaPh: 'java.exe',
+    psExePh: 'powershell.exe'
   };
   var CSRF = '<%= csrf %>';
   var modal = document.getElementById('svc-confirm-modal');
@@ -84,6 +180,7 @@
     if (action === 'stop') return "Stop-Service -Name '" + n + "' -Force";
     if (action === 'restart') return "Restart-Service -Name '" + n + "' -Force";
     if (action === 'disable') return "Set-Service -Name '" + n + "' -StartupType Disabled";
+    if (action === 'uninstall') return "sc.exe delete '" + n + "'";
     if (action === 'mode') return "Set-Service -Name '" + n + "' -StartupType " + ({ auto: 'Automatic', manual: 'Manual', disabled: 'Disabled' }[mode] || mode);
     return '';
   }
@@ -100,7 +197,7 @@
     var shown = lines.slice(0, 6).join('\n');
     if (lines.length > 6) shown += '\n' + T.more.replace('{n}', String(lines.length));
     cmdEl.textContent = shown;
-    okBtn.className = 'btn ' + ((action === 'stop' || action === 'disable') ? 'btn-danger' : 'btn-primary');
+    okBtn.className = 'btn ' + ((action === 'stop' || action === 'disable' || action === 'uninstall') ? 'btn-danger' : 'btn-primary');
     modal.style.display = 'block';
     modal.classList.add('show');
     backdrop = document.createElement('div');
@@ -174,7 +271,7 @@
       if (!name) return;
       var values = { name: name, action: action, kw: currentKw() };
       if (action === 'mode') values.mode = mode;
-      openConfirm('/services/action', values, [name], action, mode);
+      openConfirm(action === 'uninstall' ? '/services/uninstall' : '/services/action', values, [name], action, mode);
       return;
     }
     var batch = e.target.closest ? e.target.closest('[data-batch]') : null;
@@ -190,6 +287,129 @@
       var cmdAction = act === 'disable' ? 'disable' : act;
       openConfirm(url, { names: names.join(','), action: cmdAction, kw: currentKw() }, names, cmdAction, '');
     }
+  });
+
+  // ---- 服务注册框（NSSM 模板）----
+  var regModal = document.getElementById('svc-reg-modal');
+  if (!regModal) return;
+  var regBackdrop = null;
+  var tplSel = document.getElementById('svc-reg-tpl');
+  var exeRow = document.getElementById('svc-reg-exe-row');
+  var exeLbl = document.getElementById('svc-reg-exe-label');
+  var exeInput = document.getElementById('svc-reg-exe');
+  var scriptRow = document.getElementById('svc-reg-script-row');
+  var scriptLbl = document.getElementById('svc-reg-script-label');
+  var scriptInput = document.getElementById('svc-reg-script');
+  var argsInput = document.getElementById('svc-reg-args');
+  var previewEl = document.getElementById('svc-reg-preview');
+
+  document.body.appendChild(regModal);
+
+  // 模板元数据：exe 占位符（留空自动探测）/ 脚本标签与占位 / 参数组装展示
+  var TPLS = {
+    nodejs:     { exePh: T.nodePh,   scriptLbl: T.scriptNode, scriptPh: T.scriptPh, prefix: '' },
+    java:       { exePh: T.javaPh,   scriptLbl: T.scriptJava, scriptPh: T.jarPh,    prefix: '-jar ' },
+    powershell: { exePh: T.psExePh,  scriptLbl: T.scriptPs,   scriptPh: T.psPh,     prefix: '-NoProfile -ExecutionPolicy Bypass -File ' },
+    custom:     { exePh: '',         scriptLbl: '',           scriptPh: '',         prefix: '' }
+  };
+
+  function currentTpl() { return tplSel.value; }
+
+  function applyTemplate() {
+    var tpl = currentTpl();
+    var m = TPLS[tpl];
+    if (tpl === 'custom') {
+      exeLbl.textContent = T.exeReqLbl;
+      exeInput.value = '';
+      exeInput.placeholder = 'D:\\app\\app.exe';
+      scriptRow.style.display = 'none';
+      scriptInput.value = '';
+    } else {
+      exeLbl.textContent = T.exeLbl;
+      exeInput.placeholder = m.exePh;
+      scriptRow.style.display = '';
+      scriptLbl.textContent = m.scriptLbl;
+      scriptInput.placeholder = m.scriptPh;
+    }
+    buildPreview();
+  }
+
+  // 展示用命令预览（实际执行走 env 注入，值不经 PS 解析器）
+  function buildPreview() {
+    var tpl = currentTpl();
+    var name = document.getElementById('svc-reg-name').value.trim() || 'my-app';
+    var exe = exeInput.value.trim() || exeInput.placeholder || 'app.exe';
+    var script = scriptInput.value.trim();
+    var args = argsInput.value.trim();
+    var full = tpl === 'custom' ? args : (TPLS[tpl].prefix + script + (args ? ' ' + args : ''));
+    var lines = [
+      'nssm install ' + name + ' ' + exe,
+      full ? 'nssm set ' + name + ' AppParameters ' + full : null,
+      'nssm set ' + name + ' Start ' + (document.getElementById('svc-reg-mode').value === 'manual' ? 'SERVICE_DEMAND_START' : 'SERVICE_AUTO_START')
+    ].filter(Boolean);
+    var wd = document.getElementById('svc-reg-workdir').value.trim();
+    var ld = document.getElementById('svc-reg-logdir').value.trim();
+    if (wd) lines.push('nssm set ' + name + ' AppDirectory ' + wd);
+    if (ld) lines.push('nssm set ' + name + ' AppStdout ' + ld + '\\' + name + '.out.log');
+    lines.push('nssm start ' + name);
+    previewEl.textContent = lines.join('\n');
+  }
+
+  function openReg() {
+    applyTemplate();
+    regModal.style.display = 'block';
+    regModal.classList.add('show');
+    regBackdrop = document.createElement('div');
+    regBackdrop.className = 'modal-backdrop fade show';
+    document.body.appendChild(regBackdrop);
+    document.getElementById('svc-reg-name').focus();
+  }
+
+  function closeReg() {
+    regModal.style.display = 'none';
+    regModal.classList.remove('show');
+    if (regBackdrop) { regBackdrop.remove(); regBackdrop = null; }
+  }
+
+  document.getElementById('svc-reg-open').addEventListener('click', openReg);
+  document.getElementById('svc-reg-cancel').addEventListener('click', closeReg);
+  regModal.addEventListener('click', function (e) { if (e.target === regModal) closeReg(); });
+
+  tplSel.addEventListener('change', applyTemplate);
+  ['svc-reg-name', 'svc-reg-exe', 'svc-reg-script', 'svc-reg-args', 'svc-reg-workdir', 'svc-reg-logdir', 'svc-reg-mode']
+    .forEach(function (id) {
+      document.getElementById(id).addEventListener('input', buildPreview);
+      document.getElementById(id).addEventListener('change', buildPreview);
+    });
+
+  document.getElementById('svc-reg-submit').addEventListener('click', function () {
+    var tpl = currentTpl();
+    var values = {
+      tpl: tpl,
+      name: document.getElementById('svc-reg-name').value.trim(),
+      display: document.getElementById('svc-reg-display').value.trim(),
+      desc: document.getElementById('svc-reg-desc').value.trim(),
+      exe: exeInput.value.trim(),
+      script: scriptInput.value.trim(),
+      args: argsInput.value.trim(),
+      workDir: document.getElementById('svc-reg-workdir').value.trim(),
+      logDir: document.getElementById('svc-reg-logdir').value.trim(),
+      mode: document.getElementById('svc-reg-mode').value,
+      autostart: document.getElementById('svc-reg-autostart').checked ? '1' : '0',
+      kw: currentKw()
+    };
+    htmx.ajax('POST', '/services/register', {
+      target: '#svc-table-region',
+      swap: 'innerHTML',
+      values: values,
+      headers: { 'X-CSRF-Token': CSRF }
+    });
+  });
+
+  // 注册成功后关闭模态框（服务器经 HX-Trigger 触发；失败时保持打开便于修改）
+  document.body.addEventListener('svc-register-done', closeReg);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && regModal.classList.contains('show')) closeReg();
   });
 })();
 </script>
