@@ -74,6 +74,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
 | SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行，diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号仅可查看 |
 | 防火墙 `/firewall` | Windows 防火墙管理：Domain/Private/Public 三配置文件状态卡（启用状态 + 默认入站/出站动作，禁用前红色警示确认）；全量规则列表（PortFilter 批量映射免逐条查询）、方向/动作/配置文件/状态四维筛选 + 名称/组/端口/描述搜索；admin 可启用/禁用规则、新建规则（方向/动作/协议/端口/配置文件/描述，端口支持逗号多段与范围）与删除规则（确认框），全部操作审计，动态值 env 注入不落日志，只读账号仅可查看 |
+| 重启/关机 `/power` | 本机与远程重启/关机管理：本机延迟计划（shutdown.exe，0~600 秒延迟窗口内可随时取消，双重确认框含面板自身中断红色警示）；远程操作（IP + 账号密码 + 理由），DCOM/WMI 通道零预装（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入系统事件日志 1074 并在页面展示近 24h 关机/重启事件，全部操作审计、密码 env 注入不落日志，admin 专属，只读账号仅可查看事件 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |
 | 简易部署 `/deploy` | 上传 zip 压缩包原地更新程序：预检（结构白名单校验 + 自动剥离 node_modules + 拒绝 data/logs/backups/.env）、确认后自动备份当前版本到 `backups/`（保留最近 5 份）再覆盖解压；重启后若首次启动失败，启动门卫自动回滚到部署前版本；备份列表一键手动回滚（确认框 + 审计）；页面明示压缩包规范与「先在 low environment 多次验证再上 production」风险提示，admin 专属 |
@@ -85,11 +86,12 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
 
-- **2026-11-02**：新增环境变量 `/env`、证书管理 `/certs`、SMB 共享 `/smb`、防火墙 `/firewall` 四大系统管理模块（写操作全部确认框预览命令 + 逐条审计，动态值 env 注入不落日志）：
+- **2026-11-02**：新增环境变量 `/env`、证书管理 `/certs`、SMB 共享 `/smb`、防火墙 `/firewall`、重启/关机 `/power` 五大系统管理模块（写操作全部确认框预览命令 + 逐条审计，动态值 env 注入不落日志）：
   - **环境变量 `/env`**：Machine / User 双作用域增删改；30 个关键系统变量禁删（UI 置灰 + 后端 400 双拦截）；敏感值打码 + 按需 reveal（admin + 审计）；作用域筛选 + 已有变量作用域锁定；Path 等分号分隔值支持 Windows 风格列表编辑器；全员可用的只读「查看」弹窗防误触编辑
   - **证书管理 `/certs`**：LocalMachine 六大存储区浏览（有效期三色预警、指纹列、SAN/EKU 详情）；上传证书（.cer/.crt/.pem 免密码、.pfx/.p12 需导入密码）；导出 .cer/.pem/.pfx（pfx 走一次性 token，随机密码仅展示一次）与删除
   - **SMB 共享 `/smb`**：共享目录 / 客户端会话 / 打开的文件三 Tab 浏览；共享新建、权限 diff 编辑（revoke + grant 不断开连接）、取消共享（活动用户警告）、断会话 / 关文件；Everyone 暴露检测（列表红色警示徽章 + 「仅看 Everyone 暴露」筛选开关 + 新建默认不授予 Everyone + 编辑器实时警示建议移除）
   - **防火墙 `/firewall`**：Domain / Private / Public 三配置文件状态卡（禁用前红色警示确认）；全量规则浏览（PortFilter 批量映射免逐条查询）、方向 / 动作 / 配置文件 / 状态筛选 + 关键字搜索；规则启停、新建（端口支持多段与范围）与删除（确认框）
+  - **重启/关机 `/power`**：本机延迟关机 / 重启（shutdown.exe，双重确认框含面板中断红色警示，延迟窗口内可随时取消）；远程操作（IP + 账号密码 + 理由）：DCOM/WMI 零预装通道（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入事件日志 1074 并展示近 24h 关机 / 重启事件；密码 env 注入不落日志
   - 顺带修复 PowerShell 子进程 PSModulePath 被父进程（PS7）污染导致 `Cert:` 驱动器缺失的底层问题（惠及全部 PS 命令）
 - **2026-11-01**：PowerShell 控制台交互升级：内嵌终端式多行输入（Enter 执行 / Shift+Enter 换行，中文输入法友好）、经典 PowerShell 深蓝配色；新增命令自动补全（服务端 Get-Command 全集，Tab 接受 / ↑↓ 切换 / Esc 关闭）与历史前缀搜索（历史面板点击回填）
 - **2026-11-01**：新增后台长任务：命令/脚本提交为独立 Job（与交互会话解耦、每用户并发 ≤3），SSE 实时推送输出、超时预算（10 分钟~24 小时）、随时终止，任务历史保留 24 小时；终端 : 任务面板 7:3 布局，终端高度可拖拽调节（localStorage 记忆、双击恢复），任务提交开关（后台任务 / 脚本模式）内嵌终端底部，提示随状态三态切换

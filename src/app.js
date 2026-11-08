@@ -36,6 +36,7 @@ const envRoutes = require('./routes/env');
 const certRoutes = require('./routes/certs');
 const smbRoutes = require('./routes/smb');
 const firewallRoutes = require('./routes/firewall');
+const powerRoutes = require('./routes/power');
 const setupRoutes = require('./routes/setup');
 const deployRoutes = require('./routes/deploy');
 
@@ -212,6 +213,7 @@ async function buildApp() {
   await app.register(certRoutes);
   await app.register(smbRoutes);
   await app.register(firewallRoutes);
+  await app.register(powerRoutes);
   await app.register(setupRoutes);
   await app.register(deployRoutes);
 

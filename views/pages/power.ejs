@@ -1,0 +1,345 @@
+<%- include('../layouts/layout-top') %>
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-power me-2"></i><%= t('p.title') %></h2>
+      <div class="text-secondary small"><%= t('p.subtitle') %></div>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-info mb-3"><%= t('p.info') %></div>
+
+<% if (!isAdmin) { %>
+<div class="alert alert-warning"><%= t('p.readonlyNote') %></div>
+<% } else { %>
+<div class="row g-3 mb-3">
+  <!-- 本机操作 -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-home me-2"></i><%= t('p.localTitle') %></h3>
+      </div>
+      <div class="card-body">
+        <div class="text-secondary small mb-2"><%= t('p.localDesc') %></div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small mb-1"><%= t('p.op') %></label>
+            <select id="pw-l-op" class="form-select form-select-sm">
+              <option value="restart"><%= t('p.opRestart') %></option>
+              <option value="shutdown"><%= t('p.opShutdown') %></option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1"><%= t('p.delay') %></label>
+            <div class="input-group input-group-sm">
+              <input id="pw-l-delay" type="number" class="form-control" min="0" max="600" value="10">
+              <span class="input-group-text"><%= t('p.delayUnit') %></span>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small mb-1"><%= t('p.reason') %></label>
+            <input id="pw-l-reason" class="form-control form-control-sm" maxlength="200" placeholder="<%= t('p.reasonPh') %>">
+          </div>
+        </div>
+        <div class="mt-3">
+          <button id="pw-local-go" class="btn btn-sm btn-danger" type="button"><i class="ti ti-player-play me-1"></i><%= t('p.execute') %></button>
+          <button id="pw-abort" class="btn btn-sm" type="button"><i class="ti ti-player-stop me-1"></i><%= t('p.abort') %></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 远程操作 -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-network me-2"></i><%= t('p.remoteTitle') %></h3>
+      </div>
+      <div class="card-body">
+        <div class="text-secondary small mb-2"><%= t('p.remoteDesc') %></div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small mb-1"><%= t('p.channel') %></label>
+            <select id="pw-r-channel" class="form-select form-select-sm">
+              <option value="dcom">DCOM / WMI (RPC 135)</option>
+              <option value="winrm">WinRM (HTTP 5985)</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1"><%= t('p.op') %></label>
+            <select id="pw-r-op" class="form-select form-select-sm">
+              <option value="restart"><%= t('p.opRestart') %></option>
+              <option value="shutdown"><%= t('p.opShutdown') %></option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1"><%= t('p.target') %></label>
+            <input id="pw-r-target" class="form-control form-control-sm font-monospace" maxlength="100" placeholder="<%= t('p.targetPh') %>">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1"><%= t('p.delay') %></label>
+            <input id="pw-r-delay" type="number" class="form-control form-control-sm" min="0" max="600" value="10">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1"><%= t('p.user') %></label>
+            <input id="pw-r-user" class="form-control form-control-sm" maxlength="100" placeholder="<%= t('p.userPh') %>">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1"><%= t('p.pwd') %></label>
+            <input id="pw-r-pwd" type="password" class="form-control form-control-sm" autocomplete="new-password" maxlength="127">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1"><%= t('p.reason') %></label>
+            <input id="pw-r-reason" class="form-control form-control-sm" maxlength="200" placeholder="<%= t('p.reasonPh') %>">
+          </div>
+          <div class="col-12">
+            <div id="pw-probe-out" class="small"></div>
+          </div>
+          <div class="col-12">
+            <div class="form-hint" id="pw-channel-hint"></div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button id="pw-probe" class="btn btn-sm" type="button"><i class="ti ti-access-point me-1"></i><%= t('p.probe') %></button>
+          <button id="pw-remote-go" class="btn btn-sm btn-danger" type="button"><i class="ti ti-player-play me-1"></i><%= t('p.execute') %></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- 近 24h 关机/重启事件（面板初始加载） -->
+<div id="pw-recent" hx-get="/power/recent" hx-trigger="load" hx-swap="innerHTML">
+  <div class="text-center text-secondary py-4"><%= t('common.loading') %></div>
+</div>
+
+<% if (isAdmin) { %>
+<!-- 本机操作 第一步确认：动作摘要 + 命令预览 -->
+<div class="modal" id="pw-local-c1" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t('p.confirmLocal1') %></h5>
+        <button type="button" class="btn-close" data-pw-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div id="pw-c1-body" class="small"></div>
+        <pre id="pw-c1-cmd" class="bg-secondary-lt rounded p-2 font-monospace small mt-2 mb-0" style="white-space:pre-wrap;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-pw-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-warning" id="pw-c1-go"><%= t('p.continueGo') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 本机操作 第二步确认：红色警示（面板将随系统中断） -->
+<div class="modal" id="pw-local-c2" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t('p.confirmLocal2') %></h5>
+        <button type="button" class="btn-close" data-pw-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger mb-2"><i class="ti ti-alert-triangle me-1"></i><%= t('p.selfWarn') %></div>
+        <div id="pw-c2-body" class="small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-pw-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="pw-c2-go"><%= t('p.execute') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 远程操作确认：摘要 + 命令预览（密码打码） -->
+<div class="modal" id="pw-remote-confirm" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t('p.confirmRemote') %></h5>
+        <button type="button" class="btn-close" data-pw-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning mb-2"><i class="ti ti-alert-triangle me-1"></i><%= t('p.uacHint') %></div>
+        <div id="pw-rc-body" class="small"></div>
+        <pre id="pw-rc-cmd" class="bg-secondary-lt rounded p-2 font-monospace small mt-2 mb-0" style="white-space:pre-wrap;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" data-pw-dismiss><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="pw-rc-go"><%= t('p.execute') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var CSRF = '<%= csrf %>';
+    var isAdmin = <%= isAdmin ? 'true' : 'false' %>;
+    var T = {
+      opRestart: '<%= t("p.opRestart") %>',
+      opShutdown: '<%= t("p.opShutdown") %>',
+      chDcom: 'DCOM / WMI (RPC 135)',
+      chWinrm: 'WinRM (HTTP 5985)',
+      dcomHint: '<%= t("p.dcomHint") %>',
+      winrmHint: '<%= t("p.winrmHint") %>',
+      selfWarn: '<%= t("p.selfWarn") %>',
+      uacHint: '<%= t("p.uacHint") %>',
+      confirmLocal1: '<%= t("p.confirmLocal1") %>',
+      confirmLocal2: '<%= t("p.confirmLocal2") %>',
+      confirmRemote: '<%= t("p.confirmRemote") %>',
+      continueGo: '<%= t("p.continueGo") %>',
+      execute: '<%= t("p.execute") %>',
+      actionFailed: '<%= t("p.actionFailed") %>',
+      reachOk: '<%= t("p.reachOk").replace("{n}", "N") %>',
+      reachFail: '<%= t("p.reachFail") %>',
+      invalidTarget: '<%= t("p.invalidTarget") %>',
+      invalidUser: '<%= t("p.invalidUser") %>',
+      invalidPwd: '<%= t("p.invalidPwd") %>',
+      invalidDelay: '<%= t("p.invalidDelay") %>'
+    };
+    function toastMsg(message, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: message, type: type } }));
+    }
+    function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+    function openModal(el) { el.style.display = 'block'; el.classList.add('show'); document.body.classList.add('modal-open'); }
+    function closeModal(el) {
+      el.style.display = 'none'; el.classList.remove('show'); document.body.classList.remove('modal-open');
+      var bd = document.querySelector('.modal-backdrop'); if (bd) bd.remove();
+    }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-pw-dismiss]')) {
+        var m = e.target.closest('.modal'); if (m) closeModal(m);
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(closeModal);
+    });
+
+    // POST：交换 #pw-recent + 解析 HX-Trigger 头手动 toast（fetch 不自动触发）
+    function pwPost(url, params) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF },
+        body: new URLSearchParams(params)
+      }).then(function (r) {
+        var trig = r.headers.get('HX-Trigger');
+        if (trig) {
+          try {
+            var d = JSON.parse(trig).toast;
+            if (d) { var m = d.message; if (m.indexOf('enc:') === 0) m = decodeURIComponent(m.slice(4)); toastMsg(m, d.type); }
+          } catch (err) { /* 忽略 */ }
+        }
+        return r.text().then(function (html) { return { ok: r.ok, html: html }; });
+      }).then(function (res) {
+        document.getElementById('pw-recent').innerHTML = res.html;
+        return res;
+      }).catch(function () { toastMsg(T.actionFailed, 'error'); });
+    }
+
+    if (!isAdmin) return;
+
+    var localC1 = document.getElementById('pw-local-c1');
+    var localC2 = document.getElementById('pw-local-c2');
+    var remoteConfirm = document.getElementById('pw-remote-confirm');
+    var opText = { restart: T.opRestart, shutdown: T.opShutdown };
+    var chText = { dcom: T.chDcom, winrm: T.chWinrm };
+
+    // 通道切换提示
+    var hintEl = document.getElementById('pw-channel-hint');
+    function syncHint() { hintEl.textContent = v('pw-r-channel') === 'winrm' ? T.winrmHint : T.dcomHint; }
+    document.getElementById('pw-r-channel').addEventListener('change', syncHint);
+    syncHint();
+
+    function localData() {
+      return { op: v('pw-l-op'), delay: v('pw-l-delay'), reason: v('pw-l-reason') };
+    }
+    function remoteData() {
+      return {
+        channel: v('pw-r-channel'), op: v('pw-r-op'), target: v('pw-r-target'),
+        delay: v('pw-r-delay'), user: v('pw-r-user'), pwd: document.getElementById('pw-r-pwd').value, reason: v('pw-r-reason')
+      };
+    }
+    // 命令预览（密码打码；仅展示，真实动态值全部 env 注入）
+    function localCmd(d) {
+      return 'shutdown.exe ' + (d.op === 'restart' ? '/r' : '/s') + ' /t ' + d.delay + ' /c "' + d.reason + '" /d p:4:1';
+    }
+    function remoteCmd(d) {
+      var flags = { restart: 6, shutdown: 12 };
+      return d.channel === 'winrm'
+        ? 'Invoke-Command -ComputerName ' + d.target + ' -Credential *** { shutdown.exe ' + (d.op === 'restart' ? '/r' : '/s')
+          + ' /t ' + d.delay + ' /c "' + d.reason + '" /d p:4:1 }'
+        : 'Invoke-CimMethod Win32_OperatingSystem Win32ShutdownTracker -ComputerName ' + d.target + ' -Credential *** '
+          + '-Arguments @{Timeout=' + d.delay + '; Comment="' + d.reason + '"; Flags=' + flags[d.op] + '}';
+    }
+
+    // 本机执行：双重确认
+    document.getElementById('pw-local-go').addEventListener('click', function () {
+      var d = localData();
+      document.getElementById('pw-c1-body').textContent = opText[d.op] + ' · ' + d.delay + 's · ' + (d.reason || '-');
+      document.getElementById('pw-c1-cmd').textContent = localCmd(d);
+      openModal(localC1);
+    });
+    document.getElementById('pw-c1-go').addEventListener('click', function () {
+      var d = localData();
+      closeModal(localC1);
+      document.getElementById('pw-c2-body').textContent = T.selfWarn.replace('{n}', opText[d.op]).replace('{s}', d.delay) + ' · ' + d.delay + 's · ' + (d.reason || '-');
+      openModal(localC2);
+    });
+    document.getElementById('pw-c2-go').addEventListener('click', function () {
+      var d = localData();
+      closeModal(localC2);
+      pwPost('/power/local', d);
+    });
+
+    // 中止计划
+    document.getElementById('pw-abort').addEventListener('click', function () {
+      pwPost('/power/abort', {});
+    });
+
+    // 远程：连通性预检（JSON 返回）
+    document.getElementById('pw-probe').addEventListener('click', function () {
+      var out = document.getElementById('pw-probe-out');
+      var target = v('pw-r-target');
+      if (!/^[A-Za-z0-9._\-]{1,100}$/.test(target)) { out.innerHTML = '<span class="text-danger">' + T.invalidTarget + '</span>'; return; }
+      out.innerHTML = '<span class="text-secondary"><i class="ti ti-loader-2 me-1"></i>...</span>';
+      fetch('/power/probe', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF },
+        body: new URLSearchParams({ channel: v('pw-r-channel'), target: target })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        out.innerHTML = j.ok
+          ? '<span class="text-success"><i class="ti ti-check me-1"></i>' + T.reachOk.replace('N', target) + '</span>'
+          : '<span class="text-danger"><i class="ti ti-x me-1"></i>' + T.reachFail + ' ' + (j.msg || '').replace(T.reachFail, '').trim() + '</span>';
+      }).catch(function () { out.innerHTML = '<span class="text-danger">' + T.actionFailed + '</span>'; });
+    });
+
+    // 远程执行：单次确认
+    document.getElementById('pw-remote-go').addEventListener('click', function () {
+      var d = remoteData();
+      if (!/^[A-Za-z0-9._\-]{1,100}$/.test(d.target)) { toastMsg(T.invalidTarget, 'error'); return; }
+      if (!d.user) { toastMsg(T.invalidUser, 'error'); return; }
+      if (!d.pwd) { toastMsg(T.invalidPwd, 'error'); return; }
+      var n = parseInt(d.delay, 10);
+      if (isNaN(n) || n < 0 || n > 600) { toastMsg(T.invalidDelay, 'error'); return; }
+      document.getElementById('pw-rc-body').textContent =
+        chText[d.channel] + ' · ' + d.target + ' · ' + d.user + ' · ' + opText[d.op] + ' · ' + d.delay + 's · ' + (d.reason || '-');
+      document.getElementById('pw-rc-cmd').textContent = remoteCmd(d);
+      openModal(remoteConfirm);
+    });
+    document.getElementById('pw-rc-go').addEventListener('click', function () {
+      var d = remoteData();
+      closeModal(remoteConfirm);
+      pwPost('/power/remote', d);
+    });
+  })();
+</script>
+<% } %>
+
+<%- include('../layouts/layout-bottom') %>

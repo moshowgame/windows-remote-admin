@@ -140,6 +140,12 @@
               <span class="nav-link-title"><%= t('nav.firewall') %></span>
             </a>
           </li>
+          <li class="nav-item <%= active === 'power' ? 'active' : '' %>">
+            <a class="nav-link" href="/power">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-power"></i></span>
+              <span class="nav-link-title"><%= t('nav.power') %></span>
+            </a>
+          </li>
           <li class="nav-item <%= active === 'setup' ? 'active' : '' %>">
             <a class="nav-link" href="/setup">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-server-2"></i></span>
