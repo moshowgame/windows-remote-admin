@@ -14,7 +14,7 @@ const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.default.json')
 const userCfgPath = path.join(ROOT, 'config.json');
 if (fs.existsSync(userCfgPath)) {
   try {
-    Object.assign(config, JSON.parse(fs.readFileSync(userCfgPath, 'utf8')));
+    Object.assign(config, mergeAuth(config, JSON.parse(fs.readFileSync(userCfgPath, 'utf8'))));
   } catch {
     // 配置文件损坏时忽略，使用默认值
     console.warn('[config] config.json 解析失败，已忽略');
@@ -39,6 +39,15 @@ if (env.WRA_PATH_WHITELIST !== undefined) {
 if (env.WRA_LOG_RETENTION) config.logRetentionDays = num(env.WRA_LOG_RETENTION);
 
 // 保存用户配置：合并写入 config.json（保留既有键），并同步运行时 config
+// auth 段需深合并：config.json 通常只写 auth.ldap，浅合并会把 auth.mode 冲掉
+function mergeAuth(base, patch) {
+  const src = patch && typeof patch.auth === 'object' ? patch.auth : null;
+  if (!src) return patch;
+  base.auth = { ...base.auth, ...src, ldap: { ...(base.auth && base.auth.ldap), ...(src.ldap || {}) } };
+  delete patch.auth;
+  return patch;
+}
+
 function saveUserConfig(patch) {
   const userCfgPath = path.join(ROOT, 'config.json');
   let userCfg = {};
@@ -49,7 +58,7 @@ function saveUserConfig(patch) {
   }
   Object.assign(userCfg, patch);
   fs.writeFileSync(userCfgPath, JSON.stringify(userCfg, null, 2) + '\n', 'utf8');
-  Object.assign(config, patch);
+  Object.assign(config, mergeAuth(config, { ...patch }));
   return userCfg;
 }
 

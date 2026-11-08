@@ -15,6 +15,10 @@ module.exports = {
     'login.purpose': 'Purpose',
     'login.purposePlaceholder': 'e.g. maintenance check',
     'login.submit': 'Sign in',
+    'login.method': 'Authentication method',
+    'login.methodLocal': 'Local account',
+    'login.methodLdap': 'LDAP / AD',
+    'login.staffidHint': 'Sign in with your Staff ID (directory account); access is granted only after the Staff ID is mapped to a role by the administrator',
     // error
     'error.serverOops': 'Something went wrong',
     'error.accessDenied': 'Access denied',
@@ -92,6 +96,10 @@ module.exports = {
     'login.purpose': '使用目的',
     'login.purposePlaceholder': '如：运维检查',
     'login.submit': '登录',
+    'login.method': '认证方式',
+    'login.methodLocal': '本地账号',
+    'login.methodLdap': '企业目录 (LDAP/AD)',
+    'login.staffidHint': '使用 Staff ID（目录账号）登录，需管理员在映射表中授权后方可访问',
     // error
     'error.serverOops': '服务器开小差了',
     'error.accessDenied': '访问被拒绝',

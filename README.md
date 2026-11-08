@@ -77,6 +77,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 防火墙 `/firewall` | Windows 防火墙管理：Domain/Private/Public 三配置文件状态卡（启用状态 + 默认入站/出站动作，禁用前红色警示确认）；全量规则列表（PortFilter 批量映射免逐条查询）、方向/动作/配置文件/状态四维筛选 + 名称/组/端口/描述搜索；admin 可启用/禁用规则、新建规则（方向/动作/协议/端口/配置文件/描述，端口支持逗号多段与范围）与删除规则（确认框），全部操作审计，动态值 env 注入不落日志，只读账号仅可查看 |
 | 重启/关机 `/power` | 本机与远程重启/关机管理：本机延迟计划（shutdown.exe，0~600 秒延迟窗口内可随时取消，双重确认框含面板自身中断红色警示）；远程操作（IP + 账号密码 + 理由），DCOM/WMI 通道零预装（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入系统事件日志 1074 并在页面展示近 24h 关机/重启事件，全部操作审计、密码 env 注入不落日志，admin 专属，只读账号仅可查看事件 |
 | 临时授权 `/tpam` | Self-TPAM 临时特权账号（release 场景）：admin 输入 CR/IN 编号 + Staff ID 一键生成 `<StaffID>_tpam` 临时账号（admin 权限，同名重新生成即续期换密码），有效期 4 小时；随机密码仅在生成时展示一次（落盘仅 bcrypt 哈希），支持一键复制；生效账号列表（创建/到期时间 + 剩余时长）与吊销（确认框）；过期或吊销后立即无法登录，已登录会话在下一次请求时被强制登出，生成/吊销均审计 |
+| 企业认证 `/login` | 可选 LDAP / AD 企业目录认证：`auth.mode` 三模式（local / ldap / both，both 登录页提供方式选择器）；AD 走 PrincipalContext 校验、通用 LDAP 走 LdapConnection + bindTemplate（ldaps 支持），密码仅经环境变量注入不落命令与日志；登录用 Staff ID，角色映射读 `data/auth-map.csv`（staffid,role，改完即生效）或组映射 `auth.ldap.groupRoleMap`，**未映射默认拒绝登录**；LDAP 不可达时可按 `allowLocalFallback` 回退本地账号（审计记「LDAP 回退登录」，输错密码绝不兜底）；TPAM 临时账号等本地账号不受影响 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |
 | 简易部署 `/deploy` | 上传 zip 压缩包原地更新程序：预检（结构白名单校验 + 自动剥离 node_modules + 拒绝 data/logs/backups/.env）、确认后自动备份当前版本到 `backups/`（保留最近 5 份）再覆盖解压；重启后若首次启动失败，启动门卫自动回滚到部署前版本；备份列表一键手动回滚（确认框 + 审计）；页面明示压缩包规范与「先在 low environment 多次验证再上 production」风险提示，admin 专属 |
@@ -87,6 +88,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
+
+- **2026-11-08**：新增企业认证（LDAP / AD）：`auth.mode` 三模式（**local** 默认本地 entitlement.csv / **ldap** 企业目录 / **both** 登录页提供「本地账号 / LDAP」方式选择器）；AD 用 PrincipalContext `ValidateCredentials`，通用 LDAP 用 LdapConnection + bindTemplate（如 `CORP\{username}` 或 `uid={username},ou=people,dc=corp`），支持 ldaps；登录凭 Staff ID，角色映射读 `data/auth-map.csv`（staffid,role 两列 + # 注释，每次登录读盘改完即生效）或 AD 组映射 `auth.ldap.groupRoleMap`，**staffid 未映射默认拒绝登录**（零信任：不会因目录里有账号就能进）；错误码精细化：49 凭据错直接拒绝、81 服务不可达才可按 `allowLocalFallback` 回退本地账号（审计记「LDAP 回退登录」），密码仅经 spawn 环境变量注入不落命令串与日志；LDAP 组查询经 RFC 4515 过滤器转义防注入；TPAM 临时账号走本地认证不受影响（both 模式登录页选「本地」即可）
 
 - **2026-11-08**：新增 API 调试 `/http`（简易 HTTP 客户端）：粘贴 curl 一键解析自动填充（bash 风格 tokenizer，支持单双引号/反斜杠转义/续行符/`-u` Basic Auth/多段 `-d` 合并/`-d` 缺省推断 POST），GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS 七种方法 + Headers/查询参数/Body 纯文本 Tab 编辑（有 Body 未指定 Content-Type 时默认 application/json）；服务端 fetch 单次代理，无状态不落盘、不存历史、不带 Cookie，方法白名单 + http(s) URL 校验、响应 2MB 截断 + 60s 超时，响应展示状态码徽章/耗时/响应头/JSON 自动美化；审计仅记 method/url/结果（header 与 body 不落日志防敏感 payload 泄漏），只读账号不可发送
 
@@ -251,6 +254,56 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 - **服务卸载**：操作下拉新增「卸载服务」（`Stop-Service` + `sc.exe delete` 标记删除），30+ 受保护系统服务（rpcss / winmgmt / eventlog / mpssvc 等内核与安全关键项）黑名单拦截，UI 与后端双重校验
 - **安全**：服务名白名单校验；注册路径/参数正则校验（绝对路径、禁引号与换行）；动态值经 spawn env 注入（不拼接命令串）；所有写操作记录审计日志（操作人 / IP / 服务名 / 动作 / 结果）；注册/卸载需服务器 PATH 中已提供 nssm.exe（卸载走内置 sc.exe 无此依赖）
 
+### 企业认证（LDAP / AD）
+
+面向企业受限环境（如汇丰这类有目录服务的机构），登录账号改用 **Staff ID** 经企业目录校验，角色由本地映射表决定——**目录里有账号不代表能登录**，未映射 Staff ID 默认拒绝（零信任）。
+
+**三种模式**（`config.json` → `auth.mode`）：
+
+| 模式 | 行为 |
+|------|------|
+| `local`（默认） | 仅本地账号（`data/entitlement.csv` / TPAM 临时账号），行为与旧版一致 |
+| `ldap` | 仅企业目录认证；本地账号（含 TPAM）无法登录 |
+| `both` | 登录页出现「本地账号 / 企业目录 (LDAP/AD)」方式选择器，任选其一 |
+
+**目录连接**（`auth.ldap`）：
+
+```json
+{
+  "auth": {
+    "mode": "both",
+    "ldap": {
+      "url": "ldaps://dc01.corp.local:636",   // ldaps 636 或 ldap 389
+      "type": "ad",                            // ad（Windows AD）或 ldap（通用目录）
+      "bindTemplate": "CORP\\{username}",      // ldap 类型必填：CORP\{username} 或 uid={username},ou=people,dc=corp
+      "baseDN": "dc=corp,dc=local",
+      "groupFilter": "(&(objectClass=group)(member={username}))", // ldap 类型的组成员查询模板
+      "groupRoleMap": [ { "group": "Corp-Admins", "role": "admin" } ],
+      "allowLocalFallback": true               // LDAP 不可达（81）时允许回退本地账号
+    }
+  }
+}
+```
+
+- `type: "ad"`：走 `PrincipalContext.ValidateCredentials`，组经 memberOf 自动查询（无需 groupFilter）
+- `type: "ldap"`：走 `LdapConnection` 绑定 bindTemplate 展开后的 DN，组按 groupFilter 模板查询
+- 密码仅经 spawn 环境变量注入（`WRA_LDAP_PASS`），不进命令串、不落日志；组查询用户名经 RFC 4515 转义防注入
+
+**角色映射**：两种方式，优先级 staffid 精确匹配 > 组匹配 > **默认拒绝**
+
+1. `data/auth-map.csv`（推荐，每次登录读盘，改完即生效，可直接用内置编辑器 `/editor` 修改）：
+
+   ```
+   # staffid,role（admin / readonly）
+   staffid,role
+   ZH0001,admin
+   zh0002,readonly
+   ```
+
+2. 组映射 `auth.ldap.groupRoleMap`：登录用户所在组命中 `group`（大小写不敏感）即赋予 `role`
+
+**错误码语义**：49 = 凭据错误（直接拒绝，**绝不回退**）；81 = 服务不可达（按 `allowLocalFallback` 可回退本地账号，审计记「LDAP 回退登录」）；53 等 = 服务端明确拒绝。登录成功 / 失败 / 映射拒绝 / 回退均写入审计日志（不含密码）。
+
 ### 设置 `/settings`
 
 - 快速访问目录的增删改，保存写入 `config.json` 并即时生效（无需重启）
@@ -333,6 +386,8 @@ SMB 服务端（LanmanServer）视角的共享管理：谁连进来、开了哪�
 | `pathWhitelist` | `[]` | 文件操作路径白名单；为空表示不限制 |
 | `quickAccess` | 内置 3 项 | 侧栏快速访问目录 |
 | `logRetentionDays` | `30` | 日志保留天数 |
+| `auth.mode` | `local` | 登录认证方式：`local`（本地账号）/ `ldap`（企业目录）/ `both`（登录页方式选择器），详见下方[企业认证](#企业认证ldap--ad) |
+| `auth.ldap.allowLocalFallback` | `true` | LDAP 服务不可达（81）时是否回退本地账号；凭据错误（49）绝不回退 |
 
 环境变量同样支持写在程序根目录的 `.env` 文件中（参考 `.env.example`，复制为 `.env` 即生效）：`npm start`、`Run.cmd`、`npm run dev` 与 NSSM 服务启动时都会自动加载程序目录下的 `.env`，与启动时所在目录无关；`.env` 中已存在的同名系统环境变量不会被覆盖（外部注入优先）。也可用环境变量直接覆盖：`WRA_PORT`、`WRA_PS_TIMEOUT`、`WRA_UPLOAD_MAX_MB`、`WRA_PATH_WHITELIST`（`;` 分隔）、`WRA_SESSION_SECRET` 等。
 
@@ -341,6 +396,8 @@ SMB 服务端（LanmanServer）视角的共享管理：谁连进来、开了哪�
 账号存于 `data/entitlement.csv`（`username,password_hash[,role]`）。新账号可先写入一行明文密码 `user,123456`，服务启动时自动哈希迁移。忘记密码时删除对应用户行重启即可，或恢复为明文格式让系统重新哈希。
 
 **只读账号**：第三列写 `readonly` 即创建（如 `viewer,123456,readonly`），登录后不可执行 PowerShell、不可上传，文件页只保留浏览 / 预览 / 下载 / 收藏，服务管理与设置仅可查看，文本编辑器强制只读模式；所有写接口服务端双重拦截（403）。第三列缺省或写其他值均为管理员。
+
+**企业目录账号（LDAP / AD）**：`auth.mode` 设为 `ldap` / `both` 后，登录可改用 Staff ID 经企业目录校验，角色由 `data/auth-map.csv` 映射表或组映射决定，**未映射 Staff ID 默认拒绝登录**；详见[企业认证（LDAP / AD）](#企业认证ldap--ad)。
 
 ## 目录结构
 
@@ -363,7 +420,7 @@ windows-remote-admin/
 ├─ scripts/                copy-assets.js 静态资源复制、pack.js 分发打包
 ├─ screencap/              功能截图（README"界面预览"引用）
 ├─ dist/                   npm run pack:code 产物输出（不入版本库）
-├─ data/                   entitlement.csv、.session-key（勿入版本库）
+├─ data/                   entitlement.csv、auth-map.csv（LDAP 角色映射，可选）、.session-key（勿入版本库）
 └─ logs/                   app.log / audit.log / access.log（按天轮转，保留 30 天）
 ```
 

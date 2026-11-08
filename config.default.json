@@ -13,5 +13,17 @@
     { "label": "Windows 临时目录", "path": "C:\\Windows\\Temp" },
     { "label": "ProgramData", "path": "C:\\ProgramData" }
   ],
-  "logRetentionDays": 30
+  "logRetentionDays": 30,
+  "auth": {
+    "mode": "local",
+    "ldap": {
+      "url": "",
+      "type": "ad",
+      "bindTemplate": "",
+      "baseDN": "",
+      "groupFilter": "",
+      "groupRoleMap": [],
+      "allowLocalFallback": true
+    }
+  }
 }

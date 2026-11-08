@@ -42,9 +42,31 @@
         </div>
         <form hx-post="/login" hx-target="#login-alert" hx-swap="innerHTML" autocomplete="off" novalidate>
           <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <input type="hidden" name="method" value="<%= locals.authMode === 'ldap' ? 'ldap' : 'local' %>">
+          <% const authMode = locals.authMode === 'both' ? 'both' : (locals.authMode === 'ldap' ? 'ldap' : 'local'); %>
+          <% if (authMode === 'both') { %>
+          <div class="mb-3">
+            <label class="form-label"><%= t('login.method') %></label>
+            <div class="d-flex gap-2">
+              <input type="radio" class="btn-check" name="method-choice" id="method-local" value="local" checked
+                     onchange="document.getElementsByName('method')[0].value='local'">
+              <label class="btn btn-outline-secondary flex-fill" for="method-local">
+                <i class="ti ti-device-desktop me-1"></i><%= t('login.methodLocal') %>
+              </label>
+              <input type="radio" class="btn-check" name="method-choice" id="method-ldap" value="ldap"
+                     onchange="document.getElementsByName('method')[0].value='ldap'">
+              <label class="btn btn-outline-secondary flex-fill" for="method-ldap">
+                <i class="ti ti-building me-1"></i><%= t('login.methodLdap') %>
+              </label>
+            </div>
+          </div>
+          <% } %>
           <div class="mb-3">
             <label class="form-label" for="login-username"><%= t('login.username') %></label>
             <input type="text" id="login-username" name="username" class="form-control" placeholder="<%= t('login.username') %>" required>
+            <% if (authMode === 'ldap' || authMode === 'both') { %>
+            <div class="form-text"><%= t('login.staffidHint') %></div>
+            <% } %>
           </div>
           <div class="mb-3">
             <label class="form-label" for="login-password"><%= t('login.password') %></label>
