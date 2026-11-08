@@ -65,6 +65,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 文本编辑器 `/editor` | 在线编辑保存、行号/行列状态、Ctrl+S 保存、自动 `.bak` 时间戳备份 |
 | 日志监控 `/logs` | 通配符过滤、关键词高亮、SSE 实时 tail、自动跟踪新文件 |
 | 服务管理 `/services` | 服务列表/搜索、单服务与批量启停/重启/禁用（复选框多选，单批上限 20）、启动类型切换，**内置 NSSM 服务注册**（Node.js / Java / PowerShell / 自由模板，可视化填表 + 命令预览，一键把任意程序注册为系统服务并托管自启/重启/日志轮转）与卸载（30+ 受保护系统服务黑名单拦截），全部操作弹确认框（预览将执行的 PowerShell 命令）并逐条审计，只读账号仅可查看 |
+| API 调试 `/http` | 简易 HTTP 客户端：粘贴 curl（Postman「Copy as cURL」）一键解析自动填充，GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS 七种方法，Headers / 查询参数 / Body 三个 Tab 纯文本编辑（自动补默认 Content-Type），服务端 fetch 单次代理——不落盘、不存历史、不携带 Cookie，响应展示状态码/耗时/响应头/响应体（JSON 自动美化，2MB 截断），只读账号不可发送 |
 | 任务计划 `/tasks` | 模拟任务计划程序库管理：全量计划任务列表（含程序命令行、上次运行/结果/下次运行），文件夹 + 状态（就绪/运行中/排队/已禁用）+ 名称模糊筛选；admin 可运行/终止/启用/禁用/删除任务（确认框预览命令并审计），XML 全保真编辑（含描述/程序/参数/起始于/权限快速编辑表单，即时写回 XML），结构化新建任务（5 种触发器 + 运行身份，文件夹自动创建）；`\Microsoft\` 系统任务操作时红色警示，只读账号仅可查看 |
 | 端口/网络 `/net` | TCP/UDP 连接列表（本地/远程地址、状态、PID、占用进程完整命令行），状态筛选 + 关键字搜索（端口/PID/进程/IP/命令行），admin 可结束占用进程释放端口（确认框预览 `Stop-Process` 命令 + 审计），系统关键进程（PID 0/4/8）拒绝操作，只读账号仅可查看 |
 | 进程管理 `/process` | 全量运行进程列表，内存/CPU 占用率（1.5 秒差分采样，小字附累计 CPU 时间）/PID/名称排序，关键字搜索（进程名/PID/路径），admin 可结束进程释放资源（确认框预览 `Stop-Process` 命令 + 审计），系统关键进程（PID 0/4/8）拒绝操作，只读账号仅可查看 |
@@ -86,6 +87,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
+
+- **2026-11-08**：新增 API 调试 `/http`（简易 HTTP 客户端）：粘贴 curl 一键解析自动填充（bash 风格 tokenizer，支持单双引号/反斜杠转义/续行符/`-u` Basic Auth/多段 `-d` 合并/`-d` 缺省推断 POST），GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS 七种方法 + Headers/查询参数/Body 纯文本 Tab 编辑（有 Body 未指定 Content-Type 时默认 application/json）；服务端 fetch 单次代理，无状态不落盘、不存历史、不带 Cookie，方法白名单 + http(s) URL 校验、响应 2MB 截断 + 60s 超时，响应展示状态码徽章/耗时/响应头/JSON 自动美化；审计仅记 method/url/结果（header 与 body 不落日志防敏感 payload 泄漏），只读账号不可发送
 
 - **2026-11-08**：服务管理新增**内置 NSSM 服务注册/卸载**：可视化填表 + 实时命令预览，一键把任意程序注册为 Windows 系统服务（开机自启、崩溃 5 秒后自动拉起、stdout/stderr 日志 10MB 轮转），相当于把 NSSM 助手内嵌进面板——不用记命令、不用写脚本，快速 setup 服务资源。内置四种模板：**Node.js**（JS 入口脚本）、**Java**（JAR 包，自动 `-jar`）、**PowerShell**（PS1 脚本，自动 `-NoProfile -ExecutionPolicy Bypass -File`）与**自由模板**（任意可执行文件）；三种语言模板可执行文件留空自动探测（node.exe / java.exe / powershell.exe 经 Get-Command）。公共配置：服务名/显示名/描述、启动类型（自动/手动）、附加参数、工作目录、日志目录、安装后立即启动；**卸载**走操作下拉（`sc.exe delete`，30+ 受保护系统服务黑名单拦截误删）。动态值全部 env 注入不经 PowerShell 解析器，注册/卸载均审计，失败时模态框保持打开便于修改（需要服务器 PATH 中已提供 nssm.exe）
 

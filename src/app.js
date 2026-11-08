@@ -40,6 +40,7 @@ const powerRoutes = require('./routes/power');
 const tpamRoutes = require('./routes/tpam');
 const setupRoutes = require('./routes/setup');
 const deployRoutes = require('./routes/deploy');
+const httpRoutes = require('./routes/http');
 
 async function buildApp() {
   const loggers = await buildLoggers(path.join(ROOT, 'logs'));
@@ -218,6 +219,7 @@ async function buildApp() {
   await app.register(tpamRoutes);
   await app.register(setupRoutes);
   await app.register(deployRoutes);
+  await app.register(httpRoutes);
 
   return app;
 }

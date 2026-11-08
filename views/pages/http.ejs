@@ -1,0 +1,270 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle"><%= t('http.pretitle') %></div>
+        <h2 class="page-title"><i class="ti ti-api me-1"></i><%= t('http.title') %></h2>
+        <div class="text-secondary mt-1"><%= t('http.subtitle') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+
+    <%# curl 导入 %>
+    <div class="card mb-3">
+      <div class="card-body py-3">
+        <label class="form-label fw-bold mb-1"><i class="ti ti-clipboard-copy me-1"></i><%= t('http.curlLabel') %></label>
+        <textarea id="hc-curl" class="form-control font-monospace" rows="3"
+                  placeholder="<%= t('http.curlPh') %>" spellcheck="false"></textarea>
+        <div class="mt-2 d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="hc-parse">
+            <i class="ti ti-wand me-1"></i><%= t('http.parseBtn') %>
+          </button>
+          <span class="small text-secondary" id="hc-parse-hint"><%= t('http.curlHint') %></span>
+        </div>
+      </div>
+    </div>
+
+    <%# 请求表单 %>
+    <div class="card mb-3">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+          <div class="col-auto">
+            <select id="hc-method" class="form-select font-monospace fw-bold">
+              <option>GET</option><option>POST</option><option>PUT</option>
+              <option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+            </select>
+          </div>
+          <div class="col">
+            <input type="text" id="hc-url" class="form-control font-monospace"
+                   placeholder="<%= t('http.urlPh') %>" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-primary" id="hc-send">
+              <i class="ti ti-send me-1"></i><%= t('http.send') %>
+            </button>
+          </div>
+        </div>
+
+        <ul class="nav nav-tabs card-header-tabs mt-3" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#hc-tab-headers"><%= t('http.tabHeaders') %></button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hc-tab-params"><%= t('http.tabParams') %></button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hc-tab-body"><%= t('http.tabBody') %></button></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane show active pt-2" id="hc-tab-headers">
+            <textarea id="hc-headers" class="form-control font-monospace" rows="5"
+                      placeholder="<%= t('http.headersPh') %>" spellcheck="false"></textarea>
+          </div>
+          <div class="tab-pane pt-2" id="hc-tab-params">
+            <textarea id="hc-query" class="form-control font-monospace" rows="5"
+                      placeholder="<%= t('http.paramsPh') %>" spellcheck="false"></textarea>
+          </div>
+          <div class="tab-pane pt-2" id="hc-tab-body">
+            <textarea id="hc-body" class="form-control font-monospace" rows="7"
+                      placeholder="<%= t('http.bodyPh') %>" spellcheck="false"></textarea>
+            <div class="small text-secondary mt-1"><%= t('http.bodyHint') %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# 响应 %>
+    <div class="card">
+      <div class="card-header py-2 d-flex align-items-center gap-2">
+        <span class="fw-bold"><i class="ti ti-arrow-back-up me-1"></i><%= t('http.respTitle') %></span>
+        <span id="hc-resp-status" class="badge bg-secondary d-none"></span>
+        <span id="hc-resp-meta" class="small text-secondary"></span>
+      </div>
+      <div class="card-body" id="hc-resp-region">
+        <div class="text-secondary text-center py-4" id="hc-resp-empty"><%= t('http.respEmpty') %></div>
+        <div id="hc-resp-content" class="d-none">
+          <div class="mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#hc-resp-headers">
+              <i class="ti ti-chevron-down me-1"></i><%= t('http.respHeaders') %>
+            </button>
+          </div>
+          <div class="collapse" id="hc-resp-headers">
+            <div class="table-responsive mb-2">
+              <table class="table table-sm table-vcenter font-monospace mb-0" id="hc-resp-headers-table"></table>
+            </div>
+          </div>
+          <pre class="bg-secondary-lt rounded p-2 mb-0 font-monospace" id="hc-resp-body"
+               style="max-height:480px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var T = {
+    parseOk: '<%= t("http.parseOk") %>',
+    parseFail: '<%= t("http.parseFail") %>',
+    invalidUrl: '<%= t("http.invalidUrl") %>',
+    sending: '<%= t("http.sending") %>',
+    sendFailed: '<%= t("http.sendFailed") %>',
+    truncated: '<%= t("http.respTruncated") %>',
+    time: '<%= t("http.respTime") %>'
+  };
+  var CSRF = '<%= csrf %>';
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- curl 解析（bash 风格 tokenizer，支持单双引号与反斜杠转义）----
+  function tokenize(s) {
+    var out = [], cur = '', q = null, has = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (q === "'") { if (c === "'") q = null; else cur += c; }
+      else if (q === '"') {
+        if (c === '"') q = null;
+        else if (c === '\\' && i + 1 < s.length && '"\\$`'.indexOf(s.charAt(i + 1)) >= 0) cur += s.charAt(++i);
+        else cur += c;
+      }
+      else if (c === "'" || c === '"') { q = c; has = true; }
+      else if (c === '\\' && i + 1 < s.length && (s.charAt(i + 1) === '\n' || s.charAt(i + 1) === '\r')) { i++; } // bash 续行符：\+换行 丢弃
+      else if (c === '\\' && i + 1 < s.length) { cur += s.charAt(++i); has = true; }
+      else if (/\s/.test(c)) { if (cur || has) { out.push(cur); cur = ''; has = false; } }
+      else cur += c;
+    }
+    if (cur || has) out.push(cur);
+    return out;
+  }
+
+  function splitHeader(h) {
+    var idx = h.indexOf(':');
+    return idx > 0 ? [h.slice(0, idx).trim(), h.slice(idx + 1).trim()] : null;
+  }
+
+  function parseCurl(raw) {
+    var text = String(raw || '').trim().replace(/^curl\s+/i, '');
+    var args = tokenize(text);
+    var method = '', url = '', headers = [], bodyParts = [], auth = null;
+    var FLAGS_WITH_ARG = { '-X': 1, '--request': 1, '-H': 1, '--header': 1, '-d': 1, '--data': 1, '--data-raw': 1, '--data-binary': 1, '--data-ascii': 1, '--data-urlencode': 1, '--url': 1, '-u': 1, '--user': 1 };
+    var DATA_FLAGS = { '-d': 1, '--data': 1, '--data-raw': 1, '--data-binary': 1, '--data-ascii': 1, '--data-urlencode': 1 };
+    for (var i = 0; i < args.length; i++) {
+      var a = args[i], val = null;
+      if (FLAGS_WITH_ARG[a]) { val = args[++i]; }
+      else if (/^-[XHdu]/.test(a) && a.length > 2) { val = a.slice(2); a = a.slice(0, 2); }
+      else if (a.indexOf('--') === 0) {
+        var eq = a.indexOf('=');
+        if (eq > 0) { var name = a.slice(0, eq); if (FLAGS_WITH_ARG[name]) { val = a.slice(eq + 1); a = name; } }
+      }
+      if (val === null || val === undefined) {
+        if (a.charAt(0) !== '-' && !url) url = a; // 首个裸 token 视为 URL
+        continue;
+      }
+      if (a === '-X' || a === '--request') method = val.toUpperCase();
+      else if (a === '-H' || a === '--header') { var h = splitHeader(val); if (h) headers.push(h); }
+      else if (DATA_FLAGS[a]) bodyParts.push(val);
+      else if (a === '--url') url = val;
+      else if (a === '-u' || a === '--user') auth = val;
+    }
+    if (auth) headers.push(['Authorization', 'Basic ' + btoa(auth)]);
+    var body = bodyParts.join('&');
+    if (!method && body) method = 'POST'; // curl -d 缺省行为
+    return { method: method || 'GET', url: url, headers: headers, body: body };
+  }
+
+  $('hc-parse').addEventListener('click', function () {
+    var hint = $('hc-parse-hint');
+    try {
+      var c = parseCurl($('hc-curl').value);
+      if (!c.url) throw new Error('no url');
+      $('hc-method').value = c.method;
+      var qText = '';
+      var qIdx = c.url.indexOf('?');
+      if (qIdx > -1) {
+        qText = c.url.slice(qIdx + 1).split('&').map(function (p) { return p; }).join('\n');
+        c.url = c.url.slice(0, qIdx);
+      }
+      $('hc-url').value = c.url;
+      $('hc-headers').value = c.headers.map(function (h) { return h[0] + ': ' + h[1]; }).join('\n');
+      $('hc-query').value = qText;
+      $('hc-body').value = c.body;
+      hint.textContent = T.parseOk;
+      hint.className = 'small text-success';
+    } catch (e) {
+      hint.textContent = T.parseFail;
+      hint.className = 'small text-danger';
+    }
+  });
+
+  // ---- 发送 ----
+  function setStatusBadge(status) {
+    var el = $('hc-resp-status');
+    el.classList.remove('d-none', 'bg-success', 'bg-danger', 'bg-warning', 'bg-secondary');
+    var cls = status >= 200 && status < 300 ? 'bg-success'
+      : (status >= 400 ? 'bg-danger' : (status >= 300 ? 'bg-warning' : 'bg-secondary'));
+    el.classList.add(cls);
+    el.textContent = status + ' ' + (window.__hcStatusText || '');
+  }
+
+  $('hc-send').addEventListener('click', function () {
+    var url = $('hc-url').value.trim();
+    if (!url) {
+      var hint = $('hc-parse-hint');
+      hint.textContent = T.invalidUrl;
+      hint.className = 'small text-danger';
+      return;
+    }
+    var btn = $('hc-send');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader-2 me-1"></i>' + T.sending;
+    $('hc-resp-empty').classList.add('d-none');
+
+    fetch('/http/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({
+        method: $('hc-method').value,
+        url: url,
+        headers: $('hc-headers').value,
+        query: $('hc-query').value,
+        body: $('hc-body').value
+      })
+    }).then(function (r) {
+      return r.json().then(function (j) { return { httpOk: r.ok, json: j }; });
+    }).then(function (res) {
+      var j = res.json;
+      if (!res.httpOk) throw new Error(j && j.error || T.sendFailed);
+      window.__hcStatusText = j.statusText || '';
+      setStatusBadge(j.status);
+      $('hc-resp-meta').textContent = T.time.replace('{n}', String(j.durationMs)) + (j.truncated ? ' · ' + T.truncated : '');
+      var ht = $('hc-resp-headers-table');
+      ht.innerHTML = '<tbody>' + j.headers.map(function (h) {
+        return '<tr><td class="text-secondary" style="width:30%">' + esc(h[0]) + '</td><td>' + esc(h[1]) + '</td></tr>';
+      }).join('') + '</tbody>';
+      var bodyEl = $('hc-resp-body');
+      var text = j.body || '';
+      try { text = JSON.stringify(JSON.parse(text), null, 2); } catch (e) { /* 非 JSON 原样展示 */ }
+      bodyEl.textContent = j.ok ? text : (T.sendFailed + (j.error || ''));
+      $('hc-resp-content').classList.remove('d-none');
+    }).catch(function (e) {
+      window.__hcStatusText = '';
+      setStatusBadge(0);
+      $('hc-resp-meta').textContent = '';
+      $('hc-resp-headers-table').innerHTML = '';
+      $('hc-resp-body').textContent = String(e && e.message || e);
+      $('hc-resp-content').classList.remove('d-none');
+    }).finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-send me-1"></i>' + '<%= t("http.send") %>';
+    });
+  });
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
+
+<%- include('../layouts/layout-bottom') %>
