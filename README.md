@@ -75,6 +75,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行，diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号仅可查看 |
 | 防火墙 `/firewall` | Windows 防火墙管理：Domain/Private/Public 三配置文件状态卡（启用状态 + 默认入站/出站动作，禁用前红色警示确认）；全量规则列表（PortFilter 批量映射免逐条查询）、方向/动作/配置文件/状态四维筛选 + 名称/组/端口/描述搜索；admin 可启用/禁用规则、新建规则（方向/动作/协议/端口/配置文件/描述，端口支持逗号多段与范围）与删除规则（确认框），全部操作审计，动态值 env 注入不落日志，只读账号仅可查看 |
 | 重启/关机 `/power` | 本机与远程重启/关机管理：本机延迟计划（shutdown.exe，0~600 秒延迟窗口内可随时取消，双重确认框含面板自身中断红色警示）；远程操作（IP + 账号密码 + 理由），DCOM/WMI 通道零预装（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入系统事件日志 1074 并在页面展示近 24h 关机/重启事件，全部操作审计、密码 env 注入不落日志，admin 专属，只读账号仅可查看事件 |
+| 临时授权 `/tpam` | Self-TPAM 临时特权账号（release 场景）：admin 输入 CR/IN 编号 + Staff ID 一键生成 `<StaffID>_tpam` 临时账号（admin 权限，同名重新生成即续期换密码），有效期 4 小时；随机密码仅在生成时展示一次（落盘仅 bcrypt 哈希），支持一键复制；生效账号列表（创建/到期时间 + 剩余时长）与吊销（确认框）；过期或吊销后立即无法登录，已登录会话在下一次请求时被强制登出，生成/吊销均审计 |
 | 设置 `/settings` | 快速访问目录配置（即时生效） |
 | 部署向导 `/setup` | NSSM 服务安装说明 + 本机环境检测（Node/NSSM/服务状态）、Windows 防火墙配置文件与端口放行规则检测、防火墙放行命令与 GCP GCE MIG VPC 防火墙 tag 配置指引，命令一键复制 |
 | 简易部署 `/deploy` | 上传 zip 压缩包原地更新程序：预检（结构白名单校验 + 自动剥离 node_modules + 拒绝 data/logs/backups/.env）、确认后自动备份当前版本到 `backups/`（保留最近 5 份）再覆盖解压；重启后若首次启动失败，启动门卫自动回滚到部署前版本；备份列表一键手动回滚（确认框 + 审计）；页面明示压缩包规范与「先在 low environment 多次验证再上 production」风险提示，admin 专属 |
@@ -85,6 +86,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
+
+- **2026-11-08**：新增 Self-TPAM 临时授权 `/tpam`（release 场景临时特权账号）：admin 输入 CR/IN 编号 + Staff ID，生成 `<StaffID>_tpam` 临时账号（admin 权限，用于 release 窗口期授权），有效期 4 小时；随机 16 位密码（去除易混淆字符）仅在生成响应中展示一次，落盘仅存 bcrypt 哈希（`data/tpam.json`），支持一键复制；生效账号列表（创建/到期/剩余时长）+ 吊销确认框；账号过期或吊销后立即无法登录，已登录会话在认证钩子中强制登出；对同一 Staff ID 重新生成即续期（换新密码、TTL 重置）；生成/吊销均审计（不记密码），只读账号无此入口
 
 - **2026-11-02**：新增环境变量 `/env`、证书管理 `/certs`、SMB 共享 `/smb`、防火墙 `/firewall`、重启/关机 `/power` 五大系统管理模块（写操作全部确认框预览命令 + 逐条审计，动态值 env 注入不落日志）：
   - **环境变量 `/env`**：Machine / User 双作用域增删改；30 个关键系统变量禁删（UI 置灰 + 后端 400 双拦截）；敏感值打码 + 按需 reveal（admin + 审计）；作用域筛选 + 已有变量作用域锁定；Path 等分号分隔值支持 Windows 风格列表编辑器；全员可用的只读「查看」弹窗防误触编辑

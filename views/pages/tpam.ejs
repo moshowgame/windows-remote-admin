@@ -1,0 +1,161 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-key me-2"></i><%= t('tpam.title') %></h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      <%= t('tpam.subtitle') %>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-info mb-3">
+  <i class="ti ti-info-circle me-1"></i><%= t('tpam.info') %>
+</div>
+
+<% if (isAdmin) { %>
+<div class="card mb-3">
+  <div class="card-header py-2">
+    <h3 class="card-title"><i class="ti ti-user-plus me-2"></i><%= t('tpam.genTitle') %></h3>
+  </div>
+  <div class="card-body pb-1">
+    <div class="row g-2 align-items-end mb-2">
+      <div class="col-auto">
+        <label class="form-label small mb-1" for="tpam-staff"><%= t('tpam.staffId') %></label>
+        <input id="tpam-staff" class="form-control form-control-sm" type="text" maxlength="32"
+               placeholder="<%= t('tpam.staffIdPh') %>" style="max-width:220px;" autocomplete="off">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1" for="tpam-crin"><%= t('tpam.crIn') %></label>
+        <input id="tpam-crin" class="form-control form-control-sm" type="text" maxlength="40"
+               placeholder="<%= t('tpam.crInPh') %>" style="max-width:260px;" autocomplete="off">
+      </div>
+      <div class="col-auto">
+        <button id="tpam-gen" class="btn btn-sm btn-primary" type="button">
+          <i class="ti ti-plus me-1"></i><%= t('tpam.generate') %>
+        </button>
+      </div>
+    </div>
+    <div class="text-secondary small mb-2"><i class="ti ti-clock me-1"></i><%= t('tpam.genHint') %></div>
+  </div>
+</div>
+<% } %>
+
+<div id="tpam-panel">
+  <%- include('../partials/tpam-list', { items: items, isAdmin: isAdmin, cred: cred }) %>
+</div>
+
+<% if (isAdmin) { %>
+<!-- 吊销确认 -->
+<div class="modal" id="tpam-revoke-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger"><i class="ti ti-ban me-1"></i><%= t('tpam.revokeTitle') %></h5>
+        <button type="button" class="btn-close" id="tpam-revoke-x"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0 small"><%= t('tpam.revokeMsg') %> <span class="font-monospace text-danger" id="tpam-revoke-user"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" id="tpam-revoke-cancel"><%= t('common.cancel') %></button>
+        <button type="button" class="btn btn-sm btn-danger" id="tpam-revoke-confirm"><%= t('tpam.revoke') %></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var CSRF = '<%= csrf %>';
+    var T = {
+      invalidStaff: '<%= t("tpam.invalidStaff") %>',
+      invalidCrIn: '<%= t("tpam.invalidCrIn") %>',
+      doneGenerate: '<%= t("tpam.doneGenerate") %>',
+      revokeOk: '<%= t("tpam.revokeOk") %>',
+      copied: '<%= t("tpam.copied") %>',
+      actionFailed: '<%= t("tpam.actionFailed") %>'
+    };
+
+    function toastMsg(msg, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } }));
+    }
+
+    function swapPanel(html) { document.getElementById('tpam-panel').innerHTML = html; }
+
+    // fetch POST → 解析 HX-Trigger toast → innerHTML 交换 partial
+    function post(url, params) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF },
+        body: new URLSearchParams(params)
+      }).then(function (r) {
+        var hx = r.headers.get('HX-Trigger');
+        if (hx) {
+          try {
+            var ev = JSON.parse(hx).toast;
+            if (ev && ev.message) {
+              toastMsg(ev.message.indexOf('enc:') === 0 ? decodeURIComponent(ev.message.slice(4)) : ev.message, ev.type);
+            }
+          } catch (e) { /* 忽略 */ }
+        }
+        return r.text().then(function (html) { return { ok: r.ok, html: html }; });
+      });
+    }
+
+    function openModal(el) { el.style.display = 'block'; el.classList.add('show'); document.body.classList.add('modal-open'); }
+    function closeModal(el) {
+      el.style.display = 'none'; el.classList.remove('show'); document.body.classList.remove('modal-open');
+      var bd = document.querySelector('.modal-backdrop'); if (bd) bd.remove();
+    }
+
+    // 生成（凭据仅展示一次，随 partial 返回）
+    document.getElementById('tpam-gen').addEventListener('click', function () {
+      var staff = document.getElementById('tpam-staff').value.trim();
+      var crin = document.getElementById('tpam-crin').value.trim();
+      if (!staff) { toastMsg(T.invalidStaff, 'error'); return; }
+      if (!crin) { toastMsg(T.invalidCrIn, 'error'); return; }
+      var btn = this;
+      btn.disabled = true;
+      post('/tpam/generate', { staffId: staff, crIn: crin })
+        .then(function (res) {
+          btn.disabled = false;
+          if (res.ok) { swapPanel(res.html); document.getElementById('tpam-staff').value = ''; document.getElementById('tpam-crin').value = ''; }
+          else { toastMsg(res.html.slice(0, 150) || T.actionFailed, 'error'); }
+        })
+        .catch(function () { btn.disabled = false; toastMsg(T.actionFailed, 'error'); });
+    });
+
+    // 吊销（事件委托，partial 刷新后仍有效）+ 复制凭据
+    var revokeModal = document.getElementById('tpam-revoke-modal');
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('#tpam-revoke-x') || e.target.closest('#tpam-revoke-cancel')) { closeModal(revokeModal); return; }
+      var b = e.target.closest('.tpam-revoke');
+      if (b) {
+        revokeModal.setAttribute('data-user', b.getAttribute('data-user'));
+        document.getElementById('tpam-revoke-user').textContent = b.getAttribute('data-user');
+        openModal(revokeModal);
+        return;
+      }
+      var cp = e.target.closest('.tpam-copy');
+      if (cp && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cp.getAttribute('data-value') || '')
+          .then(function () { toastMsg(T.copied, 'success'); })
+          .catch(function () { /* 忽略 */ });
+      }
+    });
+    document.getElementById('tpam-revoke-confirm').addEventListener('click', function () {
+      var user = revokeModal.getAttribute('data-user');
+      closeModal(revokeModal);
+      post('/tpam/revoke', { username: user })
+        .then(function (res) { if (res.ok) swapPanel(res.html); else toastMsg(res.html.slice(0, 150) || T.actionFailed, 'error'); })
+        .catch(function () { toastMsg(T.actionFailed, 'error'); });
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(revokeModal); });
+  });
+</script>
+<% } %>
+
+<%- include('../layouts/layout-bottom') %>

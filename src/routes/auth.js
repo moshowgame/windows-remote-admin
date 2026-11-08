@@ -4,6 +4,7 @@
 // 登录成功/失败均返回 200（HTMX 用 HX-Redirect / 错误框片段），整页表单用 303 重定向
 const path = require('node:path');
 const entitlement = require('../services/entitlement');
+const tpam = require('../services/tpam');
 const audit = require('../hooks/audit');
 
 const dataDir = path.join(__dirname, '../../data');
@@ -35,13 +36,18 @@ module.exports = async function authRoutes(app) {
     if (!username || !password) {
       return loginFail(request, reply, '请输入用户名和密码');
     }
-    if (!entitlement.verify(dataDir, username, password)) {
+    // self-TPAM 临时账号（*_tpam）：走 tpam 校验（4h 有效期，过期即登录被拒）
+    if (/^[\w-]*_tpam$/.test(username)) {
+      if (!tpam.verify(dataDir, username, password)) {
+        return loginFail(request, reply, '临时账号无效或已过期（有效期 4 小时），请联系管理员重新获取');
+      }
+    } else if (!entitlement.verify(dataDir, username, password)) {
       return loginFail(request, reply, '用户名或密码错误');
     }
 
-    // 写入会话（role：admin / readonly，只读账号禁用全部写操作）
+    // 写入会话（role：admin / readonly，只读账号禁用全部写操作；TPAM 临时账号恒为 admin）
     request.session.set('username', username);
-    request.session.set('role', entitlement.roleOf(dataDir, username) || 'admin');
+    request.session.set('role', /^[\w-]*_tpam$/.test(username) ? 'admin' : (entitlement.roleOf(dataDir, username) || 'admin'));
     request.session.set('purpose', purpose);
     request.session.set('loginAt', Date.now());
     request.session.set('ip', request.ip);

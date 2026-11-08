@@ -7,6 +7,10 @@
 // - 未授权访问：仅写类 / 下载类请求记入审计；纯查看（页面浏览 / 目录浏览 / 日志查看）不写
 //   审计日志，避免噪音（访问日志仍全量记录每次请求，可追溯性不受影响）
 const audit = require('./audit');
+const tpam = require('../services/tpam');
+const path = require('node:path');
+
+const dataDir = path.join(__dirname, '../../data');
 
 // 安全方法（GET/HEAD/OPTIONS）默认视为纯查看，不写审计；下载路由除外（数据外带面，保留审计）
 const DOWNLOAD_RE = /^\/files\/download/;
@@ -27,7 +31,19 @@ module.exports = async function authenticate(request, reply) {
   if (request.raw.url && request.raw.url.startsWith('/static/')) return;
 
   const username = request.session && request.session.get('username');
-  if (username) return;
+  if (username) {
+    // self-TPAM 临时账号：4h 有效期，过期会话强制登出（读盘惰性校验，文件极小）
+    if (/^[\w-]*_tpam$/.test(username) && !tpam.sessionAlive(dataDir, username)) {
+      request.session.delete();
+      audit(request, 'TPAM 会话过期强制登出', { targetUser: username, url: request.raw.url });
+      if (request.headers['hx-request']) {
+        reply.code(401).header('HX-Redirect', '/login');
+        return reply.send('');
+      }
+      return reply.redirect('/login', 302);
+    }
+    return;
+  }
 
   if (shouldAuditUnauthorized(request)) {
     audit(request, '未授权拦截', { url: request.raw.url });
