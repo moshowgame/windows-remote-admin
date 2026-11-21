@@ -61,7 +61,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 |------|------|
 | 系统概览 `/dashboard` | OS / CPU / 内存 / 磁盘 / 运行时间 / 进程 Top10，自动轮询刷新 |
 | PowerShell 控制台 `/console` | 连续会话（cd / 变量跨命令保留）、命令自动补全（Tab 接受 + ↑↓ 切换）、命令历史（↑↓ 前缀搜索 + 历史面板回填）、超时保护、执行耗时显示，终端 : 任务面板 7:3 布局、高度可拖拽调节（双击恢复自适应）、字号随视口缩放（34" 带鱼屏 ~ 15" 笔记本）；后台长任务（开关内嵌终端卡，勾选后「执行」即提交；SSE 实时输出推送、超时预算 10 分钟~24 小时、脚本模式 .ps1、随时终止） |
-| 文件管理 `/files` | 目录浏览、多选、上传（带进度）、下载/打包下载、zip 压缩/解压、新建/重命名/删除、类型感知预览（文本分页/图片/zip 条目/二进制）、收藏夹 |
+| 文件管理 `/files` | 目录浏览（本地盘 + **局域网 UNC 共享**如 `\\nas\share\data`）、多选、上传（带进度，可选**覆盖同名文件**，不勾选时自动改名 `name_时间戳.ext` 保留原文件）、下载/打包下载、zip 压缩/解压、新建/重命名/删除、类型感知预览（文本分页/图片/zip 条目/二进制）、收藏夹；行操作下拉菜单智能防裁剪（首行/末行菜单自动翻转到可视区） |
 | 文本编辑器 `/editor` | 在线编辑保存、行号/行列状态、Ctrl+S 保存、自动 `.bak` 时间戳备份 |
 | 日志监控 `/logs` | 通配符过滤、关键词高亮、SSE 实时 tail、自动跟踪新文件 |
 | 服务管理 `/services` | 服务列表/搜索、单服务与批量启停/重启/禁用（复选框多选，单批上限 20）、启动类型切换，**内置 NSSM 服务注册**（Node.js / Java / PowerShell / 自由模板，可视化填表 + 命令预览，一键把任意程序注册为系统服务并托管自启/重启/日志轮转）与卸载（30+ 受保护系统服务黑名单拦截），全部操作弹确认框（预览将执行的 PowerShell 命令）并逐条审计，只读账号仅可查看 |
@@ -73,7 +73,7 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 本地用户 `/users` | 本地账户列表（启用/锁定状态、上次登录、密码最后设置），admin 可解锁（`Unlock-LocalUser`）、启用已禁用账户（Guest 禁止启用，UI 隐藏 + 后端 403）、重置密码（`net user`，密码 env 注入不落日志），全部操作确认框 + 命令预览（密码打码）+ 独立审计，只读账号仅可查看 |
 | 环境变量 `/env` | Machine / User 作用域环境变量管理：列表、搜索、新增/编辑/删除（`SetEnvironmentVariable`，值 env 注入不落日志）；全员可用的「查看」只读弹窗（避免误触编辑，只读账号仅此操作）；Path 等分号分隔值支持 Windows 风格列表编辑器（拆分行编辑后一键回写）；30 个系统关键变量（Path/ComSpec/OS 等）禁止删除（UI 置灰 + 后端 400 双重拦截）；敏感变量（含 pass/token/key 等）值自动打码，查看走 `/env/reveal`（admin + 审计），编辑打开时按需回填 |
 | 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
-| SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行，diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号仅可查看 |
+| SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；**NTFS 权限联动**：共享列表每行可查看底层目录的 NTFS ACL（所有者/账户/允许或拒绝/权限/是否继承，NTFS 层 Everyone 暴露红色标记），新建共享与权限变更自动镜像到 NTFS ACL（icacls：Read→RX、Change→Modify、Full→FullControl，继承到子目录/文件）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行（**Everyone 例外可删除**），diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号可查看（含 NTFS 权限） |
 | 防火墙 `/firewall` | Windows 防火墙管理：Domain/Private/Public 三配置文件状态卡（启用状态 + 默认入站/出站动作，禁用前红色警示确认）；全量规则列表（PortFilter 批量映射免逐条查询）、方向/动作/配置文件/状态四维筛选 + 名称/组/端口/描述搜索；admin 可启用/禁用规则、新建规则（方向/动作/协议/端口/配置文件/描述，端口支持逗号多段与范围）与删除规则（确认框），全部操作审计，动态值 env 注入不落日志，只读账号仅可查看 |
 | 重启/关机 `/power` | 本机与远程重启/关机管理：本机延迟计划（shutdown.exe，0~600 秒延迟窗口内可随时取消，双重确认框含面板自身中断红色警示）；远程操作（IP + 账号密码 + 理由），DCOM/WMI 通道零预装（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入系统事件日志 1074 并在页面展示近 24h 关机/重启事件，全部操作审计、密码 env 注入不落日志，admin 专属，只读账号仅可查看事件 |
 | 临时授权 `/tpam` | Self-TPAM 临时特权账号（release 场景）：admin 输入 CR/IN 编号 + Staff ID 一键生成 `<StaffID>_tpam` 临时账号（admin 权限，同名重新生成即续期换密码），有效期 4 小时；随机密码仅在生成时展示一次（落盘仅 bcrypt 哈希），支持一键复制；生效账号列表（创建/到期时间 + 剩余时长）与吊销（确认框）；过期或吊销后立即无法登录，已登录会话在下一次请求时被强制登出，生成/吊销均审计 |
@@ -88,6 +88,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
+
+- **2026-11-21**：文件管理 / SMB 共享四项实用性优化：① 上传支持**覆盖同名文件**（勾选后强制写入直接覆盖，结果逐条提示「已覆盖」；不勾选保持旧行为自动改名 `name_时间戳.ext`）；② 文件浏览器支持**局域网 UNC 共享路径**（`\\nas\share\data` 直达浏览，`pathWhitelist` 白名单兼容 UNC 条目，设备路径 `\\.\` `\\?\` 与裸服务器名仍拒绝）；③ SMB 共享 **NTFS 权限联动**——共享列表每行可查看底层目录 NTFS ACL（所有者/账户/允许或拒绝/权限/继承，NTFS 层 Everyone 暴露红色角标），新建共享与权限变更自动镜像到 NTFS ACL（icacls，失败不回滚、警告提示），**Everyone 可删除**（Full 锁定行例外放开，前端解锁 + 服务端不再强制回填）；④ 全局修复行操作下拉菜单被滚动容器裁剪问题（文件少的目录首行 / 文件多的目录末行菜单自动翻转到视口内，表格类页面统一受益）
 
 - **2026-11-08**：新增企业认证（LDAP / AD）：`auth.mode` 三模式（**local** 默认本地 entitlement.csv / **ldap** 企业目录 / **both** 登录页提供「本地账号 / LDAP」方式选择器）；AD 用 PrincipalContext `ValidateCredentials`，通用 LDAP 用 LdapConnection + bindTemplate（如 `CORP\{username}` 或 `uid={username},ou=people,dc=corp`），支持 ldaps；登录凭 Staff ID，角色映射读 `data/auth-map.csv`（staffid,role 两列 + # 注释，每次登录读盘改完即生效）或 AD 组映射 `auth.ldap.groupRoleMap`，**staffid 未映射默认拒绝登录**（零信任：不会因目录里有账号就能进）；错误码精细化：49 凭据错直接拒绝、81 服务不可达才可按 `allowLocalFallback` 回退本地账号（审计记「LDAP 回退登录」），密码仅经 spawn 环境变量注入不落命令串与日志；LDAP 组查询经 RFC 4515 过滤器转义防注入；TPAM 临时账号走本地认证不受影响（both 模式登录页选「本地」即可）
 
@@ -221,9 +223,10 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 
 ### 文件管理 `/files`
 
-- **浏览**：面包屑导航 + 路径栏直达；表头可按 名称 / 大小 / 修改时间 排序
+- **浏览**：面包屑导航 + 路径栏直达；表头可按 名称 / 大小 / 修改时间 排序；**支持局域网共享 UNC 路径**（路径栏直接输入 `\\nas\share\data` 即可浏览，白名单 `pathWhitelist` 同样可用 UNC 条目收敛范围）
 - **多选**：支持跨目录勾选（切换目录不丢选择），批量 压缩 / 打包下载
-- **上传**：单文件上限 `uploadMaxMb`（默认 100MB）、单次最多 20 个文件，实时进度条
+- **上传**：单文件上限 `uploadMaxMb`（默认 100MB）、单次最多 20 个文件，实时进度条；同名文件默认自动改名 `name_时间戳.ext` 保存（原文件不动），勾选「覆盖同名文件」则强制写入直接覆盖，结果逐条提示「已覆盖 / 另存为」
+- **行操作下拉**：菜单被滚动容器裁剪时自动翻转到视口内（首行 / 末行均可完整可见）
 - **预览**：类型感知 —— 文本分页（每页 `previewPageLines` 行）、图片、zip 条目列表、二进制仅元数据；文本 >10MB、其他 >50MB 在服务端直接拒绝并 toast 提示
 - **压缩 / 解压**：zip 打包与解压受 `extractMaxMb` / `extractMaxFiles` 上限约束，解压强制 Zip Slip 路径校验
 - **收藏与快速访问**：任意目录可收藏；侧栏"快速访问"由设置页配置，"最近访问"自动记录跳转足迹
@@ -355,8 +358,10 @@ LocalMachine 计算机证书存储区浏览与导出（仅 LocalMachine，不涉
 SMB 服务端（LanmanServer）视角的共享管理：谁连进来、开了哪些文件、共享了哪些目录。
 
 - **三 Tab 浏览**（全员可看，刷新 / 关键字搜索）：共享目录（名称 / 本地路径 / 描述 / 活动连接数>0 橙色 / 访问权限徽章组，Full 红 / Change 橙 / Read 绿）；客户端会话（计算机 / 用户 / 连接数 / 空闲 / 接入时间）；打开的文件（路径 / 打开者 / 打开数 / 锁定数>0 红色）
+- **NTFS 权限查看**（全员可看，只读信息）：共享列表每行 NTFS 列盾牌按钮打开详情弹窗——所有者、全部 ACL 条目（账户 / 允许或拒绝 / 权限 / 是否继承，显式条目橙色标注）；NTFS 层 Everyone 暴露在行内显示红色 `!` 角标
+- **NTFS 权限联动**：新建共享与权限变更（revoke / grant）自动同步镜像到底层目录的 NTFS ACL（`icacls`：Read→ReadAndExecute、Change→Modify、Full→FullControl，`(OI)(CI)` 继承到子目录与文件；账户 env 注入）；NTFS 侧失败不回滚共享权限，以警告 Toast 提示并写入审计
 - **新建共享**（admin + 审计）：分组权限行编辑器——账户名 datalist 预置常用组（Everyone / Administrators / Authenticated Users 等）且支持自由输入 `DOMAIN\user`，级别 Read / Change / Full；Full 行默认锁定（防误降权），新建默认预置 `Everyone=Read` + `Administrators=Full`；映射为 `New-SmbShare -ReadAccess/-ChangeAccess/-FullAccess`，共享名 / 本地路径（盘符开头、拒 UNC）白名单校验
-- **权限编辑**（admin + 审计，「重新共享」）：预填该共享当前 `Get-SmbShareAccess` 全部条目，保存时与服务端现状做 diff——移除 = `Revoke-SmbShareAccess`、新增/改级别 = `Grant-SmbShareAccess`（改级别自动先收后授），**不中断现有连接**；既有 Full 权限服务端强制保留兜底
+- **权限编辑**（admin + 审计，「重新共享」）：预填该共享当前 `Get-SmbShareAccess` 全部条目，保存时与服务端现状做 diff——移除 = `Revoke-SmbShareAccess`、新增/改级别 = `Grant-SmbShareAccess`（改级别自动先收后授），**不中断现有连接**；既有 Full 权限服务端强制保留兜底（**Everyone 例外：允许删除**，安全基线 Everyone 暴露应可一键移除，前端解锁删除按钮 + 服务端不强制回填）
 - **取消共享**（admin + 审计）：确认框显示命令与本地路径，`CurrentUsers > 0` 时红色警告仍有用户连接；系统管理共享（`ADMIN$`/`C$`/`IPC$`/`PRINT$`/SYSVOL/NETLOGON 等 `$` 结尾隐藏共享）UI 置灰 + 后端 400 双重拦截
 - **断开会话 / 关闭文件**（admin + 审计）：确认框预览受影响客户端用户 / 文件路径与 `Close-SmbSession` / `Close-SmbOpenFile` 命令
 - 动态值（共享名 / 路径 / 账户列表 / FileId / SessionId）全部 spawn env 注入；Server 服务未运行时列表降级为友好提示不 500；multipart 表单字段手动流式收集（`request.parts()`）
@@ -444,7 +449,7 @@ windows-remote-admin/
 | 登录防爆破 | 登录接口按 IP 限流（5 次/分钟），超出返回 429 语义化错误页 |
 | CSRF 防护 | 全部写请求校验 CSRF Token（`@fastify/csrf-protection`），HTMX 请求统一携带 `X-CSRF-Token` 头 |
 | 命令注入 | 动态值一律经 spawn env 注入 PowerShell（`$env:WRA_*` 引用），从不拼接进命令串；服务名/任务名/PID 等另加白名单正则校验 |
-| 路径穿越 | `resolveUserPath` 加固：长度上限 1000、禁控制字符 / UNC 路径 / NTFS ADS（第二个冒号）/ Windows 非法字符 / 保留设备名；可叠加 `pathWhitelist` 白名单 |
+| 路径穿越 | `resolveUserPath` 加固：长度上限 1000、禁控制字符 / 设备路径（`\\.\`、`\\?\`）/ NTFS ADS（第二个冒号）/ Windows 非法字符 / 保留设备名；UNC 局域网共享路径已支持（必须带共享名，`\\server\share` 形式，设备路径与裸服务器名拒绝），可叠加 `pathWhitelist` 白名单（UNC 条目同样生效） |
 | 恶意压缩包 | zip 解压强制 Zip Slip 路径校验 + 总解压量 / 条目数上限；长任务按用户串行队列防资源耗尽 |
 | 权限分级 | readonly 角色写操作前后端双重拦截（UI 隐藏 + 服务端 403）；系统关键进程（PID 0/4/8）与内置 Guest 账户禁止操作 |
 | 审计追溯 | 仅非只读行为写审计日志（上传 / 下载 / 保存 / 删除 / 各类管理操作，操作人 / IP / 参数 / 结果），敏感值（密码等）打码不落日志；目录浏览、日志查看等纯查看操作与未登录的页面访问不写审计（访问日志仍全量记录），避免审计噪音 |

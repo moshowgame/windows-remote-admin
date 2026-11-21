@@ -48,10 +48,14 @@ function resolveUserPath(input, fallbackDir) {
   if ((p.startsWith('"') && p.endsWith('"')) || (p.startsWith("'") && p.endsWith("'"))) {
     p = p.slice(1, -1).trim();
   }
-  // 注入/命令行攻击加固：长度、控制字符、UNC 网络路径、Windows 非法字符
+  // 注入/命令行攻击加固：长度、控制字符、设备路径、Windows 非法字符
+  // （局域网共享 UNC 路径 \\server\share\... 已支持：白名单机制同样适用于 UNC 形式的条目）
   if (p.length > 1000) throw new PathError('路径过长');
   if (/[\x00-\x1f\x7f]/.test(p)) throw new PathError('路径包含非法控制字符');
-  if (p.startsWith('\\\\') || p.startsWith('//')) throw new PathError('不支持网络（UNC）路径，仅允许本地目录');
+  // 拒绝设备路径（\\.\pipe\、\\?\C\...）与纯服务器形式（必须带共享名）
+  if (/^(\\\\|\/\/)[.?]\//i.test(p) || /\\\\[.?]\\/i.test(p) || /\/\/[?.]\//i.test(p)) {
+    throw new PathError('不支持设备路径（\\\\.\\、\\\\?\\）');
+  }
   // <>|*?" 为 Windows 文件名非法字符（' 合法故放行，由调用方按需转义）
   if (/[<>|*?"]/.test(p)) throw new PathError('路径包含 Windows 非法字符 < > | * ? "');
   let resolved;
@@ -61,7 +65,14 @@ function resolveUserPath(input, fallbackDir) {
     throw new PathError('路径格式不正确');
   }
   // 盘符冒号外不允许出现第二个冒号（阻断 NTFS 备用数据流，如 file.txt:stream）
-  if (resolved.length > 2 && resolved.slice(2).includes(':')) throw new PathError('路径包含非法冒号（疑似 NTFS 数据流）');
+  // UNC（\\server\share\...）跳过前缀后再检查：共享名 C$ / D$ 本身含盘符冒号属合法
+  // UNC 判定基于原始输入：path.resolve('\\\\server') 会按盘符相对路径归一化（如 d:\server），必须在 resolve 前识别
+  const isUnc = /^\\\\|^\/\//.test(p) || resolved.startsWith('\\\\');
+  const uncRootM = isUnc ? resolved.match(/^\\\\[^\\]+\\[^\\]+/) : null;
+  if (isUnc && !resolved.startsWith('\\\\')) throw new PathError('UNC 路径格式不正确');
+  if (isUnc && !uncRootM) throw new PathError('UNC 路径必须包含共享名（\\server\\share）');
+  const restAfterRoot = uncRootM ? resolved.slice(uncRootM[0].length) : resolved.slice(2);
+  if (restAfterRoot.includes(':')) throw new PathError('路径包含非法冒号（疑似 NTFS 数据流）');
   // Windows 保留设备名（CON/NUL/COM1...）不可作为路径段
   if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..+)?$/i.test(path.basename(resolved))) {
     throw new PathError('路径包含 Windows 保留设备名');
@@ -69,7 +80,9 @@ function resolveUserPath(input, fallbackDir) {
   const list = config.pathWhitelist || [];
   if (list.length > 0) {
     const ok = list.some((root) => {
-      const r = path.resolve(root);
+      let r = path.resolve(root);
+      // UNC 根（\\nas\data）path.resolve 会补尾分隔符（\\nas\data\），归一化掉再比较
+      if (r.length > 3 && r.endsWith(path.sep)) r = r.slice(0, -1);
       const lower = resolved.toLowerCase();
       return lower === r.toLowerCase() || lower.startsWith(r.toLowerCase() + path.sep);
     });

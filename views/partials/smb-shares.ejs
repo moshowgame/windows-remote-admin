@@ -5,15 +5,16 @@
         <th style="width:14%;"><%= t('smb.shareName') %></th>
         <th style="width:24%;"><%= t('smb.sharePath') %></th>
         <th><%= t('smb.accessTitle') %></th>
+        <th class="text-center" style="width:1%;" title="<%= t('smb.ntfsTitle') %>"><i class="ti ti-shield-lock"></i></th>
         <th class="text-end" style="width:1%;"><%= t('smb.shareUsers') %></th>
         <% if (role !== 'readonly') { %><th class="text-end" style="width:1%;"></th><% } %>
       </tr>
     </thead>
     <tbody>
       <% if (listErr) { %>
-      <tr><td colspan="6" class="text-center text-warning py-4"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></td></tr>
+      <tr><td colspan="7" class="text-center text-warning py-4"><i class="ti ti-alert-triangle me-1"></i><%= listErr %></td></tr>
       <% } else if (!items.length) { %>
-      <tr><td colspan="6" class="text-center text-secondary py-4"><%= t('smb.emptyShares') %></td></tr>
+      <tr><td colspan="7" class="text-center text-secondary py-4"><%= t('smb.emptyShares') %></td></tr>
       <% } %>
       <% items.forEach(function (s) {
            var accs = String(s.access || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
@@ -34,6 +35,13 @@
           %>
           <span class="badge <%= cls %> me-1 mb-1" title="<%= isEv ? t('smb.everyoneWarn') : right %>"><% if (isEv) { %><i class="ti ti-alert-triangle me-1"></i><% } %><%= acc %><span class="fw-bold ms-1"><%= right %></span></span>
           <% }); %>
+        </td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-secondary smb-ntfs position-relative"
+                  data-path="<%= s.path %>" title="<%= t('smb.ntfsView').replace('{p}', s.path) %>">
+            <i class="ti ti-shield-lock"></i>
+            <% if (s.ntfsEveryone) { %><span class="badge bg-red badge-pill position-absolute translate-middle" style="top:.4rem;right:-.2rem;">!</span><% } %>
+          </button>
         </td>
         <td class="text-end <%= s.users > 0 ? 'text-orange fw-bold' : 'text-secondary' %>"><%= s.users %></td>
         <% if (role !== 'readonly') { %>

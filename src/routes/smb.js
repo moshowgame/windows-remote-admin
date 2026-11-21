@@ -135,12 +135,16 @@ module.exports = async function smbRoutes(app) {
     const change = access.filter((a) => a.right === 'Change').map((a) => a.account);
     const read = access.filter((a) => a.right === 'Read').map((a) => a.account);
     const r = await smb.createShare(name, sharePath, desc, read, change, full, request.t);
-    audit(request, '新建SMB共享', { name, path: sharePath, read, change, full, ok: r.ok });
+    audit(request, '新建SMB共享', { name, path: sharePath, read, change, full, ntfsWarn: r.warn || null, ok: r.ok });
     if (!r.ok) {
       reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(r.error), type: 'warning' } }));
       return renderTab(reply, request, 'shares', body.kw, r.error);
     }
-    reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(request.t('smb.shareCreated').replace('{n}', name)), type: 'success' } }));
+    // NTFS ACL 同步失败不回滚共享，以警告提示
+    const okMsg = r.warn
+      ? `${request.t('smb.shareCreated').replace('{n}', name)} · ${request.t('smb.ntfsWarn')}: ${r.warn}`
+      : request.t('smb.shareCreated').replace('{n}', name);
+    reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(okMsg), type: r.warn ? 'warning' : 'success' } }));
     return renderTab(reply, request, 'shares', body.kw, null);
   });
 
@@ -161,7 +165,7 @@ module.exports = async function smbRoutes(app) {
     return renderTab(reply, request, 'shares', body.kw, null);
   });
 
-  // 权限编辑（diff：不中断现有连接；Full 保留行由服务端按现状合并，防误降权）
+  // 权限编辑（diff：不中断现有连接；Full 保留行由服务端按现状合并防误降权，Everyone 除外允许删除）
   app.post('/smb/share/access', async (request, reply) => {
     app.assertWritable(request);
     const body = await readFields(request);
@@ -173,8 +177,9 @@ module.exports = async function smbRoutes(app) {
     const cur = shares.find((s) => s.name.toLowerCase() === name.toLowerCase());
     if (!cur) throw bad(request.t, 'smb.shareNotFound');
     const current = smb.parseAccess(cur.access);
-    // 既有 Full 权限强制保留（编辑器锁定行可能与现状漂移，服务端兜底）
-    current.filter((a) => a.right === 'Full').forEach((a) => {
+    // 既有 Full 权限强制保留（编辑器锁定行可能与现状漂移，服务端兜底）；
+    // Everyone 例外：允许移除（安全基线：Everyone 暴露应可一键删除）
+    current.filter((a) => a.right === 'Full' && !/everyone$/i.test(a.account)).forEach((a) => {
       if (!desired.some((d) => d.account.toLowerCase() === a.account.toLowerCase())) {
         desired.push({ account: a.account, right: 'Full' });
       } else {
@@ -185,14 +190,31 @@ module.exports = async function smbRoutes(app) {
     if (!revoke.length && !grant.length) {
       return renderTab(reply, request, 'shares', body.kw, null);
     }
-    const r = await smb.editAccess(name, revoke, grant, request.t);
-    audit(request, '编辑SMB共享权限', { name, revoke, grant, ok: r.ok });
+    const r = await smb.editAccess(name, revoke, grant, request.t, cur.path);
+    audit(request, '编辑SMB共享权限', { name, revoke, grant, ntfsWarn: r.warn || null, ok: r.ok });
     if (!r.ok) {
       reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(r.error), type: 'warning' } }));
       return renderTab(reply, request, 'shares', body.kw, r.error);
     }
-    reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(request.t('smb.accessUpdated').replace('{n}', name)), type: 'success' } }));
+    const okMsg = r.warn
+      ? `${request.t('smb.accessUpdated').replace('{n}', name)} · ${request.t('smb.ntfsWarn')}: ${r.warn}`
+      : request.t('smb.accessUpdated').replace('{n}', name);
+    reply.header('HX-Trigger', JSON.stringify({ toast: { message: 'enc:' + encodeURIComponent(okMsg), type: r.warn ? 'warning' : 'success' } }));
     return renderTab(reply, request, 'shares', body.kw, null);
+  });
+
+  // NTFS ACL 详情（模态；只读信息，全员可看）
+  app.get('/smb/ntfs', async (request, reply) => {
+    const sharePath = String(request.query.path || '').trim();
+    if (!smb.SHARE_PATH_RE.test(sharePath)) throw bad(request.t, 'smb.invalidPath');
+    const r = await smb.listNtfs(sharePath, request.t);
+    return reply.view('partials/smb-ntfs', {
+      path: sharePath,
+      owner: r.owner || '',
+      items: r.ok ? r.items : [],
+      err: r.ok ? null : (r.error || ''),
+      t: request.t,
+    });
   });
 
   // 断开会话

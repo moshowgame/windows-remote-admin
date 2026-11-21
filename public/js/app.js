@@ -144,5 +144,53 @@
   });
   syncThemeIcon();
 
+  // 下拉菜单防裁剪：菜单在 .table-responsive 等滚动容器（overflow 非 visible）内会被裁剪
+  // （文件少时表格矮，菜单比容器高必被裁；文件多时最后几行菜单超出容器底部被裁）
+  // 方案：shown 时检测是否被祖先裁剪，被裁则改为 position:fixed 钉在视口坐标（Escape 定位翻转/收口）
+  function isClippedByAncestor(menu) {
+    var r = menu.getBoundingClientRect();
+    var el = menu.parentElement;
+    while (el && el !== document.body) {
+      var st = getComputedStyle(el);
+      if (/(auto|scroll|hidden|clip)/.test(st.overflowY + st.overflowX)) {
+        var c = el.getBoundingClientRect();
+        if (r.bottom > c.bottom + 1 || r.top < c.top - 1 || r.right > c.right + 1 || r.left < c.left - 1) return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+  var CLIP_PROPS = ['position', 'inset', 'transform', 'margin', 'top', 'left', 'maxHeight', 'overflowY'];
+  document.addEventListener('shown.bs.dropdown', function (e) {
+    var group = e.target.closest && e.target.closest('.dropdown, .btn-group, .dropup, .dropstart, .dropend');
+    var menu = group && group.querySelector('.dropdown-menu.show');
+    if (!menu || !isClippedByAncestor(menu)) return;
+    var r = menu.getBoundingClientRect();
+    var tr = group.querySelector('[data-bs-toggle="dropdown"]').getBoundingClientRect();
+    var vh = window.innerHeight, vw = document.documentElement.clientWidth;
+    var h = r.height, w = r.width;
+    var top = tr.bottom + 2;
+    if (top + h > vh - 4) top = Math.max(4, tr.top - h - 2); // 向下放不下 → 向上翻
+    if (h > vh - 8) h = vh - 8; // 菜单比视口还高：收口 + 内部滚动
+    if (top + h > vh - 4) top = vh - 4 - h;
+    var left = /dropdown-menu-end/.test(menu.className) ? tr.right - w : tr.left; // 对齐方式保持 end/start
+    if (left < 4) left = 4;
+    if (left + w > vw - 4) left = vw - 4 - w;
+    menu.style.position = 'fixed';
+    menu.style.inset = 'auto';
+    menu.style.transform = 'none';
+    menu.style.margin = '0';
+    menu.style.top = Math.round(top) + 'px';
+    menu.style.left = Math.round(left) + 'px';
+    menu.style.maxHeight = Math.round(h) + 'px';
+    menu.style.overflowY = 'auto';
+  });
+  document.addEventListener('hidden.bs.dropdown', function (e) {
+    var group = e.target.closest && e.target.closest('.dropdown, .btn-group, .dropup, .dropstart, .dropend');
+    var menu = group && group.querySelector('.dropdown-menu');
+    if (!menu) return;
+    CLIP_PROPS.forEach(function (k) { menu.style[k] = ''; });
+  });
+
   window.WRA = { showToast: showToast, escapeHtml: escapeHtml };
 })();

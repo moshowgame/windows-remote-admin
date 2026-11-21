@@ -174,7 +174,9 @@ module.exports = async function filesRoutes(app) {
     app.assertWritable(request);
     if (!request.isMultipart()) throw new PathError(request.t('files.errNotMultipart'));
     let dir = null;
+    let overwrite = false; // 覆盖同名文件（不勾选时保留旧行为：新文件自动改名 _时间戳，原文件不动）
     const results = [];
+    let overwritten = 0;
     const stamp = filesystem.stampNow();
     const maxBytes = (app.config.uploadMaxMb || 100) * 1024 * 1024;
 
@@ -185,6 +187,9 @@ module.exports = async function filesRoutes(app) {
           const st = await fsp.stat(dir).catch(() => null);
           if (!st || !st.isDirectory()) throw new PathError(request.t('files.errInvalidUploadDir'));
         }
+        if (part.fieldname === 'overwrite') {
+          overwrite = part.value === '1' || part.value === 'true' || part.value === 'on';
+        }
         continue;
       }
       if (!dir) throw new PathError(request.t('files.errMissingUploadDir'));
@@ -194,7 +199,8 @@ module.exports = async function filesRoutes(app) {
         continue;
       }
       let dest = path.join(dir, safeName);
-      if (fs.existsSync(dest)) {
+      const existed = fs.existsSync(dest);
+      if (existed && !overwrite) {
         const ext = path.extname(safeName);
         dest = path.join(dir, `${safeName.slice(0, safeName.length - ext.length)}_${stamp}${ext}`);
       }
@@ -205,7 +211,15 @@ module.exports = async function filesRoutes(app) {
           results.push({ name: safeName, ok: false, note: request.t('files.errFileTooLarge').replace('{n}', app.config.uploadMaxMb) });
         } else {
           const st = await fsp.stat(dest);
-          results.push({ name: safeName, ok: true, sizeText: sizeText(st.size) });
+          if (existed && overwrite) overwritten++;
+          results.push({
+            name: safeName,
+            ok: true,
+            sizeText: sizeText(st.size),
+            overwritten: existed && overwrite,
+            renamed: existed && !overwrite,
+            savedAs: existed && !overwrite ? path.basename(dest) : null,
+          });
         }
       } catch (e) {
         await fsp.rm(dest, { force: true }).catch(() => {});
@@ -216,7 +230,7 @@ module.exports = async function filesRoutes(app) {
     if (!dir) throw new PathError(request.t('files.errMissingUploadDir'));
     if (results.length === 0) throw new PathError(request.t('files.errNoFiles'));
     const okCount = results.filter((r) => r.ok).length;
-    audit(request, '上传文件', { dir, count: results.length, ok: okCount });
+    audit(request, '上传文件', { dir, count: results.length, ok: okCount, overwritten, forceOverwrite: overwrite });
 
     const b = await browseCtx(app, request, { path: dir });
     return reply.view('partials/upload-result', {

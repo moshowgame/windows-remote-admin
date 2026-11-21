@@ -1,0 +1,40 @@
+<%# NTFS ACL 详情（GET /smb/ntfs 局部页；locals: path/owner/items/err/t）%>
+<% if (err) { %>
+<div class="text-warning"><i class="ti ti-alert-triangle me-1"></i><%= err %></div>
+<% } else if (!items.length) { %>
+<div class="text-secondary"><%= t('smb.ntfsEmpty') %></div>
+<% } else { %>
+<div class="small text-secondary mb-2">
+  <span class="me-3"><%= t('smb.ntfsOwner') %>: <span class="font-monospace"><%= owner || '—' %></span></span>
+  <span><%= t('smb.ntfsCount').replace('{n}', String(items.length)) %></span>
+</div>
+<div class="table-responsive">
+  <table class="table table-sm card-table table-vcenter">
+    <thead>
+      <tr>
+        <th><%= t('smb.ntfsAccount') %></th>
+        <th style="width:80px;"><%= t('smb.ntfsType') %></th>
+        <th><%= t('smb.ntfsRights') %></th>
+        <th style="width:90px;"><%= t('smb.ntfsInherit') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach(function (a) {
+           var isEv = /everyone$/i.test(String(a.id || ''));
+           var isDeny = String(a.t || '').toLowerCase() === 'deny';
+      %>
+      <tr>
+        <td class="font-monospace text-break">
+          <%= a.id %>
+          <% if (isEv) { %><span class="badge bg-red-lt ms-1" title="<%= t('smb.everyoneWarn') %>"><i class="ti ti-alert-triangle me-1"></i>Everyone</span><% } %>
+        </td>
+        <td><span class="badge <%= isDeny ? 'bg-red-lt' : 'bg-success-lt' %>"><%= isDeny ? t('smb.ntfsDeny') : t('smb.ntfsAllow') %></span></td>
+        <td class="small"><%= a.r %></td>
+        <td class="small <%= a.inh ? 'text-secondary' : 'text-orange' %>"><%= a.inh ? t('smb.ntfsYes') : t('smb.ntfsNo') %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="small text-secondary mt-2"><%= t('smb.ntfsHint') %></div>
+<% } %>

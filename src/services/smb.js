@@ -16,6 +16,9 @@ const SHARE_PATH_RE = /^[A-Za-z]:\\[^<>:"|?*\u0000-\u001f]{0,250}$/;
 const MANAGED_RE = /\$$|^(print|fax|sysvol|netlogon)$/i;
 const RIGHTS = ['Read', 'Change', 'Full'];
 
+// SMB 权限级别 → NTFS icacls 权限标记（(OI)(CI) 让权限继承到子目录/文件）
+const NTFS_RIGHT = { Read: 'RX', Change: 'M', Full: 'F' };
+
 const TABS = new Set(['shares', 'sessions', 'openfiles']);
 
 function isManagedShare(name) {
@@ -32,21 +35,52 @@ function rows(raw) {
 
 // ---- 浏览 ----
 
-// 共享目录 + 访问权限（access = 'DOMAIN\user:Right,...' 逗号串，展示与 diff 预填共用）
+// 共享目录 + 访问权限（share access = 'DOMAIN\user:Right,...' 逗号串；ntfs = NTFS ACL 条目数组）
 async function listShares(t) {
   const cmd = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; '
     + 'Get-SmbShare | Sort-Object Name | ForEach-Object { $s = $_; '
     + '$acc = (Get-SmbShareAccess -Name $s.Name | ForEach-Object { $_.AccountName + ":" + $_.AccessRight }) -join ","; '
-    + '[pscustomobject]@{ name=$s.Name; path=$s.Path; desc=$s.Description; type=[string]$s.ShareType; users=[int]$s.CurrentUsers; access=$acc } '
-    + '} | ConvertTo-Json -Compress -Depth 2';
+    + '$ntfs = @(); $owner = ""; '
+    + 'try { $acl = Get-Acl -LiteralPath $s.Path -ErrorAction Stop; $owner = [string]$acl.Owner; '
+    + '$ntfs = @($acl.Access | ForEach-Object { [pscustomobject]@{ id=[string]$_.IdentityReference; t=[string]$_.AccessControlType; r=[string]$_.FileSystemRights; inh=[bool]$_.IsInherited } }) } catch { } '
+    + '[pscustomobject]@{ name=$s.Name; path=$s.Path; desc=$s.Description; type=[string]$s.ShareType; users=[int]$s.CurrentUsers; access=$acc; owner=$owner; ntfs=$ntfs } '
+    + '} | ConvertTo-Json -Compress -Depth 3';
   const r = await ps.execute(cmd, { timeoutMs: 30000, sessionKey: 'smb-mgmt' });
   if (!r.ok) throw new Error(String(r.output || '').slice(0, 300));
-  // everyone 标志：权限列表中含 Everyone 账户（列表警示徽章 + 「仅看 Everyone 暴露」筛选共用）
-  return rows(r.output).map((x) => ({
-    ...x,
-    managed: isManagedShare(x.name),
-    everyone: String(x.access || '').split(',').some((a) => /everyone$/i.test(a.split(':')[0].trim())),
-  }));
+  // everyone 标志：共享权限 / NTFS ACL 任一含 Everyone 账户（列表警示徽章 + 「仅看 Everyone 暴露」筛选共用）
+  const items = rows(r.output).map((x) => {
+    const ntfs = Array.isArray(x.ntfs) ? x.ntfs : (x.ntfs ? [x.ntfs] : []);
+    return {
+      ...x,
+      ntfs,
+      owner: String(x.owner || ''),
+      managed: isManagedShare(x.name),
+      everyone: String(x.access || '').split(',').some((a) => /everyone$/i.test(a.split(':')[0].trim()))
+        || ntfs.some((e) => /everyone$/i.test(String(e.id || ''))),
+      ntfsEveryone: ntfs.some((e) => /everyone$/i.test(String(e.id || ''))),
+    };
+  });
+  return items;
+}
+
+// NTFS ACL 详情（模态展示用）：owner + 访问条目（identity/type/rights/inherited）
+async function listNtfs(sharePath, t) {
+  const cmd = '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; '
+    + 'try { $acl = Get-Acl -LiteralPath $env:WRA_SMB_PATH -ErrorAction Stop; '
+    + '$ntfs = @($acl.Access | ForEach-Object { [pscustomobject]@{ id=[string]$_.IdentityReference; t=[string]$_.AccessControlType; r=[string]$_.FileSystemRights; inh=[bool]$_.IsInherited } }); '
+    + '[pscustomobject]@{ owner=[string]$acl.Owner; ntfs=$ntfs; err="" } | ConvertTo-Json -Compress -Depth 3 } '
+    + 'catch { $msg = ($_ | Out-String).Trim() -replace "\\r?\\n", " " -replace \'"\', "\'\'"; '
+    + '[Console]::Out.WriteLine(\'{"owner":"","ntfs":[],"err":"\' + $msg + \'"}\') }';
+  const r = await ps.execute(cmd, { timeoutMs: 30000, fresh: true, env: { WRA_SMB_PATH: sharePath } });
+  if (!r.ok) return { ok: false, error: String(r.output || '').slice(0, 200) };
+  let d;
+  try {
+    d = JSON.parse(r.output.trim().split('\n').filter((l) => l.trim().startsWith('{')).join('\n') || '{}');
+  } catch (e) {
+    return { ok: false, error: String(e.message).slice(0, 200) };
+  }
+  if (d.err) return { ok: false, error: String(d.err).slice(0, 200) };
+  return { ok: true, owner: String(d.owner || ''), items: Array.isArray(d.ntfs) ? d.ntfs : (d.ntfs ? [d.ntfs] : []) };
 }
 
 // 客户端会话
@@ -73,7 +107,42 @@ async function listOpenFiles(t) {
 
 // ---- 管理（全部 fresh + env 注入）----
 
-// 新建共享：read/change/full = 账户数组（Full 为锁定保留项）；返回新共享名
+// ---- NTFS ACL（icacls，账户经 env 注入；共享权限变更时同步应用，保持两层一致）----
+
+// 授予 NTFS 权限：grants = [account, smbRight]；返回 {ok, error}
+// icacls 标记映射 Read→RX / Change→M(修改) / Full→F，(OI)(CI) 继承到子目录与文件
+async function applyNtfsGrant(sharePath, grants) {
+  if (!grants.length) return { ok: true };
+  const env = {
+    WRA_SMB_PATH: sharePath,
+    WRA_SMB_NTFS_GRANT: grants.map((g) => g[0] + '|' + (NTFS_RIGHT[g[1]] || g[1])).join(';'),
+  };
+  const cmd = '$g = $env:WRA_SMB_NTFS_GRANT -split \';\' | Where-Object { $_ }; '
+    + '$errs = @(); '
+    + 'foreach ($item in $g) { $pair = $item -split \'\\|\', 2; '
+    + '& icacls.exe $env:WRA_SMB_PATH /grant ($pair[0] + ":(OI)(CI)" + $pair[1]) | Out-Null; '
+    + 'if ($LASTEXITCODE -ne 0) { $errs += $pair[0] } } '
+    + 'if ($errs.Count) { [Console]::Error.WriteLine(($errs -join \', \') + " grant failed"); exit 1 }';
+  const r = await ps.execute(cmd, { timeoutMs: 30000, fresh: true, env });
+  if (!r.ok) return { ok: false, error: String(r.output || '').slice(0, 200) };
+  return { ok: true };
+}
+
+// 移除 NTFS 显式授权（仅显式条目；继承条目 icacls 会失败并计入错误）：accounts = 账户数组
+async function applyNtfsRevoke(sharePath, accounts) {
+  if (!accounts.length) return { ok: true };
+  const env = { WRA_SMB_PATH: sharePath, WRA_SMB_NTFS_REVOKE: accounts.join(';') };
+  const cmd = '$rev = $env:WRA_SMB_NTFS_REVOKE -split \';\' | Where-Object { $_ }; '
+    + '$errs = @(); '
+    + 'foreach ($a in $rev) { & icacls.exe $env:WRA_SMB_PATH /remove:g $a | Out-Null; '
+    + 'if ($LASTEXITCODE -ne 0) { $errs += $a } } '
+    + 'if ($errs.Count) { [Console]::Error.WriteLine(($errs -join \', \') + " remove failed"); exit 1 }';
+  const r = await ps.execute(cmd, { timeoutMs: 30000, fresh: true, env });
+  if (!r.ok) return { ok: false, error: String(r.output || '').slice(0, 200) };
+  return { ok: true };
+}
+
+// 新建共享：read/change/full = 账户数组（Full 为锁定保留项）；同时把同等权限应用到 NTFS ACL；返回 {ok, warn?}
 async function createShare(name, sharePath, desc, read, change, full, t) {
   const env = {
     WRA_SMB_NAME: name,
@@ -93,6 +162,14 @@ async function createShare(name, sharePath, desc, read, change, full, t) {
   cmd += ' }; New-SmbShare @p | Out-Null';
   const r = await ps.execute(cmd, { timeoutMs: 30000, fresh: true, env });
   if (!r.ok) return { ok: false, error: String(r.output || '').slice(0, 200) };
+  // NTFS ACL 同步（共享层之外的实际文件系统权限）；失败不回滚共享，返回警告
+  const grants = [
+    ...read.map((a) => [a, 'Read']),
+    ...change.map((a) => [a, 'Change']),
+    ...full.map((a) => [a, 'Full']),
+  ];
+  const ntfs = await applyNtfsGrant(sharePath, grants);
+  if (!ntfs.ok) return { ok: true, warn: 'NTFS: ' + ntfs.error };
   return { ok: true };
 }
 
@@ -143,7 +220,8 @@ function accessDiff(current, desired) {
 }
 
 // 应用权限 diff：revoke = 账户数组；grant = [account, right] 数组（env 以 account|right 分号串注入）
-async function editAccess(name, revoke, grant, t) {
+// sharePath 传入时同步镜像到 NTFS ACL（icacls）；NTFS 失败不回滚共享权限，返回 warn
+async function editAccess(name, revoke, grant, t, sharePath) {
   const env = {
     WRA_SMB_NAME: name,
     WRA_SMB_REVOKE: revoke.join(';'),
@@ -155,6 +233,13 @@ async function editAccess(name, revoke, grant, t) {
     + 'foreach ($g in $gr) { $pair = $g -split \'\\|\'; Grant-SmbShareAccess -Name $env:WRA_SMB_NAME -AccountName $pair[0] -AccessRight $pair[1] -Force | Out-Null }';
   const r = await ps.execute(cmd, { timeoutMs: 30000, fresh: true, env });
   if (!r.ok) return { ok: false, error: String(r.output || '').slice(0, 200) };
+  if (sharePath) {
+    const ntfsRevoke = await applyNtfsRevoke(sharePath, revoke);
+    const ntfsGrant = ntfsRevoke.ok ? await applyNtfsGrant(sharePath, grant) : { ok: true };
+    if (!ntfsRevoke.ok || !ntfsGrant.ok) {
+      return { ok: true, warn: 'NTFS: ' + ((ntfsRevoke.error || ntfsGrant.error || '').slice(0, 150)) };
+    }
+  }
   return { ok: true };
 }
 
@@ -172,8 +257,10 @@ module.exports = {
   SHARE_PATH_RE,
   RIGHTS,
   TABS,
+  NTFS_RIGHT,
   isManagedShare,
   listShares,
+  listNtfs,
   listSessions,
   listOpenFiles,
   createShare,
@@ -183,4 +270,6 @@ module.exports = {
   accessDiff,
   editAccess,
   parseAccess,
+  applyNtfsGrant,
+  applyNtfsRevoke,
 };

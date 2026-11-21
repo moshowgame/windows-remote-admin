@@ -104,6 +104,22 @@
   </div>
 </div>
 
+<!-- NTFS ACL 详情（共享底层文件系统权限，只读展示） -->
+<div class="modal" id="smb-ntfs-modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ti ti-shield-lock me-2"></i><%= t('smb.ntfsTitle') %></h5>
+        <button type="button" class="btn-close" data-smb-dismiss></button>
+      </div>
+      <div class="modal-body">
+        <div class="font-monospace small text-secondary mb-2 text-break" id="smb-ntfs-path"></div>
+        <div id="smb-ntfs-body" class="text-secondary"><%= t('common.loading') %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   (function () {
     var CSRF = '<%= csrf %>';
@@ -179,6 +195,24 @@
     // Everyone 检测开关：切换立即刷新列表
     document.getElementById('smb-everyone-only').addEventListener('change', refreshTab);
 
+    // ---- NTFS ACL 详情（全员可看，只读信息）----
+    var ntfsModal = document.getElementById('smb-ntfs-modal');
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.smb-ntfs');
+      if (!btn) return;
+      var p = btn.getAttribute('data-path') || '';
+      document.getElementById('smb-ntfs-path').textContent = p;
+      var body = document.getElementById('smb-ntfs-body');
+      body.innerHTML = '<div class="text-secondary"><i class="ti ti-loader-2 me-1"></i><%= t("common.loading") %></div>';
+      openModal(ntfsModal);
+      fetch('/smb/ntfs?path=' + encodeURIComponent(p), { headers: { 'X-CSRF-Token': CSRF } })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error(r.status)); })
+        .then(function (html) { body.innerHTML = html; })
+        .catch(function () {
+          body.innerHTML = '<div class="text-danger"><i class="ti ti-alert-triangle me-1"></i>' + T.actionFailed + '</div>';
+        });
+    });
+
     // ---- 权限行编辑器 ----
     var accRows = document.getElementById('smb-acc-rows');
     function addAccRow(account, right, locked) {
@@ -245,7 +279,7 @@
           var i = s.lastIndexOf(':');
           var acc = i === -1 ? s : s.slice(0, i);
           var right = i === -1 ? 'Read' : s.slice(i + 1);
-          addAccRow(acc, right, right === 'Full');
+          addAccRow(acc, right, right === 'Full' && !/everyone$/i.test(acc.trim()));
         });
       } else {
         // 默认不授予 Everyone 任何权限（安全基线）；仅保留 Administrators=Full 锁定行

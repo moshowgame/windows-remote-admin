@@ -46,6 +46,10 @@
                 onclick="document.getElementById('upload-input').click()">
           <i class="ti ti-upload me-1"></i><%= t('files.upload') %>
         </button>
+        <label class="form-check form-check-inline mb-0 ms-1 small text-secondary" title="<%= t('files.overwriteHint') %>">
+          <input type="checkbox" name="overwrite" value="1" class="form-check-input mt-0">
+          <span class="form-check-label"><%= t('files.overwrite') %></span>
+        </label>
       </form>
       <button id="btn-compress-selected" type="button" class="btn btn-sm" disabled title="<%= t('files.compressSelTitle') %>">
         <i class="ti ti-file-zip me-1"></i><%= t('files.compressSelected') %>
