@@ -1,0 +1,62 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-package me-2"></i><%= t('updates.title') %></h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      <%= t('updates.subtitle') %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex flex-wrap align-items-center py-2 gap-2">
+    <input id="updates-kw" class="form-control form-control-sm" type="search"
+           placeholder="<%= t('updates.searchPlaceholder') %>" style="max-width:260px;">
+    <button id="updates-refresh" class="btn btn-sm btn-outline-secondary" type="button">
+      <i class="ti ti-refresh me-1"></i><%= t('updates.refresh') %>
+    </button>
+    <span id="updates-filter-count" class="text-secondary small ms-1"></span>
+  </div>
+  <div id="updates-box" hx-get="/updates/list" hx-trigger="refresh from:body" hx-swap="innerHTML">
+    <%- include('../partials/updates-list', { items: items, total: total, t: t, role: role }) %>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // 前端过滤（更新量大，避免每次按键都请求服务端）
+    var kwInput = document.getElementById('updates-kw');
+    var countEl = document.getElementById('updates-filter-count');
+
+    function applyFilter() {
+      var kw = kwInput.value.trim().toLowerCase();
+      var rows = document.querySelectorAll('#updates-box .updates-row');
+      var shown = 0;
+      rows.forEach(function (tr) {
+        var hit = !kw || tr.textContent.toLowerCase().includes(kw);
+        tr.style.display = hit ? '' : 'none';
+        if (hit) shown++;
+      });
+      var total = rows.length;
+      countEl.textContent = kw
+        ? '<%= t("updates.filterCount").replace("{n}", "SHOWN").replace("{total}", "TOTAL") %>'
+            .replace('SHOWN', String(shown)).replace('TOTAL', String(total))
+        : '';
+    }
+    kwInput.addEventListener('input', applyFilter);
+    applyFilter();
+
+    // 刷新（重新拉取已安装更新列表）
+    document.getElementById('updates-refresh').addEventListener('click', function () {
+      htmx.ajax('GET', '/updates/list', '#updates-box');
+    });
+    // 刷新后重挂过滤（片段替换后行集合变化）
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+      if (e.target && e.target.id === 'updates-box') applyFilter();
+    });
+  });
+</script>
+<%- include('../layouts/layout-bottom') %>

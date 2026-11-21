@@ -75,6 +75,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 | 证书管理 `/certs` | LocalMachine 常用存储区（My/WebHosting/Root/CA/TrustedPeople/TrustedPublisher）证书浏览：主题/颁发者/指纹/有效期（过期红 / 30 天内橙 / 正常绿）/SAN/私钥标识，状态筛选 + 关键字搜索；详情弹窗（算法/密钥位长/EKU/序列号）；admin 可上传证书（.cer/.crt/.pem 公钥免密码、.pfx/.p12 需导入密码，密码 env 注入不落日志）、导出 .cer/.pem/.pfx（pfx 走一次性下载 token + 随机密码仅展示一次）与删除证书（确认框预览 `Remove-Item` 命令 + 审计），只读账号仅可查看 |
 | SMB 共享 `/smb` | 三 Tab 浏览：共享目录（本地路径/描述/活动连接数/访问权限徽章）、客户端会话（计算机/用户/连接数/空闲/接入时间）、打开的文件（路径/打开者/锁定数）；**NTFS 权限联动**：共享列表每行可查看底层目录的 NTFS ACL（所有者/账户/允许或拒绝/权限/是否继承，NTFS 层 Everyone 暴露红色标记），新建共享与权限变更自动镜像到 NTFS ACL（icacls：Read→RX、Change→Modify、Full→FullControl，继承到子目录/文件）；admin 可新建共享、编辑权限（分组行编辑器：Read/Change 级别 + Full 锁定行（**Everyone 例外可删除**），diff 应用为 revoke + grant，不断开现有连接）、取消共享（活动用户警告）与断开会话/关闭文件，全部确认框预览命令 + 审计；系统管理共享（ADMIN$/C$/IPC$ 等）禁止取消；只读账号可查看（含 NTFS 权限） |
 | 防火墙 `/firewall` | Windows 防火墙管理：Domain/Private/Public 三配置文件状态卡（启用状态 + 默认入站/出站动作，禁用前红色警示确认）；全量规则列表（PortFilter 批量映射免逐条查询）、方向/动作/配置文件/状态四维筛选 + 名称/组/端口/描述搜索；admin 可启用/禁用规则、新建规则（方向/动作/协议/端口/配置文件/描述，端口支持逗号多段与范围）与删除规则（确认框），全部操作审计，动态值 env 注入不落日志，只读账号仅可查看 |
+| Hosts/DNS缓存 `/dns` | hosts 文件在线编辑（路径固定 `C:\Windows\System32\drivers\etc\hosts`，整文件替换，保存前自动生成时间戳备份 `hosts.bak-…` 并保留最近 20 份，备份列表可载入编辑框回看）；DNS 客户端缓存查看（`Get-DnsClientCache`：记录/数据/类型/TTL，关键字搜索）与一键清空（`Clear-DnsClientCache`）；hosts 编辑与清缓存非只读可用 + 审计，缓存查看全员可用 |
+| 已装更新 `/updates` | 已安装 Windows 更新查看（只读，`Get-HotFix`）：更新类型/补丁编号/安装日期（降序）/安装者，前端关键字实时过滤 + 刷新；仅查看安装了什么，不做安装/卸载，全员可用 |
 | 重启/关机 `/power` | 本机与远程重启/关机管理：本机延迟计划（shutdown.exe，0~600 秒延迟窗口内可随时取消，双重确认框含面板自身中断红色警示）；远程操作（IP + 账号密码 + 理由），DCOM/WMI 通道零预装（New-CimSession + Win32ShutdownTracker）可选 WinRM，连通性预检（TCP 135 / Test-WSMan）；理由写入系统事件日志 1074 并在页面展示近 24h 关机/重启事件，全部操作审计、密码 env 注入不落日志，admin 专属，只读账号仅可查看事件 |
 | 临时授权 `/tpam` | Self-TPAM 临时特权账号（release 场景）：admin 输入 CR/IN 编号 + Staff ID 一键生成 `<StaffID>_tpam` 临时账号（admin 权限，同名重新生成即续期换密码），有效期 4 小时；随机密码仅在生成时展示一次（落盘仅 bcrypt 哈希），支持一键复制；生效账号列表（创建/到期时间 + 剩余时长）与吊销（确认框）；过期或吊销后立即无法登录，已登录会话在下一次请求时被强制登出，生成/吊销均审计 |
 | 企业认证 `/login` | 可选 LDAP / AD 企业目录认证：`auth.mode` 三模式（local / ldap / both，both 登录页提供方式选择器）；AD 走 PrincipalContext 校验、通用 LDAP 走 LdapConnection + bindTemplate（ldaps 支持），密码仅经环境变量注入不落命令与日志；登录用 Staff ID，角色映射读 `data/auth-map.csv`（staffid,role，改完即生效）或组映射 `auth.ldap.groupRoleMap`，**未映射默认拒绝登录**；LDAP 不可达时可按 `allowLocalFallback` 回退本地账号（审计记「LDAP 回退登录」，输错密码绝不兜底）；TPAM 临时账号等本地账号不受影响 |
@@ -88,6 +90,8 @@ npm run pack:deploy    # 产物：dist/wra-deploy-v<版本>.zip
 当前版本：**v2.0**（Node.js 版）。完整变更见 [提交历史](https://github.com/moshowgame/windows-remote-admin/commits/main)。
 
 ### 2026-Q4 —— 生产就绪，持续迭代，实用性提升📈
+
+- **2026-11-21**：新增 **Hosts/DNS缓存 `/dns`** 与 **已装更新 `/updates`** 两个查看/编辑模块：① hosts 文件在线编辑——路径固定不开放自定义，整文件替换保存，保存前自动时间戳备份（保留最近 20 份自动清理最旧），备份列表可一键载入编辑框回看，临时文件 + rename 原子替换防半写；② DNS 客户端缓存查看（`Get-DnsClientCache`，记录/数据/类型（RFC 类型号转名称）/TTL，关键字搜索）与一键清空（`Clear-DnsClientCache`）；③ 已安装 Windows 更新只读查看（`Get-HotFix`：类型/编号/安装日期降序/安装者，前端关键字实时过滤），明确不做安装/卸载；写操作（保存 hosts / 清缓存）非只读账号可用 + 审计，缓存与更新查看全员可用
 
 - **2026-11-21**：文件管理 / SMB 共享四项实用性优化：① 上传支持**覆盖同名文件**（勾选后强制写入直接覆盖，结果逐条提示「已覆盖」；不勾选保持旧行为自动改名 `name_时间戳.ext`）；② 文件浏览器支持**局域网 UNC 共享路径**（`\\nas\share\data` 直达浏览，`pathWhitelist` 白名单兼容 UNC 条目，设备路径 `\\.\` `\\?\` 与裸服务器名仍拒绝）；③ SMB 共享 **NTFS 权限联动**——共享列表每行可查看底层目录 NTFS ACL（所有者/账户/允许或拒绝/权限/继承，NTFS 层 Everyone 暴露红色角标），新建共享与权限变更自动镜像到 NTFS ACL（icacls，失败不回滚、警告提示），**Everyone 可删除**（Full 锁定行例外放开，前端解锁 + 服务端不再强制回填）；④ 全局修复行操作下拉菜单被滚动容器裁剪问题（文件少的目录首行 / 文件多的目录末行菜单自动翻转到视口内，表格类页面统一受益）
 
@@ -365,6 +369,24 @@ SMB 服务端（LanmanServer）视角的共享管理：谁连进来、开了哪�
 - **取消共享**（admin + 审计）：确认框显示命令与本地路径，`CurrentUsers > 0` 时红色警告仍有用户连接；系统管理共享（`ADMIN$`/`C$`/`IPC$`/`PRINT$`/SYSVOL/NETLOGON 等 `$` 结尾隐藏共享）UI 置灰 + 后端 400 双重拦截
 - **断开会话 / 关闭文件**（admin + 审计）：确认框预览受影响客户端用户 / 文件路径与 `Close-SmbSession` / `Close-SmbOpenFile` 命令
 - 动态值（共享名 / 路径 / 账户列表 / FileId / SessionId）全部 spawn env 注入；Server 服务未运行时列表降级为友好提示不 500；multipart 表单字段手动流式收集（`request.parts()`）
+
+### Hosts / DNS 缓存 `/dns`
+
+hosts 文件在线编辑与 DNS 客户端缓存查看、清空。
+
+- **hosts 编辑**（非只读 + 审计）：路径固定 `C:\Windows\System32\drivers\etc\hosts` 不开放自定义；等宽字体编辑框整文件替换保存（512KB 上限），保存前在同目录自动生成时间戳备份 `hosts.bak-yyyyMMdd-HHmmss`（保留最近 20 份，超出自动清理最旧），写临时文件后 rename 原子替换防半写；保存成功 Toast 显示备份文件名
+- **备份回看**：hosts 卡片头部展示备份数量与下拉列表（名称/大小/修改时间），点击将备份内容载入编辑框（确认框提示会替换未保存修改）
+- **DNS 缓存查看**（全员可用）：`Get-DnsClientCache` 列出记录（Entry）/数据（Data）/类型（RFC 类型号转名称，A/CNAME/MX 等）/TTL（秒），关键字搜索 + 刷新按钮
+- **清空缓存**（非只读 + 审计）：确认框后执行 `Clear-DnsClientCache`，返回并展示清空后的缓存片段
+- 只读账号：hosts 编辑框置为只读、保存 / 清缓存按钮隐藏，缓存查看不受限
+
+### 已装更新 `/updates`
+
+已安装 Windows 更新的只读查看（`Get-HotFix`），仅回答「这台机器装了哪些补丁」，不做安装/卸载/下载。
+
+- 列表字段：更新类型（Security Update / Update / Hotfix 等徽章）、补丁编号（KB……）、安装日期（服务端降序）、安装者（NT AUTHORITY\SYSTEM 等）
+- 前端关键字实时过滤（描述 / 编号 / 安装者，输入即筛不请求服务端）+ 刷新按钮（重新拉取 `Get-HotFix`）；更新量数百条无分页压力
+- 全员可看，无写接口
 
 ### 全局
 

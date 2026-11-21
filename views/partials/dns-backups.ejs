@@ -1,0 +1,17 @@
+<span class="text-secondary small me-2">
+  <i class="ti ti-history me-1"></i><%= t('dns.backupCount').replace('{n}', String(backups.length)) %>
+</span>
+<% if (backups.length) { %>
+<div class="dropdown">
+  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    <%= t('dns.backupList') %>
+  </button>
+  <div class="dropdown-menu dropdown-menu-end" style="max-height:260px;overflow-y:auto;">
+    <% backups.forEach(function (b) { %>
+    <a class="dropdown-item small font-monospace" href="#" data-dns-restore="<%= b.name %>" title="<%= b.size %> B · <%= b.mtime %>">
+      <i class="ti ti-file-download me-1"></i><%= b.name %>
+    </a>
+    <% }); %>
+  </div>
+</div>
+<% } %>

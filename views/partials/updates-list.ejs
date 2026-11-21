@@ -1,0 +1,28 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head" id="updates-table-el">
+    <thead>
+      <tr>
+        <th style="width:22%;"><%= t('updates.colDescription') %></th>
+        <th style="width:16%;"><%= t('updates.colHotfix') %></th>
+        <th style="width:14%;"><%= t('updates.colInstalledOn') %></th>
+        <th><%= t('updates.colInstalledBy') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!items.length) { %>
+      <tr><td colspan="4" class="text-center text-secondary py-4"><%= t('updates.empty') %></td></tr>
+      <% } %>
+      <% items.forEach(function (u) { %>
+      <tr class="updates-row">
+        <td><span class="badge bg-blue-lt"><%= u.desc %></span></td>
+        <td class="font-monospace"><%= u.id %></td>
+        <td class="text-secondary small"><%= u.on %></td>
+        <td class="text-secondary small text-break"><%= u.by %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('updates.count').replace('{n}', String(items.length)) %>
+</div>

@@ -41,6 +41,8 @@ const tpamRoutes = require('./routes/tpam');
 const setupRoutes = require('./routes/setup');
 const deployRoutes = require('./routes/deploy');
 const httpRoutes = require('./routes/http');
+const dnsRoutes = require('./routes/dns');
+const updatesRoutes = require('./routes/updates');
 
 async function buildApp() {
   const loggers = await buildLoggers(path.join(ROOT, 'logs'));
@@ -220,6 +222,8 @@ async function buildApp() {
   await app.register(setupRoutes);
   await app.register(deployRoutes);
   await app.register(httpRoutes);
+  await app.register(dnsRoutes);
+  await app.register(updatesRoutes);
 
   return app;
 }

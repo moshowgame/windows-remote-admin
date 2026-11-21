@@ -1,0 +1,135 @@
+<%- include('../layouts/layout-top') %>
+
+<div class="page-header d-print-none mb-2">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title"><i class="ti ti-dns me-2"></i><%= t('dns.title') %></h2>
+    </div>
+    <div class="col-auto text-secondary small">
+      <%= t('dns.subtitle') %>
+    </div>
+  </div>
+</div>
+
+<!-- hosts 文件 -->
+<div class="card mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center py-2 gap-2">
+    <h3 class="card-title mb-0"><i class="ti ti-file-text me-1"></i><%= t('dns.hostsTitle') %></h3>
+    <span class="text-secondary small font-monospace"><%= hostsWithComment %></span>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <div id="dns-backups-box" hx-get="/dns/backups" hx-trigger="refreshBackups from:body" hx-swap="innerHTML">
+        <%- include('../partials/dns-backups', { backups: backups, t: t, role: role }) %>
+      </div>
+      <% if (role !== 'readonly') { %>
+      <button id="dns-hosts-save" class="btn btn-sm btn-primary" type="button">
+        <i class="ti ti-device-floppy me-1"></i><%= t('dns.saveHosts') %>
+      </button>
+      <% } %>
+    </div>
+  </div>
+  <div class="card-body p-2">
+    <textarea id="dns-hosts-text" class="form-control font-monospace" rows="16" spellcheck="false"
+              <%= role === 'readonly' ? 'readonly' : '' %>><%= hosts %></textarea>
+    <div class="text-secondary small mt-1">
+      <i class="ti ti-info-circle me-1"></i><%= t('dns.hostsHint') %>
+    </div>
+  </div>
+</div>
+
+<!-- DNS 客户端缓存 -->
+<div class="card">
+  <div class="card-header d-flex flex-wrap align-items-center py-2 gap-2">
+    <h3 class="card-title mb-0"><i class="ti ti-database me-1"></i><%= t('dns.cacheTitle') %></h3>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <input id="dns-cache-kw" class="form-control form-control-sm" type="search"
+             placeholder="<%= t('dns.searchPlaceholder') %>" value="<%= kw %>" style="max-width:220px;">
+      <button id="dns-cache-refresh" class="btn btn-sm btn-outline-secondary" type="button">
+        <i class="ti ti-refresh me-1"></i><%= t('dns.refresh') %>
+      </button>
+      <% if (role !== 'readonly') { %>
+      <button id="dns-flush" class="btn btn-sm btn-warning" type="button">
+        <i class="ti ti-eraser me-1"></i><%= t('dns.flush') %>
+      </button>
+      <% } %>
+    </div>
+  </div>
+  <div id="dns-cache-box" hx-get="/dns/cache?kw=<%= encodeURIComponent(kw) %>" hx-trigger="refresh from:body" hx-swap="innerHTML">
+    <%- include('../partials/dns-cache', { items: cache, total: cache.length, cacheErr: cacheErr, kw: kw, t: t, role: role, msg: null }) %>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var CSRF = '<%= csrf %>';
+
+    function toastMsg(msg, type) {
+      document.body.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, type: type || 'success' } }));
+    }
+
+    // hosts 保存（全文替换；服务端自动备份）
+    <% if (role !== 'readonly') { %>
+    document.getElementById('dns-hosts-save').addEventListener('click', function () {
+      var btn = this;
+      if (!window.confirm('<%= t("dns.confirmSave") %>')) return;
+      btn.disabled = true;
+      var fd = new URLSearchParams({ content: document.getElementById('dns-hosts-text').value });
+      fetch('/dns/hosts', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) {
+          btn.disabled = false;
+          if (r.ok) return;
+          return r.json().then(function (j) { throw new Error((j.error || '').slice(0, 150)); });
+        })
+        .catch(function (err) { btn.disabled = false; toastMsg(err.message || '<%= t("dns.saveFailed") %>', 'error'); });
+    });
+    <% } %>
+
+    // 查看备份内容（加载进编辑框）
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('[data-dns-restore]');
+      if (!link) return;
+      e.preventDefault();
+      var name = link.getAttribute('data-dns-restore');
+      if (!window.confirm('<%= t("dns.confirmLoadBackup") %>'.replace('{n}', name))) return;
+      fetch('/dns/backup-content?name=' + encodeURIComponent(name), { headers: { 'x-csrf-token': CSRF } })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          document.getElementById('dns-hosts-text').value = j.content || '';
+          toastMsg('<%= t("dns.backupLoaded") %>'.replace('{n}', name), 'info');
+        })
+        .catch(function () { toastMsg('<%= t("dns.backupLoadFailed") %>', 'error'); });
+    });
+
+    // 缓存搜索 / 刷新
+    function cacheUrl() {
+      return '/dns/cache?kw=' + encodeURIComponent(document.getElementById('dns-cache-kw').value.trim());
+    }
+    document.getElementById('dns-cache-refresh').addEventListener('click', function () {
+      document.getElementById('dns-cache-box').setAttribute('hx-get', cacheUrl());
+      htmx.ajax('GET', cacheUrl(), '#dns-cache-box');
+    });
+    document.getElementById('dns-cache-kw').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        document.getElementById('dns-cache-box').setAttribute('hx-get', cacheUrl());
+        htmx.ajax('GET', cacheUrl(), '#dns-cache-box');
+      }
+    });
+
+    // 清空缓存（服务端返回刷新后的片段）
+    <% if (role !== 'readonly') { %>
+    document.getElementById('dns-flush').addEventListener('click', function () {
+      var btn = this;
+      if (!window.confirm('<%= t("dns.confirmFlush") %>')) return;
+      btn.disabled = true;
+      var fd = new URLSearchParams({ kw: document.getElementById('dns-cache-kw').value.trim() });
+      fetch('/dns/flush', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-csrf-token': CSRF }, body: fd })
+        .then(function (r) { return r.text().then(function (html) { return { ok: r.ok, html: html }; }); })
+        .then(function (res) {
+          btn.disabled = false;
+          if (res.ok) document.getElementById('dns-cache-box').innerHTML = res.html;
+        })
+        .catch(function () { btn.disabled = false; toastMsg('<%= t("dns.flushFailed").replace("{n}", "") %>', 'error'); });
+    });
+    <% } %>
+  });
+</script>
+<%- include('../layouts/layout-bottom') %>

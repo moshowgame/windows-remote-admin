@@ -146,6 +146,18 @@
               <span class="nav-link-title"><%= t('nav.firewall') %></span>
             </a>
           </li>
+          <li class="nav-item <%= active === 'dns' ? 'active' : '' %>">
+            <a class="nav-link" href="/dns">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-dns"></i></span>
+              <span class="nav-link-title"><%= t('nav.dns') %></span>
+            </a>
+          </li>
+          <li class="nav-item <%= active === 'updates' ? 'active' : '' %>">
+            <a class="nav-link" href="/updates">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-package"></i></span>
+              <span class="nav-link-title"><%= t('nav.updates') %></span>
+            </a>
+          </li>
           <li class="nav-item <%= active === 'power' ? 'active' : '' %>">
             <a class="nav-link" href="/power">
               <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-power"></i></span>

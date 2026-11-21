@@ -1,0 +1,31 @@
+<div class="table-responsive">
+  <table class="table table-vcenter card-table table-hover wra-sticky-head">
+    <thead>
+      <tr>
+        <th style="width:34%;"><%= t('dns.colEntry') %></th>
+        <th style="width:34%;"><%= t('dns.colData') %></th>
+        <th style="width:14%;"><%= t('dns.colType') %></th>
+        <th class="text-end" style="width:10%;"><%= t('dns.colTtl') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (cacheErr) { %>
+      <tr><td colspan="4" class="text-danger py-4"><i class="ti ti-alert-triangle me-1"></i><%= cacheErr %></td></tr>
+      <% } else if (!items.length) { %>
+      <tr><td colspan="4" class="text-center text-secondary py-4"><%= t('dns.cacheEmpty') %></td></tr>
+      <% } %>
+      <% items.forEach(function (i) { %>
+      <tr>
+        <td class="font-monospace text-break"><%= i.entry %></td>
+        <td class="font-monospace text-break small"><%= i.data %></td>
+        <td><span class="badge bg-blue-lt"><%= i.type %></span></td>
+        <td class="text-end text-secondary small"><%= i.ttl %>s</td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<div class="px-3 py-2 text-secondary small border-top">
+  <%= t('dns.cacheCount').replace('{n}', String(items.length)) %>
+  <% if (msg) { %><span class="text-danger ms-2"><%= msg %></span><% } %>
+</div>
